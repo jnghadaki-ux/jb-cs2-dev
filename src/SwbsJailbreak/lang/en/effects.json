@@ -1,0 +1,9 @@
+{
+  "effects.menu.title": "Select an effect",
+  "effects.menu.none": "No effect",
+  "effects.selected": "{lightred}{0} {olive}selected effect: {purple}{1}{olive}.",
+  "effects.random": "Selecting a random effect.",
+  "effects.already_in": "You are already in this effect.",
+  "effects.start_error": "{red}There was an error starting effect {0}.",
+  "effects.none_available": "{red}There are no effects to select."
+}
