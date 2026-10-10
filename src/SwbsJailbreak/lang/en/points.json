@@ -1,0 +1,5 @@
+{
+  "points.guard_kill": "You have been given {0} points for killing a guard.",
+  "points.warden_kill": "You have been given {0} points for killing the warden.",
+  "points.yours": "{olive}You have {lightred}{0} {olive}points."
+}

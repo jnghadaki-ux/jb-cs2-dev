@@ -1,0 +1,10 @@
+{
+  "jihad.notify": "{olive}You have a {lightred}jihad bomb{olive}. Hold it and press {lightred}+attack2 {olive}(right click) to activate it once the cells are open.",
+  "jihad.cells_closed": "You cannot use your bomb until the cell doors open.",
+  "jihad.drop.title": "Drop your jihad bomb?",
+  "jihad.drop.subtitle": "It will be destroyed and won't explode.<br><br>+attack2 activates the bomb.<br>Usually right click.",
+  "jihad.drop.no": "No, do not drop it.",
+  "jihad.drop.yes": "Yes, drop it without exploding.",
+  "jihad.log_damage": "{0}'s jihad bomb damaged {1} for {2}.",
+  "jihad.log_exploded": "{0} detonated a jihad bomb."
+}
