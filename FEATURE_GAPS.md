@@ -1,12 +1,30 @@
 # Feature gaps, engine limits and open questions
 
-## Not ported yet (planned)
-| Item | Priority | Note |
-|---|---|---|
-| AFKManager, RotatingMessages, ServerRules/Information/HelpMenu/CommandList/MOTD | Medium | Chat/menu based; rules pages open as chat links (CS2 has no MOTD browser). |
-| ShowSpectators, SpectateMenu, NoTextSpam, RadioSpamBlock, StopMapMusic, StopWeaponSounds | Medium | |
-| Parachute, UnlimitedReserveAmmo, DisableFallDrownDamage, FixGravityOnNewRound, MapArmour | Low | |
-| Store / donator items / UserPoints economy | Out of scope for now | `IPointsService` hook exists. |
+## Not ported yet (19 jailbreak-relevant + 1 optional) — original size in lines
+| # | Plugin | What it does (original) | Commands | Lines | CS2 approach |
+|---|---|---|---|---:|---|
+| 1 | AFKManager | moves/kicks players who go AFK (3 cvars) | — | 239 | tick/button check, move to spec then kick; skip warden/LR players |
+| 2 | RotatingMessages | rotating chat messages from a file | `sm_reloadmessages` | 209 | timer + JSON list |
+| 3 | ServerRules | shows server rules | `sm_rules` | 47 | chat lines / link (no MOTD browser in CS2) |
+| 4 | Information | shows server info | `sm_info` | 46 | chat |
+| 5 | InfoMenus | menus listing URLs | — | 200 | JbMenu + chat links |
+| 6 | HelpMenu | menu linking to help pages | `sm_helpmenu`, `sm_reloadhelpmenu` | 202 | JbMenu + chat links |
+| 7 | CommandList | lists commands a player may use | `sm_commands` | 77 | built from our registered commands + Perms |
+| 8 | MOTD | the Swoobles MOTD page | — | 132 | chat link (CS2 has no MOTD browser) |
+| 9 | ShowSpectators | shows who is spectating a player | `sm_speclist` | 161 | HUD layer |
+| 10 | SpectateMenu | menu to spectate players | `sm_specmenu` | 150 | JbMenu + observer target |
+| 11 | NoTextSpam | stops chat text spam | — | 123 | chat listener |
+| 12 | RadioSpamBlock | blocks radio command spam | — | 71 | command listener |
+| 13 | StopMapMusic | per-player map music mute/volume | `sm_music`, `sm_pitch`, `sm_stopmusic`, `sm_stopsound`, `sm_volume` | 324 | CS2 music is sound events — needs in-game investigation |
+| 14 | StopWeaponSounds | per-player weapon sound toggle | `sm_stopsound` | 123 | sound-event filter — needs in-game investigation |
+| 15 | UnlimitedReserveAmmo | reserve ammo refilled (500 on reload) | — | 49 | reload event / ammo property |
+| 16 | DisableFallDrownDamage | blocks fall and drown damage (+ damage sounds) | — | 60 | `DamageService` handler |
+| 17 | FixGravityOnNewRound | resets `sv_gravity 800` each round and fixes player gravity on spawn | — | 70 | partly covered by `Movement`; add the cvar reset |
+| 18 | MapArmour | per-map armour on/off | `sm_armour`, `sm_noarmour` (root) | 169 | per-map JSON flag + Settings loadout |
+| 19 | Parachute | parachutes (also used by the LR API: saved, removed during an LR, restored after) | `sm_giveparachute`, `sm_removeparachute` | 218 | glide while holding USE; hook into LR start/end |
+| 20 | HidePlayers (optional) | players hide other players | `sm_hide` | 285 | CheckTransmit; only a transitive store dependency |
+
+Out of scope for now: Store / donator items / UserPoints economy (`IPointsService` hook exists).
 
 ## CS2 engine / API limits (cannot be reproduced 1:1)
 | Original feature | CS2 status | What the port does |
