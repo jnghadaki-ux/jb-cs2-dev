@@ -31,5 +31,8 @@
   "days.edit.enabled": "[SM] {0} enabled.",
   "days.edit.disabled": "[SM] {0} disabled.",
   "days.edit.saved": "[SM] Day configs have been saved.",
-  "days.edit.save_error": "[SM] Error creating save file."
+  "days.edit.save_error": "[SM] Error creating save file.",
+  "days.weaponselection.log": "{0} selected weapon {1}.",
+  "days.heavy.buy_time": "<font color='#FF0000'>Time remaining to buy:</font><br><font color='#FFFFFF'>{0}</font> <font color='#FF0000'>seconds.</font>",
+  "days.heavy.buy_over": "<font color='#FF0000'>Buy time is up!</font>"
 }
