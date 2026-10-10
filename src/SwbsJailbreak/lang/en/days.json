@@ -49,5 +49,11 @@
   "days.retake.msg3": "{red}- {green}When guards are unfrozen, they have to retake the map from the Prisoners.",
   "days.retake.msg4": "{red}- {green}Prisoners do not camp the Guards. Guards are invulnerable until it says so.",
   "days.horror.vision_all": "<font color='#257edd'>Everyones vision improved.</font>",
-  "days.horror.buff": "<font color='#ddaf25'>Prisoners speed increased.</font><br><font color='#257edd'>Guards vision improved.</font>"
+  "days.horror.buff": "<font color='#ddaf25'>Prisoners speed increased.</font><br><font color='#257edd'>Guards vision improved.</font>",
+  "days.freezetag.hud": "<font color='#6FC41A'>Time remaining: </font><font color='#DE2626'>{0:00}:{1:00}</font><br><font color='#6FC41A'>Active prisoners: </font><font color='#DE2626'>{2}</font><font color='#6FC41A'> / {3}</font>",
+  "days.freezetag.guards_win": "<font color='#6FC41A'>Guards win!</font>",
+  "days.freezetag.prisoners_win": "<font color='#6FC41A'>Prisoners win!</font>",
+  "days.rpg.hud": "<font color='#FF6600'>Rockets: </font><font color='#FFFFFF'>{0} / {1}</font>",
+  "days.rpg.airshot_by": "<font class='fontSize-l' color='#FF6600'>AIRSHOT!<br>By: {0}</font>",
+  "days.rpg.airshot_on": "<font class='fontSize-l' color='#BFFF00'>AIRSHOT!<br>On: {0}</font>"
 }
