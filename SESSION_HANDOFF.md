@@ -18,7 +18,6 @@
 
 ## Immediate next step
 1. Read the owner's test results (TEST_PLAN.md §4) and fix failures first.
-2. Port `Days/UltJB_Warday_CaptureTheFlag.sp` (side selection, flags, scoring, auto-respawn via ISettingsService).
 3. Remaining small server plugins (FEATURE_GAPS.md "Not ported yet").
 4. Review pass over salvaged modules (Warden/Cells/Logger/Mute/WeaponSelection) against docs/specs.
 

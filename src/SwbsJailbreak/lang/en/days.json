@@ -55,5 +55,22 @@
   "days.freezetag.prisoners_win": "<font color='#6FC41A'>Prisoners win!</font>",
   "days.rpg.hud": "<font color='#FF6600'>Rockets: </font><font color='#FFFFFF'>{0} / {1}</font>",
   "days.rpg.airshot_by": "<font class='fontSize-l' color='#FF6600'>AIRSHOT!<br>By: {0}</font>",
-  "days.rpg.airshot_on": "<font class='fontSize-l' color='#BFFF00'>AIRSHOT!<br>On: {0}</font>"
+  "days.rpg.airshot_on": "<font class='fontSize-l' color='#BFFF00'>AIRSHOT!<br>On: {0}</font>",
+  "days.ctf.flag_set": "{olive}CTF flag / defender spawn saved for this map.",
+  "days.ctf.capture_set": "{olive}CTF capture point / attacker spawn saved for this map.",
+  "days.ctf.side_title": "Select your teams side",
+  "days.ctf.attack": "Attack",
+  "days.ctf.defend": "Defend",
+  "days.ctf.random": "Choose for me",
+  "days.ctf.random_side": "[SM] Selecting a random side.",
+  "days.ctf.you_defend": "{olive}You are {lightred}defending{olive}. Guard your {lightred}flag{olive}!",
+  "days.ctf.you_attack": "{olive}You are {lightred}attacking{olive}. Go get the {lightred}flag{olive}!",
+  "days.ctf.guards": "guards",
+  "days.ctf.prisoners": "prisoners",
+  "days.ctf.defended": "<font color='#6FC41A'>Flag defended.</font><br><font color='#{0}'>The {1} win!</font>",
+  "days.ctf.carried": "<font color='#6FC41A'>Flag carried by</font><br><font color='#{0}'>{1}</font>",
+  "days.ctf.captured": "<font color='#{0}'>{1}</font><br><font color='#6FC41A'>captured the flag!</font>",
+  "days.ctf.returned": "<font color='#DE2626'>Flag returned!</font>",
+  "days.ctf.returned_by": "<font color='#DE2626'>Flag returned by</font><br><font color='#{0}'>{1}</font>",
+  "days.ctf.dropped": "<font color='#DE2626'>Flag dropped!</font><br><font color='#6FC41A'>Returning in <font color='#DE2626'>{0}</font> seconds.</font>"
 }

@@ -43,7 +43,7 @@ SimpleAdmin mod. CS2 implementation: `src/SwbsJailbreak/Modules/<Module>`.
 | Wardays: Hunger Games, Zombie, Throwing Knives, CT Retake, Horror Movie | | Days/LargeDays | Partial | Crate/knife models and fog rendering need in-game verification; custom sounds need an addon. |
 | Warday: Freeze Tag | | Days/FreezeTagDay | Implemented, unverified | |
 | Warday: RPG | | Days/RpgDay | Partial | net10 build only (needs trace); custom launcher/missile models → beam trail + CS2 particle. |
-| Warday: Capture the Flag | | — | **Not started** | Next session. |
+| Warday: Capture the Flag | side selection, flag carry/drop/return/capture, respawns, HP balance | Days/CaptureTheFlagDay | Partial | Flag/capture point are beam visuals (custom models impossible); map points via !ctf_setflag / !ctf_setcapture. |
 | Commands: Freekill, OneUp, Roll, Rules, Speed, Timer, Xray, CTMessage (!g) | | Commands | Implemented, unverified | Rules opens the URL in chat (no MOTD browser in CS2). |
 
 ## 2. SMPlugins plugins that ran on the jailbreak server

@@ -58,6 +58,7 @@ reference is compile-only).
 | Cell doors | Usually automatic (original name lists or auto-detect). Check with root: `!celldoors_edit` → look at doors, "Add/Remove", "Save doors.". Console alternative: `css_celldoors_list`, `css_celldoors_add <#>`, `css_celldoors_save`. |
 | LR teleport spot | Stand in the LR area: `!lr_setpoint` |
 | Rebel / free-for-all spawns | Walk around and `!rebelpoint_add` many times (free-for-all days need 90 by default, `Days.FreeForAllMinRebelPoints`) |
+| Capture the Flag points | `!ctf_setflag` at the flag / defender spawn, `!ctf_setcapture` at the capture point / attacker spawn |
 | Disabled days for the map | `!daysedit` |
 
 ## 5. Tests

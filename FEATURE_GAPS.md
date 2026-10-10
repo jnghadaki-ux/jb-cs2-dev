@@ -3,7 +3,6 @@
 ## Not ported yet (planned)
 | Item | Priority | Note |
 |---|---|---|
-| Warday: Capture the Flag (1182 lines) | High | Only remaining Ultimate Jailbreak gameplay plugin. |
 | AFKManager, RotatingMessages, ServerRules/Information/HelpMenu/CommandList/MOTD | Medium | Chat/menu based; rules pages open as chat links (CS2 has no MOTD browser). |
 | ShowSpectators, SpectateMenu, NoTextSpam, RadioSpamBlock, StopMapMusic, StopWeaponSounds | Medium | |
 | Parachute, UnlimitedReserveAmmo, DisableFallDrownDamage, FixGravityOnNewRound, MapArmour | Low | |

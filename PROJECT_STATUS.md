@@ -34,8 +34,7 @@ _Last updated: end of session 2 (2026-10-10), version 0.9.0. Nothing has been te
 | Last Request API (slots, menus, rebel-as-team, admin freedays, opponent selection, slay timers, isolation, beacons, LR/rebel map points) | UltJB_API_LastRequest | Implemented, unverified |
 | All 26 LRs (Freeday x4, Draw, Rebel x8, Weapon Battle x5, Contest x7) | LastRequests/* | Implemented, unverified |
 | Days API (menus + rules, team/FFA, warday freeze, weapon rules, !daysedit) | UltJB_API_Days | Implemented, unverified |
-| 22 of 23 days (all except Capture the Flag) | Days/* | Implemented, unverified (RPG net10 only) |
-| Warday Capture the Flag | Days/UltJB_Warday_CaptureTheFlag | **Not started** |
+| All 23 days | Days/* | Implemented, unverified (RPG net10 only; CTF needs !ctf_setflag/!ctf_setcapture per map) |
 | Other SMPlugins extras (AFK manager, rotating messages, rules/help menus, spectate menu, radio spam block, ...) | Plugins/* | Not started — see FEATURE_GAPS.md (to be written) |
 
 ## Blockers
@@ -44,7 +43,7 @@ _Last updated: end of session 2 (2026-10-10), version 0.9.0. Nothing has been te
 
 ## Next actions (priority order)
 1. Owner: run TEST_PLAN.md §2–§3 on a CS2 server with the net10 package and report failures.
-2. Capture the Flag warday.
+2. Remaining small server plugins (FEATURE_GAPS.md).
 3. Review salvaged Warden/Cells/Logger/Mute/WeaponSelection code paths against specs.
 4. Remaining SMPlugins extras; FEATURE_INVENTORY / FEATURE_GAPS / BUILD_AND_TEST / TEST_PLAN / CHANGELOG / RELEASE_NOTES.
 5. Owner runs the in-game test plan; fix loop.

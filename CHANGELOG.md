@@ -3,7 +3,7 @@
 ## 0.9.0 — first complete test build (session 2, 2026-10-10) — not yet verified on a live server
 ### Added
 - Last Request API and all 26 original LRs (Freeday ×4, Draw, Rebel ×8, Weapon Battle ×5, Contest ×7).
-- Days API and 22 of 23 original days (Capture the Flag pending).
+- Days API and all 23 original days.
 - Settings (spawn loadout, stable spawns, late-join respawn, cell weapon nerf, guard suicide wipe, round-end banner).
 - Teams (guard queue, pre-queue, 2:1 ratio, jointeam rules) and persistent CT bans.
 - PlayerModels, Points, Jihad.
