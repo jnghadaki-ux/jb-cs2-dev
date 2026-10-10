@@ -58,5 +58,9 @@
   "lr.points.lr_set": "{olive}LR teleport point saved for this map.",
   "lr.points.rebel_added": "{olive}Rebel point added ({lightred}{0}{olive} total).",
   "lr.points.rebel_cleared": "Rebel points cleared for this map.",
-  "lr.draw.chosen": "{lightred}{0} {olive}has chosen to end the round in a {red}{1}{olive}!"
+  "lr.draw.chosen": "{lightred}{0} {olive}has chosen to end the round in a {red}{1}{olive}!",
+  "lr.battle.no_effect": "[SM] Proceeding without an effect.",
+  "lr.battle.starting_in": "[SM] The battle will start in {0} seconds.",
+  "lr.battle.tick": "[SM] {0}..",
+  "lr.battle.started": "[SM] The battle has started!"
 }
