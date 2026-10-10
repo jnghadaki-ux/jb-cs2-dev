@@ -87,6 +87,12 @@ public static class WeaponService
     public delegate bool DropRule(CCSPlayerController player, CBasePlayerWeapon? weapon);
 
     private static readonly Dictionary<string, PickupRule> PickupRules = new();
+
+    /// <summary>
+    /// The CEconItemView being acquired, valid only while pickup rules run. For a ground pickup it is the weapon
+    /// entity's own item (AttributeManager.Item), which lets a rule find out which weapon entity is being picked up.
+    /// </summary>
+    public static nint CurrentItem { get; private set; }
     private static readonly Dictionary<string, DropRule> DropRules = new();
     private static bool _hooked;
 
@@ -146,11 +152,19 @@ public static class WeaponService
             var data = VirtualFunctions.GetCSWeaponDataFromKey(-1, item.ItemDefinitionIndex.ToString());
             var name = data?.Name ?? "";
             if (string.IsNullOrEmpty(name)) return HookResult.Continue;
-            foreach (var rule in PickupRules.Values.ToArray())
+            CurrentItem = item.Handle;
+            try
             {
-                if (rule(player, name, method)) continue;
-                hook.SetReturn(AcquireResult.NotAllowedByMode);
-                return HookResult.Handled;
+                foreach (var rule in PickupRules.Values.ToArray())
+                {
+                    if (rule(player, name, method)) continue;
+                    hook.SetReturn(AcquireResult.NotAllowedByMode);
+                    return HookResult.Handled;
+                }
+            }
+            finally
+            {
+                CurrentItem = IntPtr.Zero;
             }
         }
         catch (Exception ex)
