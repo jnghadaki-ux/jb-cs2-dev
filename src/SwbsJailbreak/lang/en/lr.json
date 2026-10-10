@@ -57,5 +57,6 @@
   "lr.points.no_rebel_points": "{red}This map has no rebel points yet. An admin can add them with !rebelpoint_add.",
   "lr.points.lr_set": "{olive}LR teleport point saved for this map.",
   "lr.points.rebel_added": "{olive}Rebel point added ({lightred}{0}{olive} total).",
-  "lr.points.rebel_cleared": "Rebel points cleared for this map."
+  "lr.points.rebel_cleared": "Rebel points cleared for this map.",
+  "lr.draw.chosen": "{lightred}{0} {olive}has chosen to end the round in a {red}{1}{olive}!"
 }

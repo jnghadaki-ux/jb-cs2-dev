@@ -15,10 +15,11 @@ public static class Movement
     {
         public readonly Dictionary<string, float> Speed = new();
         public readonly Dictionary<string, float> Gravity = new();
+        public readonly HashSet<string> AutoBhop = new();
         public bool GravityApplied;
         public bool SpeedApplied;
 
-        public bool Empty => Speed.Count == 0 && Gravity.Count == 0;
+        public bool Empty => Speed.Count == 0 && Gravity.Count == 0 && AutoBhop.Count == 0;
     }
 
     private static readonly State?[] States = new State?[Players.MaxSlots];
@@ -85,6 +86,23 @@ public static class Movement
         return s.Gravity.Values.Aggregate(1f, (a, b) => a * b);
     }
 
+    /// <summary>
+    /// Per-player auto bunny hop (holding jump re-jumps on landing). The original cleared IN_JUMP from m_nOldButtons
+    /// every frame; CS2 has no per-player auto-bhop, so the jump impulse is applied on the landing tick instead.
+    /// </summary>
+    public static void SetAutoBhop(CCSPlayerController? c, string key, bool enabled)
+    {
+        if (c == null || !c.IsValid) return;
+        var s = Get(c.Slot);
+        if (enabled) s.AutoBhop.Add(key);
+        else s.AutoBhop.Remove(key);
+    }
+
+    public static bool HasAutoBhop(CCSPlayerController c) => States[c.Slot] is { AutoBhop.Count: > 0 };
+
+    /// <summary>Jump take-off speed for the default 57-unit jump with sv_gravity 800.</summary>
+    private const float JumpImpulse = 301.993f;
+
     /// <summary>Drop all modifiers for a slot and restore defaults on the pawn.</summary>
     public static void Reset(int slot)
     {
@@ -93,6 +111,7 @@ public static class Movement
         var hadAny = !s.Empty || s.GravityApplied || s.SpeedApplied;
         s.Speed.Clear();
         s.Gravity.Clear();
+        s.AutoBhop.Clear();
         if (!hadAny) return;
         var c = Utilities.GetPlayerFromSlot(slot);
         if (c is { IsValid: true }) Apply(c);
@@ -145,6 +164,14 @@ public static class Movement
                     pawn.VelocityModifier = speed;
                     Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_flVelocityModifier");
                 }
+            }
+
+            if (s.AutoBhop.Count > 0 && (c.Buttons & CounterStrikeSharp.API.PlayerButtons.Jump) != 0 &&
+                (pawn.Flags & (uint)CounterStrikeSharp.API.Modules.Utils.PlayerFlags.FL_ONGROUND) != 0 &&
+                pawn.MoveType == MoveType_t.MOVETYPE_WALK)
+            {
+                var v = pawn.AbsVelocity;
+                pawn.Teleport(null, null, new CounterStrikeSharp.API.Modules.Utils.Vector(v.X, v.Y, JumpImpulse));
             }
 
             if (s.Gravity.Count > 0)
