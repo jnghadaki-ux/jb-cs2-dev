@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using Microsoft.Extensions.Logging;
 
@@ -55,7 +56,39 @@ public static class DamageService
 
     public static void Unregister(Handler handler) => Handlers.RemoveAll(h => h.Handler == handler);
 
-    internal static void Clear() => Handlers.Clear();
+    internal static void Clear()
+    {
+        Handlers.Clear();
+        PendingCredit.Clear();
+    }
+
+    private static readonly Dictionary<int, (int AttackerSlot, string Weapon)> PendingCredit = new();
+
+    /// <summary>
+    /// Kill a player and credit the kill to another player (SourceMod SDKHooks_TakeDamage(victim, attacker, ...,
+    /// 99999.0)). CS2 cannot build a damage info from managed code, so the victim is slain and the player_death event
+    /// is rewritten to show the attacker (and weapon) in the kill feed and logs.
+    /// </summary>
+    public static void KillWithCredit(CCSPlayerController victim, CCSPlayerController? attacker, string weapon = "")
+    {
+        if (victim == null || !victim.IsValid || !victim.IsAliveP()) return;
+        if (attacker != null && attacker.IsValid && attacker.Slot != victim.Slot) PendingCredit[victim.Slot] = (attacker.Slot, weapon);
+        victim.CommitSuicide(false, true);
+        var slot = victim.Slot;
+        Server.NextFrame(() => PendingCredit.Remove(slot));
+    }
+
+    /// <summary>player_death Pre (registered by the core): apply a pending kill credit.</summary>
+    internal static HookResult OnPlayerDeathPre(EventPlayerDeath ev, GameEventInfo info)
+    {
+        var victim = ev.Userid;
+        if (victim == null || !victim.IsValid || !PendingCredit.Remove(victim.Slot, out var credit)) return HookResult.Continue;
+        var attacker = Utilities.GetPlayerFromSlot(credit.AttackerSlot);
+        if (attacker is not { IsValid: true }) return HookResult.Continue;
+        ev.Attacker = attacker;
+        if (credit.Weapon.Length > 0) ev.Weapon = credit.Weapon;
+        return HookResult.Continue;
+    }
 
     internal static HookResult OnPlayerTakeDamagePre(CCSPlayerPawn pawn, CTakeDamageInfo info)
     {

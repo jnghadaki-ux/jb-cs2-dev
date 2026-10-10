@@ -62,6 +62,7 @@ public sealed class JailbreakPlugin : BasePlugin
         RegisterEventHandler<EventRoundFreezeEnd>(OnRoundFreezeEnd);
         RegisterEventHandler<EventRoundEnd>(OnRoundEnd);
         RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
+        RegisterEventHandler<EventPlayerDeath>(DamageService.OnPlayerDeathPre, HookMode.Pre);
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterEventHandler<EventPlayerTeam>(OnPlayerTeam);
         AddCommandListener("drop", WeaponService.OnDropCommand);
