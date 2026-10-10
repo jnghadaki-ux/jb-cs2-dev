@@ -20,6 +20,11 @@ public sealed class LrMapPoints
 public sealed partial class LastRequestModule
 {
     private LrMapPoints _points = new();
+
+    /// <summary>Rebel points of this map (also used by the Days API for free-for-all spawns).</summary>
+    internal int RebelPointCount => _points.RebelPoints.Count;
+
+    internal IReadOnlyList<float[]> RebelPointList => _points.RebelPoints;
     private string _pointsMap = "";
     private readonly Dictionary<int, int> _transmitCacheTick = new();
 

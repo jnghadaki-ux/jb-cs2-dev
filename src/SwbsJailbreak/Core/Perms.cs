@@ -23,6 +23,7 @@ public static class Perms
         ["ctban"] = "@css/ban",              // CT ban/unban
         ["ctban.permanent"] = "@css/unban",  // permanent CT bans / unban others' bans
         ["days"] = "@css/generic",           // force-start / stop days
+        ["days.edit"] = "@css/unban",        // sm_de / sm_daysedit (original: ADMFLAG_UNBAN)
         ["lr"] = "@css/generic",             // abort LRs
         ["mute"] = "@css/chat",              // mute/gag/silence
         ["teams"] = "@css/kick",             // move players between teams, swap
