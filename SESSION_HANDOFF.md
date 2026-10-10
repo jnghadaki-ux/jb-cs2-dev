@@ -15,7 +15,9 @@ _Updated: end of session 3 (2026-10-10), v0.10.0, branch `claude/swbs-jailbreak-
 ## Owner decisions (session 3, latest)
 * `!open` is admin-only (done). Auto warden when nobody queues (done). Warden bonus only with 1–2 guards (done, stacking by step).
 * Extra days: later. **Remake the SMPlugins Zone Manager** (plan: docs/design/ZONE_MANAGER_PLAN.md) — recommended model: Opus.
-* Gang system: new "Crews" design proposed (docs/design/CREWS.md) — awaiting owner feedback.
+* Gang system: new "Crews" design proposed (docs/design/CREWS.md).
+* **Owner is running the Zone Manager and Crews in separate Opus sessions** (branches `claude/zone-manager`, `claude/crews`;
+  prompts and file ownership in docs/design/OPUS_KICKOFF_PROMPTS.md). Do not start either on the main branch; merge Zone Manager first.
 
 ## Exact next actions (priority order)
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
