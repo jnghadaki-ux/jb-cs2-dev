@@ -31,8 +31,10 @@ _Last updated: session 2 (2026-10-10). Nothing has been tested on a live CS2 ser
 | PlayerModels, Points | UltJB_PlayerModels / UltJB_Points | Implemented, unverified |
 | Jihad | UltJB_Jihad | Implemented, unverified |
 | BhopCheck, ServerTweaks (noblock, grenade noblock, admin tags, clan tag filter, spam messages, kill feed) | Plugins/* | Implemented, unverified |
-| **Last Request API + 26 LRs** | UltJB_API_LastRequest + LastRequests/* | **Not started** (NullServices stub) |
-| **Days API + 22 days** | UltJB_API_Days + Days/* | **Not started** (NullServices stub) |
+| Last Request API (slots, menus, rebel-as-team, admin freedays, opponent selection, slay timers, isolation, beacons, LR/rebel map points) | UltJB_API_LastRequest | Implemented, unverified |
+| All 26 LRs (Freeday x4, Draw, Rebel x8, Weapon Battle x5, Contest x7) | LastRequests/* | Implemented, unverified |
+| Days API (menus + rules, team/FFA, warday freeze, weapon rules, !daysedit) | UltJB_API_Days | Implemented, unverified |
+| **23 days** | Days/* | **In progress** (session 2) |
 | Other SMPlugins extras (AFK manager, rotating messages, rules/help menus, spectate menu, radio spam block, ...) | Plugins/* | Not started — see FEATURE_GAPS.md (to be written) |
 
 ## Blockers
@@ -40,8 +42,7 @@ _Last updated: session 2 (2026-10-10). Nothing has been tested on a live CS2 ser
 * Account usage window limits session length; sub-agents are kept to a minimum on request.
 
 ## Next actions (priority order)
-1. Last Request API + LRs (largest remaining core system).
-2. Days API + days.
+1. The 23 day implementations (Days/*.sp) on top of the Days API.
 3. Review salvaged Warden/Cells/Logger/Mute/WeaponSelection code paths against specs.
 4. Remaining SMPlugins extras; FEATURE_INVENTORY / FEATURE_GAPS / BUILD_AND_TEST / TEST_PLAN / CHANGELOG / RELEASE_NOTES.
 5. Owner runs the in-game test plan; fix loop.

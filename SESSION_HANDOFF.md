@@ -17,6 +17,9 @@
 * After every module: build both TFMs, run tests, commit, push.
 
 ## Immediate next step
-Implement `Modules/LastRequest` (ILastRequestService in `Core/Api.cs` is already defined: Register, flags, opponent
-selection, slay timer, weapon save/restore/strip, SetHealth) from `UltJB_API_LastRequest.sp` (3985 lines), then the
-26 LR plugins, then `Modules/Days` from `UltJB_API_Days.sp` + 22 days.
+Days API is done (`Modules/Days/DaysModule.cs`). Implement the 23 days from `Mods/UltimateJailbreak/Days/*.sp` as
+modules that call `Jb.Days.Register(new DayDefinition{...})` in OnLoad (check `Jb.Days is DaysModule` inside OnLoad,
+NOT in `Enabled` - Enabled is evaluated before any module loads). Days may change FreezeTime/FreezeTeams on the
+definition after registering (original SetFreezeTime/SetFreezeTeams). Use `DamageService.KillWithCredit` for
+"kill credited to X", `Movement.*` for speed/gravity/auto-bhop, `Fx.*` for beams/particles, `JbEvents.DaySpawnPost`,
+`JbEvents.WardayFreezeEnded`, `Jb.Jihad.SetAllowBombDropping`.
