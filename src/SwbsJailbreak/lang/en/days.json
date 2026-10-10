@@ -34,5 +34,20 @@
   "days.edit.save_error": "[SM] Error creating save file.",
   "days.weaponselection.log": "{0} selected weapon {1}.",
   "days.heavy.buy_time": "<font color='#FF0000'>Time remaining to buy:</font><br><font color='#FFFFFF'>{0}</font> <font color='#FF0000'>seconds.</font>",
-  "days.heavy.buy_over": "<font color='#FF0000'>Buy time is up!</font>"
+  "days.heavy.buy_over": "<font color='#FF0000'>Buy time is up!</font>",
+  "days.hunger.warning": "{red}WARNING: {lightred}Find and run into a wooden box to get a weapon.",
+  "days.zombie.infected": "{red}[{green}Zombie Warday{red}]{default}: Prisoners have been infected.",
+  "days.zombie.headshots": "{red}[{green}Zombie Warday{red}]{default}: Zombies can only be killed by headshots.",
+  "days.zombie.knife": "{red}[{green}Zombie Warday{red}]{default}: Knifing a guard will kill them.",
+  "days.zombie.tired": "{red}[{green}Zombie Warday{red}]{default}: {red}The remaining zombies are getting tired.",
+  "days.retake.unfreeze_in": "<font color='#6FC41A'>Unfreezing guards in:</font><br><font color='#DE2626'>{0}</font> <font color='#6FC41A'>seconds.</font>",
+  "days.retake.unfrozen": "<font color='#6FC41A'>Guards have been unfrozen!</font>",
+  "days.retake.vulnerable": "<font color='#6FC41A'>Guards are now vulnerable!</font>",
+  "days.retake.line": "{red}----------------------------------",
+  "days.retake.msg1": "{red}- {green}Guards are frozen for {0} seconds.",
+  "days.retake.msg2": "{red}- {green}Prisoners run around the map finding weapons.",
+  "days.retake.msg3": "{red}- {green}When guards are unfrozen, they have to retake the map from the Prisoners.",
+  "days.retake.msg4": "{red}- {green}Prisoners do not camp the Guards. Guards are invulnerable until it says so.",
+  "days.horror.vision_all": "<font color='#257edd'>Everyones vision improved.</font>",
+  "days.horror.buff": "<font color='#ddaf25'>Prisoners speed increased.</font><br><font color='#257edd'>Guards vision improved.</font>"
 }
