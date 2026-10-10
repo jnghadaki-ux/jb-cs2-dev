@@ -1,6 +1,6 @@
 # Project status — SWBS Ultimate Jailbreak for CS2
 
-_Last updated: session 2 (2026-10-10). Nothing has been tested on a live CS2 server yet: every gameplay feature is
+_Last updated: end of session 2 (2026-10-10), version 0.9.0. Nothing has been tested on a live CS2 server yet: every gameplay feature is
 **Implemented, unverified** unless stated otherwise._
 
 ## Build
@@ -9,7 +9,7 @@ _Last updated: session 2 (2026-10-10). Nothing has been tested on a live CS2 ser
 |---|---|
 | `dotnet build -c Release` (net8.0 → CSS 1.0.368, net10.0 → CSS 1.0.376) | **Passes**, 0 warnings, 0 errors |
 | Unit tests (`tests/SwbsJailbreak.Tests`, 21 tests: round state machine, storage, targets, config) | **Pass** |
-| Packaging (`build.sh` / `build.ps1` → `SwbsJailbreak-<ver>-net10.zip` / `-net8.zip`) | Script exists, output not loaded on a server |
+| Packaging (`build.sh` / `build.ps1` → `SwbsJailbreak-<ver>-net10.zip` / `-net8.zip`) | **Works** (zips produced); not yet loaded on a server |
 | Live server load test | **Not done** (no CS2 server in this environment) |
 
 ## Modules (single plugin, `src/SwbsJailbreak/Modules/*`)
@@ -34,7 +34,8 @@ _Last updated: session 2 (2026-10-10). Nothing has been tested on a live CS2 ser
 | Last Request API (slots, menus, rebel-as-team, admin freedays, opponent selection, slay timers, isolation, beacons, LR/rebel map points) | UltJB_API_LastRequest | Implemented, unverified |
 | All 26 LRs (Freeday x4, Draw, Rebel x8, Weapon Battle x5, Contest x7) | LastRequests/* | Implemented, unverified |
 | Days API (menus + rules, team/FFA, warday freeze, weapon rules, !daysedit) | UltJB_API_Days | Implemented, unverified |
-| **23 days** | Days/* | **In progress** (session 2) |
+| 22 of 23 days (all except Capture the Flag) | Days/* | Implemented, unverified (RPG net10 only) |
+| Warday Capture the Flag | Days/UltJB_Warday_CaptureTheFlag | **Not started** |
 | Other SMPlugins extras (AFK manager, rotating messages, rules/help menus, spectate menu, radio spam block, ...) | Plugins/* | Not started — see FEATURE_GAPS.md (to be written) |
 
 ## Blockers
@@ -42,7 +43,8 @@ _Last updated: session 2 (2026-10-10). Nothing has been tested on a live CS2 ser
 * Account usage window limits session length; sub-agents are kept to a minimum on request.
 
 ## Next actions (priority order)
-1. The 23 day implementations (Days/*.sp) on top of the Days API.
+1. Owner: run TEST_PLAN.md §2–§3 on a CS2 server with the net10 package and report failures.
+2. Capture the Flag warday.
 3. Review salvaged Warden/Cells/Logger/Mute/WeaponSelection code paths against specs.
 4. Remaining SMPlugins extras; FEATURE_INVENTORY / FEATURE_GAPS / BUILD_AND_TEST / TEST_PLAN / CHANGELOG / RELEASE_NOTES.
 5. Owner runs the in-game test plan; fix loop.

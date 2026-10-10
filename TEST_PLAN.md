@@ -1,0 +1,78 @@
+# Test plan
+
+Record each run as `date / tester / CSS version / package (net10|net8) / result`. A feature becomes **Verified** in
+FEATURE_INVENTORY.md only after its row below passed on a real server.
+
+## 1. Level 1 — automated (done by every build)
+
+`dotnet test -c Release` → 21 tests: round state machine (legal/illegal transitions, duplicate round_end/round_start
+rejection, map reset, resync), storage round-trip, target matching (@prisoners, #userid, partial names), config defaults.
+Status: **passing** (session 2).
+
+## 2. Level 2 — server load (owner)
+
+| # | Step | Expected |
+|---|---|---|
+| 2.1 | Start server with the package | Console: `SWBS Ultimate Jailbreak v0.9.0 loaded: <n> modules ...` with no `failed to load` lines |
+| 2.2 | `css_plugins list` | SwbsJailbreak listed, author "Gdaki (designed after HlStriker, SWBS development/lead admins)" |
+| 2.3 | Check `configs/plugins/SwbsJailbreak/SwbsJailbreak.json` | Generated with all sections |
+| 2.4 | `css_plugins reload SwbsJailbreak` twice | No errors, commands work once (no duplicate chat lines) |
+| 2.5 | `changelevel` to another JB map | Cells log line `[Cells] <map>: source=...`, no exceptions |
+| 2.6 | net8 package on CSS 1.0.368 | Loads; warden markers/cell editor say "no ray-trace API" and use the fallback |
+
+## 3. Level 3 — in game (at least 2 players + bots: `bot_add_t`, `bot_add_ct`)
+
+### Teams / rounds
+1. Join with nobody on CT → 30 s "Selecting guards in" countdown, cells force-open, a random/queued prisoner is moved to CT, round restarts.
+2. `jointeam 3` as prisoner when the ratio is full → "[SM] Guards team full..." and the restricted sound.
+3. `!guard` → queue position message. Round end → ratio fixed (2 prisoners per guard).
+4. `!ctban <name> 5 test` → player moved to T and slain; `!check_ctban`; `!unctban`.
+
+### Settings / spawn
+5. Guards spawn with knife + Five-SeveN + healthshot + 100 armor (no helmet); prisoners knife only.
+6. Join late as prisoner during the first 60 s with closed cells → respawned once in your cell.
+7. Guard suicides (`kill` is blocked, use a fall) → dropped guns disappear.
+8. Round end → "GUARDS WIN!/PRISONERS WIN!" banner + tint.
+
+### Warden
+9. `!w` as guard → queue message; first warden picked after 10 s countdown (centre HUD), heavy model, "Warden" tag.
+10. Double-tap USE → pointer marker; triple-tap WALK → line; triple-tap DUCK → ring (net10: at crosshair).
+11. `!wm` → rings (set/resize/remove), healing area (heals prisoners +5 every 0.5 s), client colours; `!cc ring` / `!cc remove`.
+12. `!uw`, `!rw` (admin), `!sw <name>` (root), `!wwho`, `!kiss`. Warden death → "The warden has died!" + reselection.
+
+### Cells
+13. Wait 60 s → cells open; logger shows "Cell doors opened." once. Press the cell button as CT → opened detected.
+14. Root `!cdo` → "Admin X forced the cell doors open." `!celldoors_edit` → green glow on doors, yellow box on looked-at door, add/remove/save → `maps/cells/<map>.json`.
+
+### Last guard / mute / logger / jihad
+15. Kill all guards but one → "is the last guard!", beacons, damage timer.
+16. Prisoners muted first 60 s; warden mute power HUD; dead players muted.
+17. `!logs` (admin) shows the round's events.
+18. Set `Jihad.PercentChanceToGive 100`, `GuardsNeeded 1` → a prisoner gets C4; right click before cells open → refusal; after → bomb on head, pink, explosion damages in 750 u; `drop` → confirm menu.
+
+### Last requests (bots as guards are fine)
+19. Kill prisoners until LR slots (8 %, min 1) → "LR initialized", category menu, 20 s timeout → random LR.
+20. One LR from each category: Weapon Battle (opponent menu → weapon menu → effect menu → countdown → slay timer), Contest (Race: place start/end, beam finish line; Gun Toss: drop the deagle), Rebel (rebel point teleport), Freeday (suicide → next round freeday, slain if interfering).
+21. During an LR: other players invisible to the LR pair, pickups/drops/buys blocked per LR, damage only between opponents.
+22. `!abortlr <name>`, `!givefreeday <name>`, `!lrs`, `!lr_setpoint`, `!rebelpoint_add`.
+
+### Days
+23. As warden (warden twice this map, within 15 s): `!day` → Freeday/Warday menus; wardays refused once cells are open.
+24. Warday freeze countdown → unfreeze; FFA option appears once the map has 90 rebel points.
+25. Spot-check each day (one per round): Gang, Jihad (FFA), Taser, No Scope, Fat Kid, Low Gravity, Scoutz Knivez, Weapon Selection, Classic (effect), Heavy Assault (buy time), One In The Chamber, Hunger Games (crates), Zombie, Throwing Knives, CT Retake, Horror Movie (fog), Freeze Tag, RPG (net10).
+26. `!daysedit` disables a day for the map; persists after map change.
+
+### Admin / extras
+27. `!admin` menu; slap/slay/beacon/freeze/burn/blind/drug/noclip/give/hp/respawn/team; mute/gag/silence + timed; ban/unban/kick; `!rr`.
+28. Commands: `!g`, `!freekill`, `!wk`, `!1up`, `!roll`, `!jbrules`, `!speed`, `!timer`, `!xray`, `!bhc`, `!admintag`, `!points`.
+
+### Robustness
+29. Disconnect the warden, an LR prisoner and an LR guard mid-round → no errors, LR ends/continues per flags.
+30. `mp_restartgame 1` mid-LR and mid-day → state resets cleanly next round.
+31. Plugin reload mid-round → no duplicate timers/menus.
+
+## 4. Results log
+
+| Date | Tester | CSS | Package | Section | Result | Notes |
+|---|---|---|---|---|---|---|
+| 2026-10-10 | Claude (automated) | — | both | §1 | Pass (21/21) | build 0 warnings |

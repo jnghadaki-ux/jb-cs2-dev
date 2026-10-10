@@ -19,7 +19,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "1.0.0";
+    public const string PluginVersion = "0.9.0"; // first complete test build (not yet verified on a live server)
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;

@@ -17,9 +17,13 @@
 * After every module: build both TFMs, run tests, commit, push.
 
 ## Immediate next step
-Days API is done (`Modules/Days/DaysModule.cs`). Implement the 23 days from `Mods/UltimateJailbreak/Days/*.sp` as
-modules that call `Jb.Days.Register(new DayDefinition{...})` in OnLoad (check `Jb.Days is DaysModule` inside OnLoad,
-NOT in `Enabled` - Enabled is evaluated before any module loads). Days may change FreezeTime/FreezeTeams on the
-definition after registering (original SetFreezeTime/SetFreezeTeams). Use `DamageService.KillWithCredit` for
-"kill credited to X", `Movement.*` for speed/gravity/auto-bhop, `Fx.*` for beams/particles, `JbEvents.DaySpawnPost`,
-`JbEvents.WardayFreezeEnded`, `Jb.Jihad.SetAllowBombDropping`.
+1. Read the owner's test results (TEST_PLAN.md §4) and fix failures first.
+2. Port `Days/UltJB_Warday_CaptureTheFlag.sp` (side selection, flags, scoring, auto-respawn via ISettingsService).
+3. Remaining small server plugins (FEATURE_GAPS.md "Not ported yet").
+4. Review pass over salvaged modules (Warden/Cells/Logger/Mute/WeaponSelection) against docs/specs.
+
+## Patterns that worked
+* Module `OnLoad`: `if (Jb.Days is not DaysModule) return;` (never in `Enabled` - evaluated before modules load).
+* Kill credited to another player: `DamageService.KillWithCredit(victim, attacker, weapon)`.
+* Touch detection: poll positions in `OnTick` (no SDKHooks touch in CSS).
+* Ray traces only under `#if NET10_0_OR_GREATER`; features that truly need them are disabled on net8 (RPG day).
