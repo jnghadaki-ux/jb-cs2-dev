@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- CounterStrikeSharp 1.0.376 targets .NET 10 -->
-    <TargetFramework>net10.0</TargetFramework>
+    <!--
+      Two builds from one source tree:
+        net8.0  -> compiled against CounterStrikeSharp.API 1.0.368 (last CSS release built for .NET 8)
+        net10.0 -> compiled against CounterStrikeSharp.API 1.0.376 (CSS 1.0.370+ ship for .NET 10 only)
+      Install the build that matches the CounterStrikeSharp version on your server (see COMPATIBILITY.md).
+    -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -19,7 +24,11 @@
 
   <ItemGroup>
     <!-- Provided by the CounterStrikeSharp runtime on the server, so never copied to output -->
-    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376">
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.368" Condition="'$(TargetFramework)' == 'net8.0'">
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376" Condition="'$(TargetFramework)' == 'net10.0'">
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

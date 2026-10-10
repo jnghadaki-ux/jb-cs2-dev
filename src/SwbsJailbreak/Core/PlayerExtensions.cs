@@ -312,9 +312,15 @@ public static class VectorUtil
         return new Vector(cp * MathF.Cos(yaw), cp * MathF.Sin(yaw), -MathF.Sin(pitch));
     }
 
-    /// <summary>Trace from the player's eyes along their view and return the world hit point (null if nothing hit).</summary>
+    /// <summary>
+    /// Trace from the player's eyes along their view and return the world hit point, or null if nothing was hit.
+    /// Uses CounterStrikeSharp's Trace API, which exists from CSS 1.0.370 (the net10.0 build). The net8.0 build
+    /// (CSS 1.0.368) has no working ray-trace API, so this returns null there and callers must fall back to a real
+    /// position (the player's origin or the last bullet_impact) - never to an invented point.
+    /// </summary>
     public static Vector? AimPoint(CCSPlayerController c, float maxDistance = 8192f)
     {
+#if NET10_0_OR_GREATER
         var pawn = c.PawnOrNull();
         if (pawn?.AbsOrigin == null) return null;
         var eye = c.EyePosition();
@@ -328,5 +334,16 @@ public static class VectorUtil
         };
         var result = Trace.TraceEndShape(eye, end, pawn, options);
         return result.DidHit() ? result.EndPos : null;
+#else
+        return null;
+#endif
     }
+
+    /// <summary>True when this build has a working server-side ray trace (net10.0 / CSS 1.0.370+).</summary>
+    public static bool HasRayTrace =>
+#if NET10_0_OR_GREATER
+        true;
+#else
+        false;
+#endif
 }
