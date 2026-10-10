@@ -52,6 +52,12 @@ public sealed class JbPlayer
     /// <summary>Freeday queued for next round (LR freeday / warden granted).</summary>
     public bool FreedayNextRound { get; set; }
 
+    /// <summary>Owned by the Admin module: voice muted by an admin (mute/silence). Voice rules must keep this muted.</summary>
+    public bool AdminVoiceMuted { get; set; }
+
+    /// <summary>Owned by the Admin module: text chat gagged by an admin (gag/silence).</summary>
+    public bool AdminChatGagged { get; set; }
+
     public CCSPlayerController? Controller
     {
         get
@@ -128,6 +134,8 @@ public sealed class JbPlayer
         IsRebel = false;
         IsFreeday = false;
         FreedayNextRound = false;
+        AdminVoiceMuted = false;
+        AdminChatGagged = false;
         SteamId64 = 0;
         CachedName = "unknown";
         IsBot = false;

@@ -35,6 +35,13 @@ public static class Perms
         ["vip"] = "@css/reservation",        // donator / VIP perks (old SMPlugins "Donators")
         ["logs"] = "@css/generic",           // view jail logs at any time
         ["zones"] = "@css/config",           // edit map zones / LR locations
+        ["kick"] = "@css/kick",
+        ["ban"] = "@css/ban",
+        ["unban"] = "@css/unban",
+        ["map"] = "@css/changemap",
+        ["cvar"] = "@css/cvar",
+        ["config"] = "@css/config",
+        ["chat"] = "@css/chat",
     };
 
     /// <summary>Check a named capability (see <see cref="Defaults"/>) or a raw CSS flag / group ("@css/ban", "#css/admin").</summary>
