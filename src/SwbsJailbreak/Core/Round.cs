@@ -14,6 +14,9 @@ public enum RoundPhase
     /// <summary>Map loading / warmup / between rounds.</summary>
     Inactive,
 
+    /// <summary>A round started without at least one prisoner and one guard.</summary>
+    WaitingForPlayers,
+
     /// <summary>round_start fired, freeze time running.</summary>
     FreezeTime,
 
@@ -29,10 +32,16 @@ public static class Round
 {
     private static readonly List<Timer> RoundTimers = new();
 
-    public static RoundPhase Phase { get; internal set; } = RoundPhase.Inactive;
+    /// <summary>The authoritative round state machine (driven by the core from real game events).</summary>
+    public static RoundStateMachine Machine { get; } = new();
 
-    /// <summary>Incremented on every round_start since map start.</summary>
-    public static int Number { get; internal set; }
+    public static RoundPhase Phase => Machine.Phase;
+
+    /// <summary>Incremented on every round start since map start.</summary>
+    public static int Number => Machine.RoundNumber;
+
+    /// <summary>The cell doors were opened this round (set by the cells module via JbEvents.CellsOpened).</summary>
+    public static bool CellsOpened => Machine.CellsOpened;
 
     /// <summary>Server.CurrentTime at round_start.</summary>
     public static float StartTime { get; internal set; }
@@ -41,6 +50,9 @@ public static class Round
     public static float FreezeEndTime { get; internal set; }
 
     public static bool IsActive => Phase == RoundPhase.Active;
+
+    /// <summary>A round is being played (freeze time or active, not ended).</summary>
+    public static bool InProgress => Phase is RoundPhase.FreezeTime or RoundPhase.Active;
 
     public static bool IsOver => Phase is RoundPhase.Ended or RoundPhase.Inactive;
 

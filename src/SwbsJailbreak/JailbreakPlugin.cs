@@ -68,6 +68,10 @@ public sealed class JailbreakPlugin : BasePlugin
         AddCommand("css_jb_version", "Show SWBS Jailbreak version", OnVersionCommand);
 
         AddTimer(Math.Max(5, Config.General.DataFlushSeconds), () => Storage.Flush(), TimerFlags.REPEAT);
+        JbEvents.CellsOpened += () =>
+        {
+            if (!Round.Machine.MarkCellsOpened()) DebugLog("Round: " + Round.Machine.LastRejection);
+        };
 
         // ---- modules (discovered by reflection, sorted by Order) ----
         var types = Assembly.GetExecutingAssembly().GetTypes()
@@ -130,7 +134,10 @@ public sealed class JailbreakPlugin : BasePlugin
                 foreach (var m in _modules) Safe(m, x => x.OnPlayerConnected(p), "OnPlayerConnected");
             }
 
-            Round.Phase = RoundPhase.Active;
+            // Late load: synchronise with the real game state instead of assuming a fresh round.
+            var gr = Round.GameRules;
+            Round.Machine.Synchronise(gr == null || gr.WarmupPeriod ? RoundPhase.Inactive : gr.FreezePeriod ? RoundPhase.FreezeTime : RoundPhase.Active);
+            Round.StartTime = Server.CurrentTime;
             Round.FreezeEndTime = Server.CurrentTime;
         }
 
@@ -182,8 +189,7 @@ public sealed class JailbreakPlugin : BasePlugin
 
     private void OnMapStart(string map)
     {
-        Round.Phase = RoundPhase.Inactive;
-        Round.Number = 0;
+        Round.Machine.ResetForMap();
         Round.KillRoundTimers();
         Hud.ResetAll();
         Dispatch(m => m.OnMapStart(map), "OnMapStart");
@@ -193,7 +199,7 @@ public sealed class JailbreakPlugin : BasePlugin
     {
         Dispatch(m => m.OnMapEnd(), "OnMapEnd");
         Round.KillRoundTimers();
-        Round.Phase = RoundPhase.Inactive;
+        Round.Machine.ResetForMap();
         Cvars.RestoreAll();
         Storage.Flush();
     }
@@ -250,9 +256,34 @@ public sealed class JailbreakPlugin : BasePlugin
 
     private HookResult OnRoundStart(EventRoundStart ev, GameEventInfo info)
     {
-        Round.Number++;
+        var warmup = Round.IsWarmup;
+        var target = warmup ? RoundPhase.Inactive
+            : Round.CvarInt("mp_freezetime") > 0 ? RoundPhase.FreezeTime : RoundPhase.Active;
+        if (Round.Phase == RoundPhase.Inactive && target == RoundPhase.Inactive)
+        {
+            DebugLog("Round: warmup round_start ignored");
+            return HookResult.Continue;
+        }
+
+        if (!Round.Machine.TryTransition(target))
+        {
+            // A missed round_end (e.g. mp_restartgame) leaves us mid-round: close the old round first.
+            if (target != RoundPhase.Inactive && Round.Machine.TryTransition(RoundPhase.Ended) && Round.Machine.TryTransition(target))
+                DebugLog("Round: recovered from missing round_end");
+            else
+            {
+                Logger.LogWarning("Round state: {Reason} - round_start ignored", Round.Machine.LastRejection);
+                return HookResult.Continue;
+            }
+        }
+
+        if (Round.Phase == RoundPhase.Inactive)
+        {
+            DebugLog("Round: warmup started - jailbreak round logic paused");
+            return HookResult.Continue;
+        }
+
         Round.StartTime = Server.CurrentTime;
-        Round.Phase = Round.CvarInt("mp_freezetime") > 0 ? RoundPhase.FreezeTime : RoundPhase.Active;
         if (Round.Phase == RoundPhase.Active) Round.FreezeEndTime = Server.CurrentTime;
         Dispatch(m => m.OnRoundStart(), "OnRoundStart");
         return HookResult.Continue;
@@ -260,7 +291,12 @@ public sealed class JailbreakPlugin : BasePlugin
 
     private HookResult OnRoundFreezeEnd(EventRoundFreezeEnd ev, GameEventInfo info)
     {
-        Round.Phase = RoundPhase.Active;
+        if (!Round.Machine.TryTransition(RoundPhase.Active))
+        {
+            DebugLog("Round: " + Round.Machine.LastRejection);
+            return HookResult.Continue;
+        }
+
         Round.FreezeEndTime = Server.CurrentTime;
         Dispatch(m => m.OnRoundFreezeEnd(), "OnRoundFreezeEnd");
         return HookResult.Continue;
@@ -268,7 +304,12 @@ public sealed class JailbreakPlugin : BasePlugin
 
     private HookResult OnRoundEnd(EventRoundEnd ev, GameEventInfo info)
     {
-        Round.Phase = RoundPhase.Ended;
+        if (!Round.Machine.TryTransition(RoundPhase.Ended))
+        {
+            DebugLog("Round: " + Round.Machine.LastRejection + " - duplicate round_end ignored");
+            return HookResult.Continue;
+        }
+
         var winner = (CsTeam)ev.Winner;
         var reason = ev.Reason;
         Dispatch(m => m.OnRoundEnd(winner, reason), "OnRoundEnd");
@@ -311,6 +352,11 @@ public sealed class JailbreakPlugin : BasePlugin
         var disconnect = ev.Disconnect;
         Dispatch(m => m.OnPlayerTeam(p, oldTeam, newTeam, disconnect), "OnPlayerTeam");
         return HookResult.Continue;
+    }
+
+    public void DebugLog(string message)
+    {
+        if (Config.General.Debug) Logger.LogInformation("[debug] {Message}", message);
     }
 
     // ------------------------------------------------------------------ commands

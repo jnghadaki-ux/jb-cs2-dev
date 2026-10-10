@@ -35,6 +35,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SwbsJailbreak.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="lang\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
