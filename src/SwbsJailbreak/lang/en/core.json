@@ -1,0 +1,14 @@
+{
+  "core.no_access": "{red}You do not have access to this command.",
+  "core.reloaded": "Phrases reloaded ({0} loaded).",
+  "core.reload_hint": "Config changes apply on map change or plugin reload (css_plugins reload SwbsJailbreak).",
+  "core.target.none": "{red}No matching player found.",
+  "core.target.ambiguous": "{red}More than one player matches \"{0}\" - be more specific.",
+  "core.target.immune": "{red}You cannot target that player.",
+  "core.only_alive": "{red}You must be alive to use this.",
+  "core.only_dead": "{red}You must be dead to use this.",
+  "core.only_prisoner": "{red}Only prisoners can use this.",
+  "core.only_guard": "{red}Only guards can use this.",
+  "core.usage": "{grey}Usage: {0}",
+  "core.console_only_ingame": "This command can only be used in-game."
+}
