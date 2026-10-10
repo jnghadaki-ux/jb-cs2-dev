@@ -1,0 +1,8 @@
+{
+  "lg.enabled": "{lightred}{0} {olive}guard{1} alive at round start. {yellow}Last Guard: {green}ENABLED{olive}!",
+  "lg.disabled": "{lightred}{0} {olive}guard{1} alive at round start. {yellow}Last Guard: {red}DISABLED{olive}.",
+  "lg.is_last_guard": "{lightred}{0} {olive}is the last guard!",
+  "lg.kill_hint": "<font color='#DE2626'>{0}</font><br><font color='#6FC41A'>is last guard. Kill them!</font>",
+  "lg.wait_hint": "<font color='#6FC41A'>You have </font><font color='#DE2626'>{0}</font><font color='#6FC41A'> seconds<br>to damage the prisoners.</font>",
+  "lg.interval_hint": "<font color='#6FC41A'>You have </font><font color='#DE2626'>{0}</font><font color='#6FC41A'> seconds<br>before you're damaged again.</font>"
+}

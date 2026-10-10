@@ -1,0 +1,286 @@
+##### Mods/UltimateJailbreak
+Commands/UltJB_Command_CTBan.sp | ? | The CT Ban plugin for Ultimate Jailbreak. | lines=316 cvars=1 | cmds=sm_check_ctban,sm_ctban,sm_unctban
+Commands/UltJB_Command_CTMessage.sp | ? | Allows players to message the CT team even if that team has them gagged. | lines=132 cvars=1 | cmds=sm_g
+Commands/UltJB_Command_Freekill.sp | ? | The freekill command plugin for Ultimate Jailbreak. | lines=210 cvars=1 | cmds=sm_freekill,sm_whokilled,sm_wk
+Commands/UltJB_Command_OneUp.sp | ? | The 1up plugin for Ultimate Jailbreak. | lines=178 cvars=1 | cmds=sm_1up,sm_xup
+Commands/UltJB_Command_Roll.sp | ? | Allows players to roll a random number. | lines=66 cvars=1 | cmds=sm_roll
+Commands/UltJB_Command_Rules.sp | ? | Allows players to open the jailbreak rules page. | lines=106 cvars=3 | cmds=sm_definitions,sm_defs,sm_jbrules
+Commands/UltJB_Command_Speed.sp | ? | The speed plugin for Ultimate Jailbreak. | lines=72 cvars=1 | cmds=sm_speed
+Commands/UltJB_Command_Timer.sp | ? | Allows warden to display a countdown timer. | lines=197 cvars=1 | cmds=sm_stoptimer,sm_timer
+Commands/UltJB_Command_Xray.sp | ? | The X-ray command for Ultimate Jailbreak. | lines=313 cvars=1 | cmds=sm_xray
+Days/UltJB_Freeday_AutoBhop.sp | ? | Freeday: Auto Bhop. | lines=45 cvars=1 | cmds=
+Days/UltJB_Freeday_Classic.sp | ? | Freeday: Classic. | lines=35 cvars=1 | cmds=
+Days/UltJB_Freeday_LowGravity.sp | ? | Freeday: Low Gravity. | lines=79 cvars=1 | cmds=
+Days/UltJB_Freeday_Speed.sp | ? | Freeday: Speed. | lines=81 cvars=1 | cmds=
+Days/UltJB_Warday_CTRetake.sp | ? | Warday: CT Retake. | lines=294 cvars=2 | cmds=
+Days/UltJB_Warday_CaptureTheFlag.sp | ? | Warday: Capture the Flag. | lines=1183 cvars=6 | cmds=
+Days/UltJB_Warday_Classic.sp | ? | Warday: Classic. | lines=128 cvars=1 | cmds=
+Days/UltJB_Warday_FatKid.sp | ? | Warday: Fat Kid. | lines=84 cvars=1 | cmds=
+Days/UltJB_Warday_FreezeTag.sp | ? | Warday: Freeze Tag. | lines=483 cvars=5 | cmds=
+Days/UltJB_Warday_Gang.sp | ? | Warday: Gang. | lines=68 cvars=1 | cmds=
+Days/UltJB_Warday_HeavyAssault.sp | ? | Warday: Heavy Assault. | lines=153 cvars=1 | cmds=
+Days/UltJB_Warday_HorrorMovie.sp | ? | Warday: Horror Movie. | lines=441 cvars=1 | cmds=
+Days/UltJB_Warday_HungerGames.sp | ? | Warday: Hunger Games. | lines=235 cvars=1 | cmds=
+Days/UltJB_Warday_Jihad.sp | ? | Warday: Jihad. | lines=72 cvars=1 | cmds=
+Days/UltJB_Warday_LowGravity.sp | ? | Warday: Low Gravity. | lines=96 cvars=1 | cmds=
+Days/UltJB_Warday_NoScope.sp | ? | Warday: No Scope. | lines=82 cvars=1 | cmds=
+Days/UltJB_Warday_OneInTheChamber.sp | ? | Warday: One In The Chamber. | lines=154 cvars=1 | cmds=
+Days/UltJB_Warday_RPG.sp | ? | Warday: RPG. | lines=897 cvars=3 | cmds=
+Days/UltJB_Warday_ScoutzKnivez.sp | ? | Warday: Scoutz Knivez. | lines=97 cvars=1 | cmds=
+Days/UltJB_Warday_Taser.sp | ? | Warday: Taser. | lines=75 cvars=1 | cmds=
+Days/UltJB_Warday_ThrowingKnives.sp | ? | Warday: Throwing Knives. | lines=259 cvars=1 | cmds=
+Days/UltJB_Warday_WeaponSelection.sp | ? | Warday: Weapon Selection. | lines=121 cvars=1 | cmds=
+Days/UltJB_Warday_Zombie.sp | ? | Warday: Zombie. | lines=253 cvars=1 | cmds=
+Effects/UltJB_Effect_Drugs.sp | ? | Effect: Drugs. | lines=174 cvars=1 | cmds=
+Effects/UltJB_Effect_Drunk.sp | ? | Effect: Drunk. | lines=159 cvars=1 | cmds=
+Effects/UltJB_Effect_FarOut.sp | ? | Effect: Far Out. | lines=55 cvars=1 | cmds=
+Effects/UltJB_Effect_HeadshotsOnly.sp | ? | Effect: Headshots Only. | lines=63 cvars=1 | cmds=
+Effects/UltJB_Effect_LowGravity.sp | ? | Effect: Low Gravity. | lines=52 cvars=1 | cmds=
+Effects/UltJB_Effect_Speed.sp | ? | Effect: Speed. | lines=46 cvars=1 | cmds=
+Effects/UltJB_Effect_ThirdPerson.sp | ? | Effect: Third Person. | lines=99 cvars=1 | cmds=
+LastRequests/UltJB_LR_Contest_FallDamage.sp | ? | Last Request: Contest - Fall Damage. | lines=168 cvars=1 | cmds=
+LastRequests/UltJB_LR_Contest_FallDamage_OldSchool.sp | ? | Last Request: Contest - Fall Damage Old School. | lines=181 cvars=1 | cmds=
+LastRequests/UltJB_LR_Contest_GunToss.sp | ? | Last Request: Contest - Gun Toss. | lines=330 cvars=1 | cmds=
+LastRequests/UltJB_LR_Contest_GunToss_OldSchool.sp | ? | Last Request: Contest - Gun Toss Old School. | lines=345 cvars=1 | cmds=
+LastRequests/UltJB_LR_Contest_MostJumps.sp | ? | Last Request: Contest - Most Jumps. | lines=191 cvars=3 | cmds=
+LastRequests/UltJB_LR_Contest_Race.sp | ? | Last Request: Contest - Race. | lines=449 cvars=2 | cmds=
+LastRequests/UltJB_LR_Contest_RussianRoulette.sp | ? | Last Request: Contest - Russian Roulette. | lines=157 cvars=1 | cmds=
+LastRequests/UltJB_LR_EndRound_Draw.sp | ? | Last Request: End Round - Draw | lines=50 cvars=1 | cmds=
+LastRequests/UltJB_LR_Freeday_AutoBhop.sp | ? | Last Request: Freeday - Auto Bhop. | lines=51 cvars=1 | cmds=
+LastRequests/UltJB_LR_Freeday_Classic.sp | ? | Last Request: Freeday - Classic. | lines=37 cvars=1 | cmds=
+LastRequests/UltJB_LR_Freeday_LowGravity.sp | ? | Last Request: Freeday - Low Gravity. | lines=70 cvars=1 | cmds=
+LastRequests/UltJB_LR_Freeday_Speed.sp | ? | Last Request: Freeday - Speed. | lines=63 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_AWP.sp | ? | Last Request: Rebel - AWP | lines=66 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_CokedTaser.sp | ? | Last Request: Rebel - Coked Taser. | lines=70 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_DrugDealer.sp | ? | Last Request: Rebel - Drug Dealer. | lines=79 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_Ghost.sp | ? | Last Request: Rebel - Ghost | lines=247 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_MachineGunner.sp | ? | Last Request: Rebel - Machine Gunner. | lines=79 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_PhatKid.sp | ? | Last Request: Rebel - Phat Kid. | lines=155 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_Scout.sp | ? | Last Request: Rebel - Scout | lines=66 cvars=1 | cmds=
+LastRequests/UltJB_LR_Rebel_WildCowboy.sp | ? | Last Request: Rebel - Wild Cowboy. | lines=63 cvars=1 | cmds=
+LastRequests/UltJB_LR_WeaponBattle_Classic.sp | ? | Last Request: Weapon Battle - Classic. | lines=229 cvars=2 | cmds=
+LastRequests/UltJB_LR_WeaponBattle_KnifeBackstab.sp | ? | Last Request: Weapon Battle - Knife Backstab. | lines=193 cvars=2 | cmds=
+LastRequests/UltJB_LR_WeaponBattle_MagForMag.sp | ? | Last Request: Weapon Battle - Mag for Mag. | lines=271 cvars=2 | cmds=
+LastRequests/UltJB_LR_WeaponBattle_NoScope.sp | ? | Last Request: Weapon Battle - No Scope. | lines=228 cvars=2 | cmds=
+LastRequests/UltJB_LR_WeaponBattle_ShotForShot.sp | ? | Last Request: Weapon Battle - Shot for Shot. | lines=255 cvars=2 | cmds=
+UltJB_API_CellDoors.sp | ? | The cell doors API for Ultimate Jailbreak. | lines=735 cvars=1 | cmds=sm_celldoors_edit
+UltJB_API_Days.sp | ? | The days API for Ultimate Jailbreak. | lines=2172 cvars=4 | cmds=sm_d,sm_day,sm_daysedit,sm_de,sm_freeday,sm_warday
+UltJB_API_Effects.sp | ? | The effects plugin for Ultimate Jailbreak. | lines=590 cvars=2 | cmds=
+UltJB_API_LastRequest.sp | ? | The last request API for Ultimate Jailbreak. | lines=3985 cvars=8 | cmds=sm_abortlr,sm_givefreeday,sm_lastrequest,sm_lr,sm_lrs
+UltJB_API_WeaponSelection.sp | ? | The weapon selection plugin for Ultimate Jailbreak. | lines=1014 cvars=2 | cmds=
+UltJB_CellDoors.sp | ? | The cell doors plugin. | lines=95 cvars=2 | cmds=sm_cdo,sm_celldoors_open
+UltJB_Jihad.sp | ? | The jihad plugin for Ultimate Jailbreak. | lines=700 cvars=7 | cmds=
+UltJB_LastGuard.sp | ? | The last guard plugin for Ultimate Jailbreak. | lines=524 cvars=7 | cmds=
+UltJB_Logger.sp | ? | The logger plugin for Ultimate Jailbreak. | lines=746 cvars=1 | cmds=sm_log,sm_logs
+UltJB_MuteManager.sp | ? | The mute manager plugin for Ultimate Jailbreak. | lines=465 cvars=1 | cmds=sm_wmute
+UltJB_PlayerModels.sp | ? | The player models plugin for Ultimate Jailbreak. | lines=339 cvars=3 | cmds=
+UltJB_Points.sp | ? | The points plugin for Ultimate Jailbreak. | lines=93 cvars=1 | cmds=
+UltJB_Settings.sp | ? | The settings plugin for Ultimate Jailbreak. | lines=880 cvars=4 | cmds=
+UltJB_TeamRatio.sp | ? | The team ratio plugin for Ultimate Jailbreak. | lines=653 cvars=3 | cmds=sm_guard
+UltJB_VoiceChat.sp | ? | The voice chat plugin for Ultimate Jailbreak. | lines=290 cvars=2 | cmds=
+UltJB_Warden.sp | ? | The warden plugin for Ultimate Jailbreak. | lines=1393 cvars=3 | cmds=sm_kiss,sm_rw,sm_setw,sm_setwarden,sm_smooch,sm_sw,sm_uw,sm_w,sm_warden,sm_wwho
+UltJB_WardenMenu.sp | ? | The warden menu plugin for Ultimate Jailbreak. | lines=1001 cvars=1 | cmds=sm_cc,sm_wm
+##### Plugins
+AFKManager/AFKManager.sp | ? | Manages players that go away from keyboard. | lines=239 cvars=3 | cmds=
+AdminTags/AdminTags.sp | ? | Applies admin clan tags to the admins. | lines=83 cvars=1 | cmds=sm_admintag
+AllowMorePlayers/AllowMorePlayers.sp | Allow More Players | Allows more players to join teams. | lines=409 cvars=5 | cmds=
+AutoBhop/AutoBhop.sp | ? | Auto Bhop | lines=93 cvars=1 | cmds=
+AutoStrafe/AutoStrafe.sp | ? | Auto Strafe | lines=101 cvars=1 | cmds=
+BhopCap/BhopCap.sp | ? | Adds a speed cap to bunny hopping. | lines=115 cvars=4 | cmds=
+BhopCheck/BhopCheck.sp | ? | Bhop Check Plugin | lines=505 cvars=5 | cmds=sm_bhc,sm_bhce,sm_bhopcheck,sm_perfsound
+BlockGameStart/BlockGameStart.sp | ? | Blocks the game start OnTerminateRound reason. | lines=25 cvars=0 | cmds=
+BlockSpamMessages/BlockSpamMessages.sp | ? | Blocks many of the spam messages. | lines=53 cvars=0 | cmds=
+Blocks/Block_Arrow.sp | ? | A block type. | lines=50 cvars=1 | cmds=
+Blocks/Block_Boost.sp | ? | A block type. | lines=88 cvars=1 | cmds=
+Blocks/Block_Bunnyhop.sp | ? | A block type. | lines=161 cvars=1 | cmds=
+Blocks/Block_Camouflage.sp | ? | A block type. | lines=179 cvars=1 | cmds=
+Blocks/Block_CautionTape.sp | ? | A block type. | lines=50 cvars=1 | cmds=
+Blocks/Block_Chicken.sp | ? | A block type. | lines=307 cvars=1 | cmds=
+Blocks/Block_Death.sp | ? | A block type. | lines=59 cvars=1 | cmds=
+Blocks/Block_Freeze.sp | ? | A block type. | lines=164 cvars=1 | cmds=
+Blocks/Block_Glass.sp | ? | A block type. | lines=50 cvars=1 | cmds=
+Blocks/Block_GodMode.sp | ? | A block type. | lines=168 cvars=1 | cmds=
+Blocks/Block_Healing.sp | ? | A block type. | lines=91 cvars=1 | cmds=
+Blocks/Block_Ice.sp | ? | A block type. | lines=210 cvars=1 | cmds=
+Blocks/Block_Ladder.sp | ? | A block type. | lines=50 cvars=1 | cmds=
+Blocks/Block_Lava.sp | ? | A block type. | lines=61 cvars=1 | cmds=
+Blocks/Block_Letters.sp | ? | A block type. | lines=182 cvars=1 | cmds=
+Blocks/Block_Light.sp | ? | A block type. | lines=142 cvars=1 | cmds=
+Blocks/Block_LowGravity.sp | ? | A block type. | lines=122 cvars=1 | cmds=
+Blocks/Block_Magnet.sp | ? | A block type. | lines=133 cvars=1 | cmds=
+Blocks/Block_NoFallDamage.sp | ? | A block type. | lines=111 cvars=1 | cmds=
+Blocks/Block_Nuke.sp | ? | A block type. | lines=134 cvars=1 | cmds=
+Blocks/Block_PlatformDisappearing.sp | ? | A block type. | lines=170 cvars=1 | cmds=
+Blocks/Block_PortalDoor.sp | ? | A block type. | lines=376 cvars=1 | cmds=
+Blocks/Block_Slap.sp | ? | A block type. | lines=87 cvars=1 | cmds=
+Blocks/Block_Slime.sp | ? | A block type. | lines=120 cvars=1 | cmds=
+Blocks/Block_Speed.sp | ? | A block type. | lines=122 cvars=1 | cmds=
+Blocks/Block_TeamBarrier.sp | ? | A block type. | lines=70 cvars=1 | cmds=
+Blocks/Block_Teleport.sp | ? | A block type. | lines=486 cvars=1 | cmds=
+Blocks/Block_Train.sp | ? | A block type. | lines=804 cvars=1 | cmds=
+Blocks/Block_Trampoline.sp | ? | A block type. | lines=116 cvars=1 | cmds=
+Blocks/Block_Weapons.sp | ? | A block type. | lines=576 cvars=1 | cmds=
+ClanTagFilter/ClanTagFilter.sp | ? | Filters clan tags. | lines=88 cvars=1 | cmds=
+ClientAirAccelerate/ClientAirAccelerate.sp | ? | Allows players to have a per client air accelerate value. | lines=122 cvars=2 | cmds=
+ClientFootsteps/ClientFootsteps.sp | ? | Allows players to have a per client footsteps value. | lines=192 cvars=1 | cmds=
+CoinPoints/CoinPoints.sp | ? | Throws coins other players can pickup for points. | lines=472 cvars=1 | cmds=sm_coins
+CommandList/CommandList.sp | ? | Shows players a list of all commands they can use. | lines=77 cvars=1 | cmds=sm_commands
+CourseAutoRespawn/CourseAutoRespawn.sp | ? | Automatically respawns players on the course server. | lines=388 cvars=2 | cmds=
+CustomWeapons/RPG/CustomWeapon_RPG.sp | ? |  | lines=1188 cvars=17 | cmds=
+DeathrunQueue/DeathrunQueue.sp | ? | Adds players to a queue so everyone gets a chance to be button presser. | lines=246 cvars=1 | cmds=
+DetectTeleportHacking/DetectTeleportHacking.sp | ? | Detects teleport hacking. | lines=58 cvars=1 | cmds=
+DisableDuckDelay/DisableDuckDelay.sp | ? | Disables the delay between ducks. | lines=50 cvars=1 | cmds=
+DisableFallDrownDamage/DisableFallDrownDamage.sp | ? | Disables fall and drown damage. | lines=60 cvars=1 | cmds=
+DisableKillFeed/DisableKillFeed.sp | ? | Disables the kill feed. | lines=29 cvars=1 | cmds=
+DisablePlayerDamage/DisablePlayerDamage.sp | ? | Disables player damage. | lines=63 cvars=1 | cmds=
+DonatorItems/BodySize/DonatorItem_BodySize.sp | ? | Allows players to set their body size. | lines=239 cvars=1 | cmds=
+DonatorItems/BodyTransparency/DonatorItem_BodyTransparency.sp | ? | Allows players to have a transparent body. | lines=186 cvars=1 | cmds=
+DonatorItems/ColoredChat/DonatorItem_ColoredChat.sp | ? | Allows players to have colored chat. | lines=167 cvars=1 | cmds=
+DonatorItems/PlayerModels/DonatorItem_PlayerModels.sp | ? | Allows players to use a custom model. | lines=1385 cvars=1 | cmds=
+DonatorItems/Titles/DonatorItem_Titles.sp | ? | Gives titles to players. | lines=146 cvars=1 | cmds=
+EntityPatches/AutoUse/AutoUse.sp | ? | Automatically presses +use on hooked entities. | lines=64 cvars=1 | cmds=
+EntityPatches/DisableBhopPlatforms/DisableBhopPlatforms.sp | ? | Disables platforms from moving when a player jumps on them. | lines=54 cvars=1 | cmds=
+EntityPatches/DisableUserControlledPlatforms/DisableUserControlledPlatforms.sp | ? | Disables users from slowing down or speeding up platforms created by trains. | lines=54 cvars=1 | cmds=
+EntityPatches/FixCSGOTriggerGravity/FixCSGOTriggerGravity.sp | ? | Fix CS:GO trigger_gravity. | lines=65 cvars=1 | cmds=
+EntityPatches/FixFuncRotating/FixFuncRotating.sp | ? | Fixes func_rotating desync issue. | lines=91 cvars=1 | cmds=
+EntityPatches/FixTeleportAngles/FixTeleportAngles.sp | ? | Fixes the angles of teleport destinations. | lines=107 cvars=1 | cmds=
+EntityPatches/FixTriggerPush/FixTriggerPush.sp | ? | Fixes the trigger_push entity. | lines=611 cvars=3 | cmds=
+EntityPatches/LockState/LockState.sp | ? | Locks entities in a specific state. | lines=81 cvars=1 | cmds=
+EntityPatches/MultigamesGameSelect/MultigamesGameSelect.sp | ? | Allows marking which buttons select a game for multigame maps. | lines=277 cvars=2 | cmds=
+EntityPatches/OpenAreaportals/OpenAreaportals.sp | ? | Force opens areaportals. | lines=39 cvars=1 | cmds=
+EntityPatches/RemoveEntities/RemoveEntities.sp | ? | Allows certain entities to be removed. | lines=59 cvars=1 | cmds=
+EntityPatches/RemoveSparks/RemoveSparks.sp | ? | Removes sparks from the maps since they can cause serious FPS lag. | lines=64 cvars=1 | cmds=
+EntityPatches/TeleportStateLock/TeleportStateLock.sp | ? | Locks trigger_teleport enabled state. | lines=94 cvars=1 | cmds=
+FixCameraBug/FixCameraBug.sp | Fix camera bug | Fixes the camera bug. | lines=66 cvars=1 | cmds=
+FixGravityOnNewRound/FixGravityOnNewRound.sp | Gravity fix | gravity fix | lines=70 cvars=0 | cmds=
+FixRoundEndClassnames/FixRoundEndClassnames.sp | ? | Fixes a crash for maps that change a client's classname. | lines=33 cvars=1 | cmds=
+FootstepsMenu/FootstepsMenu.sp | ? | Allows players to toggle footsteps. | lines=92 cvars=1 | cmds=sm_footsteps
+ForceMapEnd/ForceMapEnd.sp | ? | Forces the map to end when the timelimit runs out. | lines=164 cvars=3 | cmds=
+GrenadeNoblock/GrenadeNoblock.sp | ? | Grenades will not collide with players. | lines=49 cvars=1 | cmds=
+GrenadesForSkillServers/GrenadesForSkillServers.sp | ? | Disables grenade annoyances used for skill servers. | lines=86 cvars=1 | cmds=
+Heal/Heal.sp | ? | Heals a player to full | lines=45 cvars=0 | cmds=sm_heal
+HelpMenu/HelpMenu.sp | ? | A menu that links to help web pages. | lines=202 cvars=1 | cmds=sm_helpmenu,sm_reloadhelpmenu
+HideHud/HideHud.sp | ? | Hides parts of the HUD. | lines=188 cvars=1 | cmds=sm_hh,sm_hh_unhide
+HidePlayers/HidePlayers.sp | ? | Hides other players. | lines=286 cvars=2 | cmds=sm_hide
+InfoMenus/InfoMenus.sp | ? | Menus to list URLS that can be opened | lines=200 cvars=1 | cmds=
+Information/Information.sp | ? | Shows information about the current server. | lines=46 cvars=2 | cmds=sm_info
+Jetpacks/Jetpacks.sp | ? | Lets users fly around with jetpacks | lines=141 cvars=1 | cmds=
+LogAdminActivity/LogAdminActivity.sp | ? | Logs admin activity to the database. | lines=329 cvars=1 | cmds=
+MOTD/MOTD.sp | ? | The Swoobles MOTD. | lines=132 cvars=1 | cmds=
+MagicTargetFilter/MagicTargetFilter.sp | ? | Filters magic targeting for admin commands. | lines=135 cvars=1 | cmds=
+MapArmour/MapArmour.sp | ? | A plugin to manage armour on a map-by-map basis. | lines=169 cvars=1 | cmds=sm_armour,sm_noarmour
+MapRatings/MapRatings.sp | ? | Allows players to rate maps. | lines=294 cvars=1 | cmds=
+MapStats/MapStats.sp | ? | Allows users to see map stats. | lines=66 cvars=1 | cmds=sm_maptime
+MapVoting/MapVoting.sp | ? | A better map voting system. | lines=2719 cvars=17 | cmds=sm_nextmap,sm_nom,sm_nominate,sm_revote,sm_rockthevote,sm_rtv,sm_setnextmap,sm_timeleft
+MeasureGap/MeasureGap.sp | ? | Measures the distance between 2 points via a menu | lines=215 cvars=0 | cmds=sm_gap,sm_measure
+MinigamesAutoBhop/MinigamesAutoBhop.sp | ? | Enables auto bhop on the bhop levels. | lines=391 cvars=1 | cmds=sm_setbhopname,sm_setbhopteam,sm_showteleportnames
+MovementStyles/Style_AutoBhop.sp | ? | Style: Auto Bhop. | lines=49 cvars=1 | cmds=
+MovementStyles/Style_AutoStrafe.sp | ? | Style: Auto Strafe. | lines=83 cvars=3 | cmds=
+MovementStyles/Style_BackwardOnly.sp | ? | Style: Backward Only. | lines=60 cvars=1 | cmds=
+MovementStyles/Style_Backwards.sp | ? | Style: Backwards | lines=131 cvars=3 | cmds=
+MovementStyles/Style_BumpMines.sp | ? | Style: Bump Mines. | lines=333 cvars=3 | cmds=
+MovementStyles/Style_ForceAutoBhop.sp | ? | Style: Force Auto Bhop. | lines=71 cvars=2 | cmds=
+MovementStyles/Style_ForwardOnly.sp | ? | Style: Forward Only. | lines=104 cvars=3 | cmds=
+MovementStyles/Style_HalfSidewaysBhopOnly.sp | ? | Style: Half Sideways Bhop Only. | lines=109 cvars=3 | cmds=
+MovementStyles/Style_HighFOV.sp | ? | Style: High FOV | lines=111 cvars=4 | cmds=
+MovementStyles/Style_Legit.sp | ? | Style: Legit. | lines=44 cvars=2 | cmds=
+MovementStyles/Style_LowFOV.sp | ? | Style: Low FOV | lines=111 cvars=4 | cmds=
+MovementStyles/Style_LowGravity.sp | ? | Style: Low Gravity. | lines=124 cvars=3 | cmds=
+MovementStyles/Style_NoLandCap.sp | ? | Style: No Landing Cap. | lines=139 cvars=1 | cmds=
+MovementStyles/Style_NoSpeedCap.sp | ? | Style: No Speed Cap. | lines=27 cvars=1 | cmds=
+MovementStyles/Style_OneStrafeOnly.sp | ? | Style: One Strafe Only | lines=139 cvars=3 | cmds=
+MovementStyles/Style_Parkour.sp | ? | Style: Parkour. | lines=420 cvars=3 | cmds=
+MovementStyles/Style_ProTimer.sp | ? | Style: Pro Timer. | lines=27 cvars=1 | cmds=
+MovementStyles/Style_RocketJump.sp | ? |  | lines=156 cvars=3 | cmds=
+MovementStyles/Style_SetDefaultStyle.sp | ? | Style: Set default style. | lines=27 cvars=1 | cmds=
+MovementStyles/Style_SidewaysBhopOnly.sp | ? | Style: Sideways Bhop Only. | lines=142 cvars=5 | cmds=
+MovementStyles/Style_SimpleKZ.sp | ? | Style: SimpleKZ. | lines=384 cvars=1 | cmds=
+MovementStyles/Style_StockCap.sp | ? | Style: Stock Cap | lines=56 cvars=1 | cmds=
+MovementStyles/Style_StrafeOnly.sp | ? | Style: Strafe Only. | lines=79 cvars=2 | cmds=
+MovementStyles/Style_TAS.sp | ? |  | lines=193 cvars=1 | cmds=sm_tas
+MovementStyles/Style_ThirdPerson.sp | ? |  | lines=150 cvars=3 | cmds=
+MovementStyles/Style_Vanilla.sp | ? | Style: Vanilla Movement. | lines=252 cvars=1 | cmds=
+MultigamesQueue/MultigamesQueue.sp | ? | Adds players to a queue so everyone gets a chance to select a multigame. | lines=163 cvars=1 | cmds=
+NoBlock/hlstriker_noblock.sp | Noblock | Hlstrikers noblock. | lines=136 cvars=2 | cmds=
+NoScopeRounds/NoScopeRounds.sp | ? | Allows a chance for the round to be noscope only. | lines=158 cvars=2 | cmds=
+NoTextSpam/NoTextSpam.sp | ? | Stops players from spamming text. | lines=123 cvars=1 | cmds=
+Noclip/Noclip.sp | ? | Allows non-admin players to noclip | lines=46 cvars=0 | cmds=sm_nc,sm_p
+Parachute/Parachute.sp | ? | Give players parachutes. | lines=219 cvars=1 | cmds=sm_giveparachute,sm_removeparachute
+PlayerModelsForSkillServers/PlayerModelsForSkillServers.sp | ? | Uses old player models to fix the landing view bob. | lines=185 cvars=1 | cmds=sm_bobfix
+PreStrafe/PreStrafe.sp | ? | Prestrafing. | lines=430 cvars=3 | cmds=
+RadioSpamBlock/radio_spam_block.sp | Radio Spam Block | Blocks radio command spam | lines=71 cvars=1 | cmds=
+Respawn/Respawn.sp | ? | Allows admins to respawn dead players. | lines=182 cvars=1 | cmds=sm_respawn
+RotatingMessages/RotatingMessages.sp | Rotating Messages | Shows messages to the players | lines=209 cvars=2 | cmds=sm_reloadmessages
+ServerNeed/ServerNeed.sp | ? | Notifies systems a server needs more players. | lines=288 cvars=6 | cmds=sm_need,sm_needsub,sm_sub
+ServerRules/ServerRules.sp | ? | Displays the server rules to players. | lines=47 cvars=2 | cmds=sm_rules
+ShowForumThreads/ShowForumThreads.sp | ? | Shows the latest forum threads. | lines=170 cvars=2 | cmds=sm_read
+ShowSpectators/ShowSpectators.sp | Show Spectators | Shows who is spectating a specific player. | lines=161 cvars=1 | cmds=sm_speclist
+SkillServerWeapons/SkillServerWeapons.sp | ? | Skill server weapons. | lines=874 cvars=2 | cmds=sm_gun,sm_guns,sm_knife,sm_knives,sm_weapon,sm_weapons,sm_ws
+SkinsForMapWeapons/SkinsForMapWeapons.sp | ? | Allows players to use their skins on map spawned weapons. | lines=268 cvars=2 | cmds=
+SpectateMenu/SpectateMenu.sp | ? | Allows players to use a menu to spectate other players. | lines=150 cvars=1 | cmds=sm_specmenu
+SteamIdToConsole/SteamIdToConsole.sp | ? | Displays Steam ID to console when a client disconnects or name changes. | lines=56 cvars=0 | cmds=
+StopMapMusic/StopMapMusic.sp | ? | Stops music from playing from the map. | lines=324 cvars=1 | cmds=sm_music,sm_pitch,sm_stopmusic,sm_stopsound,sm_volume
+StopWeaponSounds/StopWeaponSounds.sp | ? | Allows players to stop hearing weapon sounds. | lines=123 cvars=1 | cmds=sm_stopsound
+StoreItems/BulletTracers/Item_BulletTracers.sp | ? | Allows players to have bullet tracers. | lines=282 cvars=1 | cmds=
+StoreItems/Equipment/Item_Equipment.sp | ? | Allows players to attach equipment to themselves. | lines=343 cvars=1 | cmds=
+StoreItems/EquipmentColors/Item_EquipmentColors.sp | ? | Allows players to add colors to their equipment. | lines=104 cvars=1 | cmds=
+StoreItems/EquipmentEffects/Item_EquipmentEffects.sp | ? | Allows players to add effects to their equipment. | lines=343 cvars=1 | cmds=
+StoreItems/GrenadeSounds/Item_GrenadeSounds.sp | ? | Allows players to add custom sounds to their grenades. | lines=174 cvars=1 | cmds=
+StoreItems/KillEffects/Item_KillEffects.sp | ? | Allows players to have kill effects. | lines=274 cvars=1 | cmds=
+StoreItems/KillSounds/Item_KillSounds.sp | ? | Allows players to have kill sounds. | lines=247 cvars=1 | cmds=
+StoreItems/Paintballs/Item_Paintballs.sp | ? | Allows players to shoot paintballs. | lines=172 cvars=1 | cmds=
+StoreItems/PlayerEffects/Item_PlayerEffects.sp | ? | Allows players to add effects to themselves. | lines=437 cvars=1 | cmds=
+Teamswitch/Teamswitch.sp | TeamSwitch | switch people to the other team now, at round end, on death | lines=279 cvars=1 | cmds=sm_teamswitch,sm_teamswitch_death,sm_teamswitch_roundend,sm_ts,sm_tsd,sm_tsr
+ThrowingKnife/ThrowingKnife.sp | Throwing Knives | Throwing Knives. | lines=187 cvars=1 | cmds=
+TimedMuteGag/TimedMuteGag.sp | ? | Allows admins to mute and gag players for a certain time. | lines=631 cvars=1 | cmds=sm_check_gag,sm_check_mute,sm_check_silence,sm_timed_gag,sm_timed_mute,sm_timed_silence,sm_timed_ungag,sm_timed_unmute,sm_timed_unsilence
+TokensUpdate/TokensUpdate.sp | ? | Updates tokens using various token sites. | lines=571 cvars=2 | cmds=
+UnlimitedReserveAmmo/UnlimitedReserveAmmo.sp | ? | Allows players to have unlimited reserve ammo. | lines=50 cvars=1 | cmds=
+Unsafe/Unsafe_Gloves.sp | ? | Allows players to select gloves. | lines=578 cvars=1 | cmds=sm_glove,sm_gloves
+Unsafe/Unsafe_Knives.sp | ? | Allows players to use the CS:GO knives. | lines=414 cvars=1 | cmds=sm_knife,sm_knives
+Unsafe/Unsafe_WeaponSkins.sp | ? | Allows players to select weapon skins. | lines=2616 cvars=2 | cmds=sm_paints,sm_showskin,sm_ss,sm_ws,sm_wskins
+UserPoints/UserPoints.sp | ? | Gives users points. | lines=517 cvars=12 | cmds=sm_clantag,sm_credits,sm_points,sm_tag
+UserPointsForMinigamesWinner/UserPointsForMinigamesWinner.sp | ? | Gives points to the winner of the minigames stage. | lines=112 cvars=1 | cmds=
+UserStats/UserStats.sp | ? | Allows users to see each others stats. | lines=267 cvars=1 | cmds=sm_rank,sm_ranks
+ZoneTypes/ZoneType_Blockade.sp | ? | A zone type of blockade. | lines=401 cvars=1 | cmds=
+ZoneTypes/ZoneType_DamageBlocker.sp | ? | A zone type that blocks different forms of damage. | lines=176 cvars=1 | cmds=
+ZoneTypes/ZoneType_Flashlight.sp | ? | A zone type of flashlight. | lines=100 cvars=1 | cmds=
+ZoneTypes/ZoneType_HideToggle.sp | ? | A zone type of hide toggle. | lines=102 cvars=1 | cmds=
+ZoneTypes/ZoneType_Kill.sp | ? | A zone type of kill. | lines=280 cvars=1 | cmds=
+ZoneTypes/ZoneType_Named.sp | ? | A zone type of named. | lines=136 cvars=1 | cmds=
+ZoneTypes/ZoneType_Respawn.sp | ? | A zone type of respawn. | lines=97 cvars=1 | cmds=
+ZoneTypes/ZoneType_Teleport.sp | ? | A zone type of teleport. | lines=332 cvars=1 | cmds=
+ZoneTypes/ZoneType_WeaponStrip.sp | ? | A zone type that strips the clients weapon. | lines=85 cvars=1 | cmds=
+##### Libraries
+Admins/API_Admins.sp | ? | An API to handle admins. | lines=114 cvars=1 | cmds=
+BlockMaker/API_BlockMaker.sp | ? | An API for managing blocks. | lines=2452 cvars=4 | cmds=sm_badd,sm_bclosest,sm_bcopy,sm_bdel,sm_bedit,sm_blockmaker,sm_bm,sm_btype
+ClientCookies/API_ClientCookies.sp | ? | An API to handle client cookies. | lines=254 cvars=1 | cmds=
+ClientSettings/API_ClientSettings.sp | ? | An API to handle clients settings. | lines=300 cvars=1 | cmds=
+ClientTimes/API_ClientTimes.sp | ? | An API to handle clients times in the server. | lines=471 cvars=1 | cmds=
+DatabaseBridge/API_DatabaseBridge.sp | ? | An API to manage the bridge to the database. | lines=78 cvars=2 | cmds=
+DatabaseCore/API_DatabaseCore.sp | ? | An API to manage core database functions. | lines=408 cvars=1 | cmds=
+DatabaseMapSessions/API_DatabaseMapSessions.sp | ? | An API to manage the map sessions in the database. | lines=122 cvars=1 | cmds=
+DatabaseMapStats/API_DatabaseMapStats.sp | ? | An API to manage the map stats in the database. | lines=199 cvars=1 | cmds=
+DatabaseMaps/API_DatabaseMaps.sp | ? | An API to manage the maps in the database. | lines=266 cvars=1 | cmds=
+DatabaseServers/API_DatabaseServers.sp | ? | An API to manage the servers in the database. | lines=216 cvars=3 | cmds=
+DatabaseUserBans/API_DatabaseUserBans.sp | ? | An API to manage the user bans in the database. | lines=213 cvars=1 | cmds=
+DatabaseUserSessions/API_DatabaseUserSessions.sp | ? | An API to manage the user sessions in the database. | lines=184 cvars=1 | cmds=
+DatabaseUserStats/API_DatabaseUserStats.sp | ? | An API to manage the user stats in the database. | lines=346 cvars=1 | cmds=
+DatabaseUsernameStats/API_DatabaseUsernameStats.sp | ? | An API to manage the username stats in the database. | lines=118 cvars=1 | cmds=
+DatabaseUsers/API_DatabaseUsers.sp | ? | An API to manage the users in the database. | lines=353 cvars=1 | cmds=
+DemoSessions/API_DemoSessions.sp | ? | An API to manage demos. | lines=214 cvars=1 | cmds=
+Donators/API_Donators.sp | ? | An API to manage donators. | lines=692 cvars=1 | cmds=sm_credits,sm_d,sm_donate,sm_donator,sm_models,sm_points,sm_shop,sm_skins,sm_store
+EntityHooker/API_EntityHooker.sp | ? | An API to hook entities. | lines=1157 cvars=1 | cmds=sm_enthook
+FileDownloader/API_FileDownloader.sp | ? | An API to download files. | lines=542 cvars=1 | cmds=
+MapCookies/API_MapCookies.sp | ? | An API to handle map cookies. | lines=215 cvars=1 | cmds=
+ModelSkinManager/API_ModelSkinManager.sp | ? | An API to manage player models and skins. | lines=947 cvars=2 | cmds=
+MovementStyles/API_MovementStyles.sp | ? | An API to manage movement styles. | lines=726 cvars=1 | cmds=sm_mode,sm_style,sm_styles
+ParticleManager/API_ParticleManager.sp | ? | An API to manage particle systems. | lines=666 cvars=1 | cmds=
+PathPoints/API_PathPoints.sp | ? | An API for managing path points. | lines=1247 cvars=1 | cmds=sm_pathpoints
+PlayerChat/API_PlayerChat.sp | ? | An API to manage players chat. | lines=656 cvars=5 | cmds=
+Replays/API_Replays.sp | ? | Replays API. | lines=211 cvars=0 | cmds=
+SquelchManager/API_SquelchManager.sp | ? | An API to manage users squelches. | lines=1722 cvars=3 | cmds=sm_ms,sm_sg,sm_sm,sm_votesg,sm_votesm
+Store/API_Store.sp | ? | An API for the store. | lines=1279 cvars=2 | cmds=sm_models,sm_shop,sm_skins,sm_store
+TimedPunishments/API_TimedPunishments.sp | ? | An API to handle timed punishments. | lines=630 cvars=1 | cmds=sm_check_tp
+UserLogs/API_UserLogs.sp | ? | An API to manage user logs in the database. | lines=122 cvars=1 | cmds=
+WebPageViewer/API_WebPageViewer.sp | ? | An API to let users view web pages. | lines=139 cvars=1 | cmds=
+ZoneManager/API_ZoneManager.sp | ? | An API to manage the zone plugins. | lines=3228 cvars=2 | cmds=sm_showtriggernames,sm_zm,sm_zonemanager

@@ -1,0 +1,10 @@
+{
+  "mute.notice_generic": "{red}Your microphone is muted right now. Possible Reasons: Talking over Warden, Admin Muted, Timed Muted, Dead",
+  "mute.notice_prisoner_time": "{red}Your microphone is muted right now. T's are muted for the first 60 seconds of the round.",
+  "mute.prisoners_muted": "{olive}The prisoners have been muted for {lightred}{0} {olive}seconds.",
+  "mute.prisoners_may_speak": "{olive}The prisoners may now speak quietly.",
+  "mute.must_be_warden": "{red}You must be warden to use this command.",
+  "mute.wmute_inactive": "{yellow}Warden Mute Powers:{lightred} INACTIVE",
+  "mute.wmute_active": "{yellow}Warden Mute Powers:{lime} ACTIVE",
+  "mute.hud": "<font class='fontSize-l' color='#6FC41A'>Mute power:</font> <font class='fontSize-l' color='{0}'>{1}</font><br><font class='fontSize-s' color='#999999'>When you speak you will mute<br>everyone while power is above 0.</font>"
+}

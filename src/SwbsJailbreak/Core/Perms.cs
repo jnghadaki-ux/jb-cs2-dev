@@ -18,8 +18,8 @@ public static class Perms
     {
         ["admin"] = "@css/generic",          // basic admin: see admin chat, logs, use !admin menu
         ["warden.manage"] = "@css/generic",  // force/remove warden
-        ["cells"] = "@css/generic",          // open/close cells, cell door editor
-        ["cells.edit"] = "@css/config",      // save per-map cell configs
+        ["cells"] = "@css/root",             // sm_celldoors_open / sm_cdo (original: ADMFLAG_ROOT)
+        ["cells.edit"] = "@css/root",        // sm_celldoors_edit + save (original: ADMFLAG_ROOT)
         ["ctban"] = "@css/ban",              // CT ban/unban
         ["ctban.permanent"] = "@css/unban",  // permanent CT bans / unban others' bans
         ["days"] = "@css/generic",           // force-start / stop days
