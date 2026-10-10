@@ -5,7 +5,7 @@ FEATURE_INVENTORY.md only after its row below passed on a real server.
 
 ## 1. Level 1 — automated (done by every build)
 
-`dotnet test -c Release` → 21 tests: round state machine (legal/illegal transitions, duplicate round_end/round_start
+`dotnet test -c Release` → 35 tests: round state machine (legal/illegal transitions, duplicate round_end/round_start
 rejection, map reset, resync), storage round-trip, target matching (@prisoners, #userid, partial names), config defaults.
 Status: **passing** (session 2).
 
@@ -64,6 +64,7 @@ Status: **passing** (session 2).
 
 ### Admin / extras
 27. `!admin` menu; slap/slay/beacon/freeze/burn/blind/drug/noclip/give/hp/respawn/team; mute/gag/silence + timed; ban/unban/kick; `!rr`.
+27b. `!commands` as a normal player (no admin commands listed, pages with Next/Back), as an admin (admin commands appear), `!commands console` (full list in the console), and `css_commands` from the server console (everything).
 28. Commands: `!g`, `!freekill`, `!wk`, `!1up`, `!roll`, `!jbrules`, `!speed`, `!timer`, `!xray`, `!bhc`, `!admintag`, `!points`.
 
 ### Robustness

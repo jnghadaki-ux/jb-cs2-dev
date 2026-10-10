@@ -20,7 +20,7 @@ _Updated: end of session 3 (2026-10-10), v0.10.0, branch `claude/swbs-jailbreak-
 3. **RPG warday on CSS 1.0.368** — launcher = real gun with bullet damage blocked; rocket flies to the shot's
    `bullet_impact` point (engine trace); `weapon_accuracy_nospread 1` during the day (restore after). Acceptance: day
    registers, rockets explode at real impact points, build 0/0, FEATURE_INVENTORY row → Implemented, unverified.
-4. Small server plugins (FEATURE_GAPS.md "Not ported yet"): UnlimitedReserveAmmo (500 reserve on reload),
+4. Small server plugins (FEATURE_GAPS.md "Not ported yet"; CommandList is done): UnlimitedReserveAmmo (500 reserve on reload),
    DisableFallDrownDamage (block fall/drown damage + sounds), FixGravityOnNewRound, MapArmour, Parachute, then AFK,
    rotating messages, rules/help menus, spectate menu, radio/text spam.
 5. Before "finished": validate admin + JB commands vs CS2-SimpleAdmin / eGo / destoer JB; research CS:GO/CS:S JB

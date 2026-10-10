@@ -1,6 +1,8 @@
 # Changelog
 
 ## 0.10.0 — .NET 8 only (session 3, 2026-10-10) — not yet verified on a live server
+### Added
+- `!commands` (CommandList, `sm_commands`): menu of the commands the player may use, `!commands console` prints the full list to the console. Gates come from [RequiresPermissions] and an IL scan of each command (incl. same-class helpers); 14 new unit tests.
 ### Changed
 - Target `net8.0` only, against CounterStrikeSharp.API 1.0.368 (owner directive); the net10 build, its package and all
   `NET10_0_OR_GREATER` trace code were removed. `build.sh`/`build.ps1` produce one `SwbsJailbreak-<ver>-net8.zip`.

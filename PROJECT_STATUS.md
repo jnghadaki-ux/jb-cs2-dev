@@ -41,12 +41,12 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 
 | Item | Count |
 |---|---|
-| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 29 / 15 / 66 / ~23,000 |
-| Console commands + aliases registered (`[ConsoleCommand]`) | 135 (Admin 71, Commands 14, Warden 12, LastRequest 8, Days 7, Cells 7, Extras 5, Teams 4, Logger 4, Mute 2, PlayerExtras 1) |
-| Chat/HUD phrases (17 files) | 577 defined; every literal phrase key used in code resolves |
+| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 30 / 15 / 67 / ~23,500 |
+| Console commands + aliases registered (`[ConsoleCommand]`) | 136 (Admin 71, Commands 14, Warden 12, LastRequest 8, Days 7, Cells 7, Extras 6, Teams 4, Logger 4, Mute 2, PlayerExtras 1) |
+| Chat/HUD phrases (17 files) | 581 defined; every literal phrase key used in code resolves |
 | LRs / days / effects / admin+fun command groups | 25 / 23 (22 usable) / 6 (+1 unsupported) / see Admin |
 | Original UJB sources (81): usable in code | 79 (70 Implemented-unverified + 9 Partial); 1 Blocked, 1 Unsupported |
-| Automated tests | 21 passing (round state machine, config, storage, phrases, targets, weapons, perms); **0 in-game / server tests** |
+| Automated tests | 35 passing (round state machine, config, storage, phrases, targets, weapons, perms, command catalogue + permission gates, no duplicate command names); **0 in-game / server tests** |
 
 SMPlugins source coverage (390 `.sp`): see FEATURE_INVENTORY.md §4.
 
