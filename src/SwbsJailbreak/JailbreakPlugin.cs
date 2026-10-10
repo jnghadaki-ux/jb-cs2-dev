@@ -56,6 +56,7 @@ public sealed class JailbreakPlugin : BasePlugin
         RegisterListener<Listeners.OnTick>(OnTick);
         RegisterListener<Listeners.OnPlayerButtonsChanged>(OnPlayerButtonsChanged);
         RegisterListener<Listeners.OnPlayerTakeDamagePre>(DamageService.OnPlayerTakeDamagePre);
+        RegisterListener<Listeners.CheckTransmit>(Glow.OnCheckTransmit);
         RegisterEventHandler<EventRoundPrestart>(OnRoundPrestart);
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventRoundFreezeEnd>(OnRoundFreezeEnd);
@@ -151,6 +152,7 @@ public sealed class JailbreakPlugin : BasePlugin
             Safe(_modules[i], m => m.OnUnload(hotReload), "OnUnload");
         _modules.Clear();
         Round.KillRoundTimers();
+        Glow.RemoveAll();
         WeaponService.Clear();
         DamageService.Clear();
         Cvars.RestoreAll();
