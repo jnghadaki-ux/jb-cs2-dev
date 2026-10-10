@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
-# Builds SwbsJailbreak and produces a drop-in server package:
-#   artifacts/SwbsJailbreak/addons/counterstrikesharp/plugins/SwbsJailbreak/...
-#   artifacts/SwbsJailbreak-<version>.zip
-# Requires the .NET 10 SDK (CounterStrikeSharp 1.0.376 targets net10.0).
+# Builds SwbsJailbreak for both supported CounterStrikeSharp lines and produces drop-in server packages:
+#   artifacts/SwbsJailbreak-<version>-net10.zip  -> CounterStrikeSharp 1.0.370 .. 1.0.376 (.NET 10)  [recommended]
+#   artifacts/SwbsJailbreak-<version>-net8.zip   -> CounterStrikeSharp <= 1.0.368 (.NET 8)
+# Each zip contains  addons/counterstrikesharp/plugins/SwbsJailbreak/...  ready to copy into game/csgo/.
+# Requires the .NET 10 SDK (it can also build the net8.0 target).
 set -euo pipefail
 cd "$(dirname "$0")"
 CONFIG="${1:-Release}"
-OUT="artifacts/SwbsJailbreak"
-PLUGIN_DIR="$OUT/addons/counterstrikesharp/plugins/SwbsJailbreak"
+VERSION=$(grep -oP 'PluginVersion = "\K[^"]+' src/SwbsJailbreak/JailbreakPlugin.cs || echo dev)
 
 rm -rf artifacts
 dotnet build src/SwbsJailbreak/SwbsJailbreak.csproj -c "$CONFIG"
-mkdir -p "$PLUGIN_DIR"
-BIN="src/SwbsJailbreak/bin/$CONFIG/net10.0"
-cp "$BIN/SwbsJailbreak.dll" "$PLUGIN_DIR/"
-[ -f "$BIN/SwbsJailbreak.pdb" ] && cp "$BIN/SwbsJailbreak.pdb" "$PLUGIN_DIR/"
-[ -f "$BIN/SwbsJailbreak.deps.json" ] && cp "$BIN/SwbsJailbreak.deps.json" "$PLUGIN_DIR/"
-cp -r "$BIN/lang" "$PLUGIN_DIR/"
-# Optional example configs / map data shipped with the plugin
-if [ -d package ]; then cp -r package/. "$OUT/"; fi
 
-VERSION=$(grep -oP 'PluginVersion = "\K[^"]+' src/SwbsJailbreak/JailbreakPlugin.cs || echo dev)
-(cd artifacts && if command -v zip >/dev/null; then zip -qr "SwbsJailbreak-$VERSION.zip" SwbsJailbreak; else python3 -c "import shutil; shutil.make_archive('SwbsJailbreak-$VERSION','zip','.','SwbsJailbreak')"; fi)
-echo "Package: artifacts/SwbsJailbreak-$VERSION.zip"
+for TFM in net10.0 net8.0; do
+  TAG="${TFM%%.*}"                      # net10 / net8
+  OUT="artifacts/$TAG"
+  PLUGIN_DIR="$OUT/addons/counterstrikesharp/plugins/SwbsJailbreak"
+  BIN="src/SwbsJailbreak/bin/$CONFIG/$TFM"
+  mkdir -p "$PLUGIN_DIR"
+  cp "$BIN/SwbsJailbreak.dll" "$PLUGIN_DIR/"
+  [ -f "$BIN/SwbsJailbreak.pdb" ] && cp "$BIN/SwbsJailbreak.pdb" "$PLUGIN_DIR/"
+  [ -f "$BIN/SwbsJailbreak.deps.json" ] && cp "$BIN/SwbsJailbreak.deps.json" "$PLUGIN_DIR/"
+  cp -r "$BIN/lang" "$PLUGIN_DIR/"
+  if [ -d package ]; then cp -r package/. "$OUT/"; fi
+  ZIP="SwbsJailbreak-$VERSION-$TAG.zip"
+  (cd "$OUT" && if command -v zip >/dev/null; then zip -qr "../$ZIP" addons; else python3 -c "import shutil; shutil.make_archive('../SwbsJailbreak-$VERSION-$TAG','zip','.','addons')"; fi)
+  echo "Package: artifacts/$ZIP"
+done
