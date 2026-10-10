@@ -32,6 +32,9 @@ public class CommandCatalogTests
     [InlineData("mute", "mute")]          // thin wrapper: the check lives in CommCommand
     [InlineData("timebomb", "slay")]      // thin wrapper: the check lives in BombCommand
     [InlineData("ctf_setflag", "zones")]  // thin wrapper: the check lives in SetPoint
+    [InlineData("open", "cells.open")]    // admin !open / !o
+    [InlineData("o", "cells.open")]
+    [InlineData("cdo", "cells")]          // original root-only command is unchanged
     public void AdminCommands_AreGatedByTheirCapability(string name, string capability)
     {
         var e = Catalogue().FirstOrDefault(x => x.Name == name || x.Aliases.Contains(name));
@@ -75,5 +78,12 @@ public class CommandCatalogTests
             Assert.DoesNotContain('>', d);
             Assert.DoesNotContain('&', d);
         }
+    }
+
+    [Fact]
+    public void OpenCapability_IsABasicAdminFlag_WhileTheOriginalStaysRoot()
+    {
+        Assert.Equal("@css/generic", Perms.Defaults["cells.open"]);
+        Assert.Equal("@css/root", Perms.Defaults["cells"]);
     }
 }

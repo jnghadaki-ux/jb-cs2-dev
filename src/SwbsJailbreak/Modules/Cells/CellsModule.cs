@@ -17,6 +17,9 @@ public sealed class CellsConfig
     /// <summary>ultjb_cell_door_open_time (min 1): seconds after round_start before the cells open automatically.</summary>
     public float OpenTime { get; set; } = 60f;
 
+    /// <summary>ADDITION: seconds between uses of the admin !open / !o command.</summary>
+    public float AdminOpenCooldown { get; set; } = 3f;
+
     /// <summary>ultjb_cell_doors_autodetect: find doors heuristically when a map has no JSON and no matching original list.</summary>
     public bool AutoDetect { get; set; } = true;
 

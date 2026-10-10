@@ -68,5 +68,7 @@
   "wm.cells.already": "{olive}The cells are already open.",
   "wm.cells.failed": "{red}The cell doors could not be opened.",
   "wm.color.set.hint": "Your color has been set to<br><font color='{0}'>{1}</font>.",
-  "wm.color.removed.hint": "Your color has been removed."
+  "wm.color.removed.hint": "Your color has been removed.",
+  "warden.selected.auto": "{lightred}{0} {olive}was automatically selected as warden because nobody queued.",
+  "warden.bonus": "{olive}Few guards left: you gained {lightred}+{0} HP {olive}and {lightred}+{1} armor {olive}as warden ({2} guards alive)."
 }

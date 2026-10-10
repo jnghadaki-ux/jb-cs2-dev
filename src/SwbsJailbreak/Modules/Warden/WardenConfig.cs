@@ -11,6 +11,28 @@ public sealed class WardenConfig
     /// <summary>ultjb_warden_select_time_initial: countdown before the first warden of the round (min 1).</summary>
     public int SelectTimeInitial { get; set; } = 10;
 
+    /// <summary>
+    /// ADDITION: auto warden. When nobody queued with !w (or the queue holds nobody eligible) the countdown still ends
+    /// with a guard being picked automatically. false = only players who queued can become warden.
+    /// </summary>
+    public bool AutoWarden { get; set; } = true;
+
+    /// <summary>"roundrobin" (original: the guard who has waited longest) or "random".</summary>
+    public string AutoWardenMode { get; set; } = "roundrobin";
+
+    /// <summary>
+    /// ADDITION: warden bonus while guards are few. With at most BonusMaxGuards guards alive the warden gets one "step" per
+    /// guard below the limit + 1 (2 max guards: 2 alive = 1 step, 1 alive = 2 steps), so the bonus stacks as guards die.
+    /// With more guards alive the warden has no bonus at all.
+    /// </summary>
+    public bool BonusEnabled { get; set; } = true;
+    public int BonusMaxGuards { get; set; } = 2;
+    public int BonusHpPerStep { get; set; } = 25;
+    public int BonusArmorPerStep { get; set; } = 25;
+
+    /// <summary>Speed multiplier added per step (0 = off), e.g. 0.05 = +5 % per step.</summary>
+    public float BonusSpeedPerStep { get; set; } = 0f;
+
     /// <summary>Warden model (original ctm_heavy.mdl). Empty = do not change the model. Must be a CS2 .vmdl.</summary>
     public string WardenModel { get; set; } = "characters/models/ctm_heavy/ctm_heavy.vmdl";
 

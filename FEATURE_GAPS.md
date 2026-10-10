@@ -34,28 +34,28 @@ original SMPlugins, so each is an optional addition; adopt by owner choice and m
 | # | eGo feature | What it does | Ours today | Effort |
 |---|---|---|---|---|
 | 1 | Rebel tracking (`Rebel`) | T who hurt a CT outside an LR is marked a rebel (turns red for a set time), pardon by warden/admin; Last Guard marks all Ts rebels | none (only LR "Rebel" categories) | M |
-| 2 | Warden `!open` / `!o` | warden opens cells with cooldown + delay, reports prisoners still inside | root-only `!cdo` | S |
+| 2 | Warden `!open` / `!o` | eGo: warden opens cells | **Done as ADMIN-ONLY** (owner decision): `!open` / `!o`, capability `cells.open` = @css/generic, cooldown `Cells.AdminOpenCooldown`; root-only `!cdo` unchanged | done |
 | 3 | `!pass <player>` / `!fire` | warden hands warden to a chosen player; admin forces a pass | `!uw`, admin `!rw` | S |
 | 4 | `!peace [seconds]` | only the warden may talk for N seconds | none | S |
 | 5 | `!count` | counts prisoners inside the warden's marker | none | S |
 | 6 | Special treatment `!st` / `!treat` | warden flags a prisoner as privileged (exempt from rebel rules, icon) | none | M |
 | 7 | `!chicken`, `!soccer` / `!spawnball` | warden spawns a chicken / a soccer ball (capped) | none | S |
-| 8 | Auto warden `!aw`, queue "favor" | auto-assign a warden after a delay; players who went rounds without warden get priority | FIFO queue + selection timer | S |
-| 9 | Warden bonuses | extra HP/armor, kill sound, auto-snitch on rebels | heavy model + clan tag only | S |
+| 8 | Auto warden, queue "favor" | auto-assign a warden when nobody queued | **Done**: `Warden.AutoWarden` (default on) + `AutoWardenMode` roundrobin/random; the original already fell back to a round-robin guard. Queue "favor" not done | done / favor open |
+| 9 | Warden bonuses | extra HP/armor | **Done, only with few guards** (owner rule): with ≤ `Warden.BonusMaxGuards` (2) guards alive, +`BonusHpPerStep`/`BonusArmorPerStep` per step (2 alive = 1 step, 1 alive = 2 steps, stacks as guards die; optional speed); none above the limit | done |
 | 10 | Marker shapes + customization | 10 shapes (circle…star, heart, jelly bean, among-us), 9 colours, resizable, `!markertype` / `!markercolor` | rings (4 colours, sizes) + pointer/line | M |
 | 11 | Warden paint trail | warden draws in the air with a (rainbow) beam trail | paintball splats on bullet impacts | M |
 | 12 | Icons above heads | world-text icon over the warden, special-treatment prisoners, bomb carrier | none (clan tag / HUD only) | M |
 | 13 | Logs: button + breakable events | `!logs` also records who pressed `func_button` / broke `func_breakable` | round/kill/LR events only | S |
 | 14 | LR: Coinflip, Rock-Paper-Scissors | menu-only duels | not in the 25 LRs | S |
 | 15 | LR: plain Knife Fight; LR time limit; `!rebel` during LR | | only Knife Backstab; slay timers; Rebel category | S |
-| 16 | Days: BHop, Custom, Fog, Ghost, GunGame, HE, Hide & Seek, Teleport, Speedrun | 9 extra special days | not among the 23 (Hide & Seek exists as an original SWBS mod) | S–M each |
+| 16 | Days: BHop, Custom, Fog, Ghost, GunGame, HE, Hide & Seek, Teleport, Speedrun | 9 extra special days | not among the 23 (Hide & Seek exists as an original SWBS mod) | **later** (owner) |
 | 17 | Days: Rocket Jump | rocket-jump FFA | RPG day blocked (no trace) | blocked |
 | 18 | Day rules | cooldown rounds between days, must start within N s of round start, random "shuffle bag" pick, zone/cell/armory-restricted days | warden 15 s window only | M |
 | 19 | RTD (`!rtd`, `!rtdstats`, auto-RTD) | roll the dice at round end / while dead: ammo, armor, HP, bomb, fake bomb, colour, transparent, random teleport, chat spy, guaranteed warden, no-weapon, cannot-scope/use/knife, credits | none | M |
-| 20 | Zone manager | box / sphere / hull zones in SQL, random zone generator, movement restrictor, "near open" test | per-map point lists only | L |
+| 20 | Zone manager | box / sphere / hull zones in SQL, random zone generator, movement restrictor, "near open" test | **owner approved: remake the SMPlugins ZoneManager** — plan in docs/design/ZONE_MANAGER_PLAN.md | L (next) |
 | 21 | Player trails, rainbow colourizer | cosmetic beam trails and colour cycling | none | M |
 | 22 | `css_debug` test commands | end round, force LR / last guard, mark rebel / ST, pardon, set time, RTD, zone — a tester's toolbox | none (would speed up the v1 test) | S |
-| 23 | Gangs + perks, credits, MySQL stats | external economy | out of scope (JSON storage; `IPointsService` hook) | — |
+| 23 | Gangs + perks, credits, MySQL stats | external economy | **new design proposed instead: "Crews"** — docs/design/CREWS.md (needs the Zone Manager for turf) | design |
 
 Also in the owner's earlier 12-plugin attempt (not eGo): Hot Potato / Sumo / Fruit Ninja LRs, CT queue, round-flow cvars,
 contraband, Discord logging, SQLite leaderboards.

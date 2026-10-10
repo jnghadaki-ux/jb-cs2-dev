@@ -12,6 +12,11 @@ _Updated: end of session 3 (2026-10-10), v0.10.0, branch `claude/swbs-jailbreak-
 * All 25 LRs and 22 of 23 days are Implemented, unverified. RPG warday is **Blocked** (needs world collision).
 * Nothing has been run on a live CS2 server yet.
 
+## Owner decisions (session 3, latest)
+* `!open` is admin-only (done). Auto warden when nobody queues (done). Warden bonus only with 1–2 guards (done, stacking by step).
+* Extra days: later. **Remake the SMPlugins Zone Manager** (plan: docs/design/ZONE_MANAGER_PLAN.md) — recommended model: Opus.
+* Gang system: new "Crews" design proposed (docs/design/CREWS.md) — awaiting owner feedback.
+
 ## Exact next actions (priority order)
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
 2. **Review pass for runtime bugs** — read-only review of LR (`Modules/LastRequest/*`), Days (`Modules/Days/*`),

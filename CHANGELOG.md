@@ -2,6 +2,10 @@
 
 ## 0.10.0 — .NET 8 only (session 3, 2026-10-10) — not yet verified on a live server
 ### Added
+- `!open` / `!o` (admin only, capability `cells.open` = @css/generic, cooldown `Cells.AdminOpenCooldown`); `!cdo` stays root-only.
+- Auto warden setting (`Warden.AutoWarden`, `AutoWardenMode`): a guard is picked automatically when nobody queued, with its own chat line.
+- Warden bonus only with few guards (`Warden.Bonus*`): +25 HP / +25 armor per step, stacking as guards die when ≤ 2 are alive, taken back when the warden ends; 12 new unit tests.
+- Design docs: docs/design/ZONE_MANAGER_PLAN.md, docs/design/CREWS.md.
 - `!commands` (CommandList, `sm_commands`): menu of the commands the player may use, `!commands console` prints the full list to the console. Gates come from [RequiresPermissions] and an IL scan of each command (incl. same-class helpers); 14 new unit tests.
 ### Changed
 - Target `net8.0` only, against CounterStrikeSharp.API 1.0.368 (owner directive); the net10 build, its package and all

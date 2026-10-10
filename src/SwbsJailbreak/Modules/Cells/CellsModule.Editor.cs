@@ -51,6 +51,32 @@ public sealed partial class CellsModule
         Logger.LogInformation("\"{Admin}\" forced open cell doors", AdminLabel(caller));
     }
 
+    private float _nextAdminOpen;
+
+    /// <summary>ADDITION (not in the original): !open / !o for basic admins (capability "cells.open", default @css/generic).</summary>
+    [ConsoleCommand("css_open", "sm_open - (admin) open the cell doors")]
+    [ConsoleCommand("css_o", "sm_o - (admin) open the cell doors")]
+    public void CmdAdminOpen(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller != null && !Perms.Has(caller, "cells.open")) { Chat.Tell(caller, "core.no_access"); return; }
+        var now = Server.CurrentTime;
+        if (now < _nextAdminOpen)
+        {
+            Chat.ReplyT(caller, info, "cells.open_wait", (int)MathF.Ceiling(_nextAdminOpen - now));
+            return;
+        }
+
+        _nextAdminOpen = now + Math.Max(0f, Cfg.AdminOpenCooldown);
+        if (!ForceOpen(caller))
+        {
+            Chat.ReplyT(caller, info, "cells.none_to_open");
+            return;
+        }
+
+        Chat.PrintAll(T("cells.admin_forced", Chat.Name(caller)), false);
+        Logger.LogInformation("\"{Admin}\" opened the cell doors with !open", AdminLabel(caller));
+    }
+
     [ConsoleCommand("css_celldoors_edit", "sm_celldoors_edit - in-game cell door editor")]
     public void CmdEdit(CCSPlayerController? caller, CommandInfo info)
     {

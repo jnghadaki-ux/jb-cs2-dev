@@ -64,6 +64,8 @@ Status: **passing** (session 2).
 
 ### Admin / extras
 27. `!admin` menu; slap/slay/beacon/freeze/burn/blind/drug/noclip/give/hp/respawn/team; mute/gag/silence + timed; ban/unban/kick; `!rr`.
+27a. `!open` / `!o` as a normal player (denied), as `@css/generic` admin (cells open once, chat line, 3 s cooldown message on repeat), `!cdo` still root-only.
+27c. Warden: with nobody on `!w`, after the countdown a guard is picked with the "automatically selected" line; `Warden.AutoWardenMode random` picks differently across rounds. With 3+ guards the warden has no bonus; kill guards until 2 alive → "+25 HP / +25 armor"; 1 alive → +50/+50 total; unwarden → bonus taken back, never kills.
 27b. `!commands` as a normal player (no admin commands listed, pages with Next/Back), as an admin (admin commands appear), `!commands console` (full list in the console), and `css_commands` from the server console (everything).
 28. Commands: `!g`, `!freekill`, `!wk`, `!1up`, `!roll`, `!jbrules`, `!speed`, `!timer`, `!xray`, `!bhc`, `!admintag`, `!points`.
 

@@ -20,6 +20,7 @@ public static class Perms
         ["warden.manage"] = "@css/generic",  // force/remove warden
         ["cells"] = "@css/root",             // sm_celldoors_open / sm_cdo (original: ADMFLAG_ROOT)
         ["cells.edit"] = "@css/root",        // sm_celldoors_edit + save (original: ADMFLAG_ROOT)
+        ["cells.open"] = "@css/generic",     // !open / !o (addition: any basic admin may open the cells)
         ["ctban"] = "@css/ban",              // CT ban/unban
         ["ctban.permanent"] = "@css/unban",  // permanent CT bans / unban others' bans
         ["days"] = "@css/generic",           // force-start / stop days

@@ -24,6 +24,9 @@ internal sealed class WardenPlayerData
     public string OriginalClanTag = "";
     public string AppliedClanTag = "";
     public bool ColorApplied;
+
+    // Warden bonus (few guards): what is currently granted, so it can be changed or taken back exactly.
+    public int BonusSteps, BonusHp, BonusArmor, BonusPrevMaxHp;
 }
 
 /// <summary>
@@ -345,9 +348,17 @@ public sealed partial class WardenModule : JbModule, IWardenService
 
         StopWardenTimer();
 
+        // The !w queue decides the first warden of a round (every selection when auto warden is off). If nobody queued,
+        // auto warden picks a guard so the round is never left without one.
         JbPlayer? w = null;
-        if (_roundWardenCount == 0) w = GetPrimaryWarden();
-        w ??= GetSecondaryWarden();
+        var automatic = false;
+        if (_roundWardenCount == 0 || !Cfg.AutoWarden) w = GetPrimaryWarden();
+        if (w == null && Cfg.AutoWarden)
+        {
+            w = string.Equals(Cfg.AutoWardenMode, "random", StringComparison.OrdinalIgnoreCase) ? GetRandomWarden() : GetSecondaryWarden();
+            automatic = w != null;
+        }
+
         _lastForceRemoved = null;
 
         if (w == null)
@@ -359,7 +370,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
         }
 
         HintNeeded(WText.T("warden.selected.hint", WText.HtmlName(w.Name)), 5);
-        Chat.PrintAll(WText.T("warden.selected.chat", w.Name));
+        Chat.PrintAll(WText.T(automatic && _roundWardenCount == 0 ? "warden.selected.auto" : "warden.selected.chat", w.Name));
         SetWarden(w);
     }
 
@@ -402,6 +413,84 @@ public sealed partial class WardenModule : JbModule, IWardenService
         return chosen;
     }
 
+    /// <summary>Auto warden "random" mode: any eligible guard (the force-removed warden only when alone).</summary>
+    private JbPlayer? GetRandomWarden()
+    {
+        var pool = _queueSecondary.Where(p => Eligible(p) && p.IsGuard).ToList();
+        if (pool.Count > 1) pool.RemoveAll(p => ReferenceEquals(p, _lastForceRemoved));
+        if (pool.Count == 0) return null;
+        var chosen = pool[Random.Shared.Next(pool.Count)];
+        _queueSecondary.Remove(chosen);
+        _queueSecondary.Add(chosen);
+        return chosen;
+    }
+
+    // ================================================================= bonus while guards are few
+
+    private int _bonusTick;
+
+    /// <summary>Steps for the current number of living guards: 0 above the limit, else limit + 1 - alive (stacks as guards die).</summary>
+    internal static int BonusSteps(int aliveGuards, int maxGuards) =>
+        aliveGuards >= 1 && aliveGuards <= maxGuards ? maxGuards + 1 - aliveGuards : 0;
+
+    /// <summary>~2 Hz from OnTick: cheap, and it also covers guards leaving, switching team or dying.</summary>
+    private void BonusTick()
+    {
+        if (++_bonusTick < 32) return;
+        _bonusTick = 0;
+        RefreshBonus();
+    }
+
+    private void RefreshBonus()
+    {
+        var w = _warden;
+        var c = w?.Controller;
+        var pawn = w?.Pawn;
+        if (w == null || c == null || pawn == null || !w.IsAlive || pawn.Health <= 0) return;
+
+        var d = w.Data<WardenPlayerData>();
+        var steps = Cfg.BonusEnabled ? BonusSteps(CountAliveGuards(), Math.Max(1, Cfg.BonusMaxGuards)) : 0;
+        if (steps == d.BonusSteps) return;
+
+        var wantHp = steps * Math.Max(0, Cfg.BonusHpPerStep);
+        var wantArmor = steps * Math.Max(0, Cfg.BonusArmorPerStep);
+        if (d.BonusSteps == 0) d.BonusPrevMaxHp = pawn.MaxHealth;
+
+        var dHp = wantHp - d.BonusHp;
+        if (dHp > 0) c.AddHp(dHp);
+        else if (dHp < 0) c.SetHp(Math.Max(1, Math.Min(pawn.Health, Math.Max(d.BonusPrevMaxHp, pawn.Health + dHp))), false);
+
+        var dArmor = wantArmor - d.BonusArmor;
+        if (dArmor != 0) c.SetArmor(Math.Max(0, pawn.ArmorValue + dArmor));
+
+        if (Cfg.BonusSpeedPerStep > 0f && steps > 0) Movement.SetSpeed(c, "warden.bonus.speed", 1f + steps * Cfg.BonusSpeedPerStep);
+        else Movement.ClearSpeed(c, "warden.bonus.speed");
+
+        if (steps > d.BonusSteps) Chat.Tell(c, "warden.bonus", wantHp, wantArmor, CountAliveGuards());
+        d.BonusSteps = steps;
+        d.BonusHp = wantHp;
+        d.BonusArmor = wantArmor;
+        if (steps == 0 && d.BonusPrevMaxHp > 0) c.SetMaxHp(d.BonusPrevMaxHp);
+    }
+
+    /// <summary>Warden ends (unwarden, LR, day, round end): take the bonus back without ever killing or healing the player.</summary>
+    private void RevokeBonus(JbPlayer p)
+    {
+        var d = p.Data<WardenPlayerData>();
+        if (d.BonusSteps == 0) return;
+        var c = p.Controller;
+        var pawn = p.Pawn;
+        if (c != null && pawn != null && p.IsAlive && pawn.Health > 0)
+        {
+            c.SetHp(Math.Max(1, Math.Min(pawn.Health, Math.Max(d.BonusPrevMaxHp, pawn.Health - d.BonusHp))), false);
+            c.SetArmor(Math.Max(0, pawn.ArmorValue - d.BonusArmor));
+            if (d.BonusPrevMaxHp > 0) c.SetMaxHp(d.BonusPrevMaxHp);
+            Movement.ClearSpeed(c, "warden.bonus.speed");
+        }
+
+        d.BonusSteps = d.BonusHp = d.BonusArmor = d.BonusPrevMaxHp = 0;
+    }
+
     private static void AddToQueue(JbPlayer p, List<JbPlayer> queue)
     {
         if (!queue.Contains(p)) queue.Add(p);
@@ -422,6 +511,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
 
         d.WardenCount++;
         _roundWardenCount++;
+        d.BonusSteps = d.BonusHp = d.BonusArmor = d.BonusPrevMaxHp = 0; // new life: nothing granted yet
         ResetPointerState();
 
         JbEvents.RaiseWardenSelected(p);
@@ -429,6 +519,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
         ApplyMarker(p);
         Jb.Mute.Refresh(p);
         if (Cfg.ShowPointerTip) Chat.Print(p.Controller, WText.T("warden.pointer.tip"));
+        RefreshBonus();
     }
 
     /// <summary>TryRemoveClientFromWarden: remove + (optionally) the 3 s reselection + model restore while alive.</summary>
@@ -455,6 +546,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
     /// <summary>RemoveWarden: clear, back to the plain guard tag, stop the gestures, fire OnRemoved.</summary>
     private void RemoveWardenInternal(JbPlayer p)
     {
+        RevokeBonus(p);
         _warden = null;
         GiveGuardClanTag(p);
         StopPointer();
