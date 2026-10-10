@@ -11,7 +11,9 @@ namespace SwbsJailbreak.Modules.Warden;
 /// <summary>
 /// Warden in-world markers from UltJB_Warden.sp: pointer laser (double-tap USE) with pulse ring, bullet history,
 /// bullet line (triple-tap walk), gesture ring (triple-tap duck) and warden paintballs. Everything is drawn with
-/// real beam entities. Time base = engine time, as in the original (GetEngineTime).
+/// real beam entities. Time base = engine time, as in the original (GetEngineTime). CounterStrikeSharp 1.0.368 has no
+/// ray trace, so the pointer marks the warden's ping (stock CS2 ping key) or last bullet impact instead of following
+/// the crosshair live.
 /// </summary>
 public sealed partial class WardenModule
 {
@@ -28,6 +30,7 @@ public sealed partial class WardenModule
     private readonly Vector[] _saved = { new(0, 0, 0), new(0, 0, 0) };
     private readonly Vector[] _pulled = { new(0, 0, 0), new(0, 0, 0) };
     private int _savedCount;
+    private double _savedTime;
     private double _nextBulletSave;
     private double _nextPaint;
 
@@ -163,33 +166,44 @@ public sealed partial class WardenModule
     }
 
     /// <summary>
-    /// End point = crosshair world position (trace ignoring players). net8.0 build: no ray-trace API, so the pointer
-    /// marks the last recorded bullet impact instead (a real position) and the warden is told once.
+    /// End point = the newest real aim position: the warden's recent ping (the engine's crosshair trace) or the last
+    /// bullet impact. Without either the warden is told once how to aim (ping or shoot).
     /// </summary>
     private bool UpdatePointerEnd(CCSPlayerController c)
     {
-        if (WTrace.EyeTrace(c, out var end, out _))
+        var hasPing = WAim.RecentPing(c, Cfg.PingMaxAge, out var ping, out var pingTime);
+        if (hasPing && (_savedCount == 0 || pingTime >= _savedTime))
         {
-            _ptrEnd = end;
+            _ptrEnd = ping;
             return true;
         }
 
-        if (!WTrace.Available)
+        if (_savedCount > 0)
         {
-            if (_savedCount > 0)
-            {
-                _ptrEnd = VectorUtil.Copy(_saved[0]);
-                return true;
-            }
-
-            if (!_ptrNoTraceWarned)
-            {
-                _ptrNoTraceWarned = true;
-                Chat.Print(c, WText.T("warden.pointer.no_trace"));
-            }
+            _ptrEnd = VectorUtil.Copy(_saved[0]);
+            return true;
         }
 
-        return _ptrEnd != null; // e.g. aiming at the sky: keep the previous end point
+        if (!_ptrNoTraceWarned)
+        {
+            _ptrNoTraceWarned = true;
+            Chat.Print(c, WText.T("warden.pointer.no_trace"));
+        }
+
+        return _ptrEnd != null;
+    }
+
+    /// <summary>A warden ping shows the pointer laser at the pinged spot, with a pulse ring, for PingPointerTime.</summary>
+    private void OnPing(CCSPlayerController c, Vector pos, int entity)
+    {
+        if (!Cfg.PointerEnabled || Cfg.PingPointerTime <= 0) return;
+        var w = Warden;
+        if (w == null || w.Slot != c.Slot || !w.IsAlive) return;
+        _ptrEnd = pos;
+        _ptrButtonExpire = Math.Max(_ptrButtonExpire, Server.EngineTime + Cfg.PingPointerTime);
+        DrawPointerBeam(c);
+        _pulses.Spawn(new Vector(pos.X, pos.Y, pos.Z + 2f), 1f, Math.Max(1f, Cfg.PulseRingRadius), Cfg.PulseRingLife,
+            WDraw.ToColor(Cfg.PointerColor, Color.OrangeRed), Cfg.PulseRingWidth, 16);
     }
 
     /// <summary>Beam from the end point (width 0.4) to near the weapon muzzle (end width 1.0).</summary>
@@ -241,17 +255,11 @@ public sealed partial class WardenModule
         _saved[1] = _saved[0];
         _pulled[1] = _pulled[0];
 
-        // Pull the point 10 units off the surface along the surface normal (eye trace, as the original).
-        // net8.0 (no trace): pull it 10 units back toward the shooter's eye instead.
-        Vector n;
-        if (WTrace.EyeTrace(c, out _, out var normal) && WDraw.Length(normal) > 0.5f) n = normal;
-        else
-        {
-            var eye = c.EyePosition();
-            n = WDraw.Normalize(new Vector(eye.X - impact.X, eye.Y - impact.Y, eye.Z - impact.Z));
-        }
-
+        // The original pulled the point 10 units off the surface along the trace normal; without a ray trace
+        // (CSS 1.0.368) it is pulled 10 units back toward the shooter's eye.
+        var n = TowardEye(c, impact);
         _saved[0] = impact;
+        _savedTime = Server.EngineTime;
         _pulled[0] = new Vector(impact.X + n.X * 10, impact.Y + n.Y * 10, impact.Z + n.Z * 10);
         if (_savedCount < 2) _savedCount++;
     }
@@ -259,25 +267,16 @@ public sealed partial class WardenModule
     /// <summary>Warden paintball splat (TE World Decal substitute: two crossed beams on the surface).</summary>
     private bool TryPaint(CCSPlayerController c, Vector impact)
     {
-        Vector normal;
-        if (WTrace.ImpactTrace(c, impact, out var world, out var n))
+        // No ray trace on CSS 1.0.368, so world and props cannot be told apart; at least never paint on players.
+        foreach (var other in Players.Alive())
         {
-            if (!world) return false; // paint the world only, never props/players
-            normal = WDraw.Length(n) > 0.5f ? n : TowardEye(c, impact);
+            if (other.Slot == c.Slot) continue;
+            var o = other.Origin();
+            if (o == null) continue;
+            if (VectorUtil.Distance2D(o, impact) <= 24f && impact.Z >= o.Z - 4f && impact.Z <= o.Z + 76f) return false;
         }
-        else
-        {
-            // net8.0: cannot tell world from props; at least never paint on players.
-            foreach (var other in Players.Alive())
-            {
-                if (other.Slot == c.Slot) continue;
-                var o = other.Origin();
-                if (o == null) continue;
-                if (VectorUtil.Distance2D(o, impact) <= 24f && impact.Z >= o.Z - 4f && impact.Z <= o.Z + 76f) return false;
-            }
 
-            normal = TowardEye(c, impact);
-        }
+        var normal = TowardEye(c, impact);
 
         var p = new Vector(impact.X + normal.X, impact.Y + normal.Y, impact.Z + normal.Z);
         var reference = MathF.Abs(normal.Z) < 0.9f ? new Vector(0, 0, 1) : new Vector(1, 0, 0);

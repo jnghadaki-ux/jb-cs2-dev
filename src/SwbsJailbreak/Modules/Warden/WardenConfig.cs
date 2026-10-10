@@ -49,6 +49,16 @@ public sealed class WardenConfig
     public float PulseRingLife { get; set; } = 0.3f;
     public float PulseRingWidth { get; set; } = 3f;
 
+    /// <summary>
+    /// CounterStrikeSharp 1.0.368 (.NET 8) has no ray trace, so the warden aims with the stock CS2 ping key (player_ping,
+    /// middle mouse by default): a warden ping shows the pointer laser at the pinged spot for this many seconds
+    /// (0 = pings do not draw the pointer).
+    /// </summary>
+    public float PingPointerTime { get; set; } = 3f;
+
+    /// <summary>Maximum age (seconds) of a warden ping used as the position for double-tap USE, rings and the healing area.</summary>
+    public float PingMaxAge { get; set; } = 15f;
+
     /// <summary>Optional: print the cl_use_opens_buy_menu tip to a new warden (the original had this as a TODO).</summary>
     public bool ShowPointerTip { get; set; } = false;
 

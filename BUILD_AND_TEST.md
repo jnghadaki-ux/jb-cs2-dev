@@ -4,31 +4,28 @@
 
 | Component | Version | Notes |
 |---|---|---|
-| CounterStrikeSharp (recommended) | **1.0.376** (any 1.0.370+) | .NET 10 runtime (`net10.0` build, full feature set incl. ray traces) |
-| CounterStrikeSharp (legacy) | **1.0.368** or older | .NET 8 runtime (`net8.0` build; no ray-trace API → see COMPATIBILITY.md) |
-| MetaMod:Source | 2.0 (build 1474+ for current CS2) | install the build that matches your CS2 server update |
-| .NET SDK to build | 10.0 (builds both targets) | 8.0 SDK can build only `net8.0` |
-
-Pick the package that matches the CounterStrikeSharp you install; never mix them.
+| CounterStrikeSharp | **1.0.368 with runtime** (any .NET 8 CSS build) | `net8.0` build; no managed ray trace → aimed features use pings (COMPATIBILITY.md) |
+| MetaMod:Source | 2.0 dev build matching the CS2 update | |
+| .NET SDK to build | 8.0 (a newer SDK also works) | target stays `net8.0` only — never add net10 |
 
 ## 2. Build
 
 ```bash
 dotnet restore
-dotnet build -c Release            # builds net8.0 and net10.0
+dotnet build -c Release            # net8.0 only
 dotnet test  -c Release            # 21 unit tests (round state machine, storage, targets, config)
-./build.sh                         # (Windows: build.ps1) -> artifacts/SwbsJailbreak-<ver>-net10.zip and -net8.zip
+./build.sh                         # (Windows: build.ps1) -> artifacts/SwbsJailbreak-<ver>-net8.zip
 ```
 
-Expected: `0 Warning(s) 0 Error(s)`, tests `Passed: 21`. Each zip holds `addons/counterstrikesharp/plugins/SwbsJailbreak/`
+Expected: `0 Warning(s) 0 Error(s)`, tests `Passed: 21`. The zip holds `addons/counterstrikesharp/plugins/SwbsJailbreak/`
 (`SwbsJailbreak.dll`, `.deps.json`, `.pdb`, `lang/en/*.json`). CounterStrikeSharp itself is **not** bundled (the package
 reference is compile-only).
 
 ## 3. Install on a CS2 dedicated server
 
 1. Install MetaMod:Source into `game/csgo/addons/metamod` and add the `Game csgo/addons/metamod` line to `gameinfo.gi`.
-2. Install CounterStrikeSharp **with runtime** (1.0.376 for the net10 package) into `game/csgo/addons/counterstrikesharp`.
-3. Unzip `SwbsJailbreak-<ver>-net10.zip` into `game/csgo/` (it creates `addons/counterstrikesharp/plugins/SwbsJailbreak`).
+2. Install CounterStrikeSharp **1.0.368 with runtime** (.NET 8) into `game/csgo/addons/counterstrikesharp`.
+3. Unzip `SwbsJailbreak-<ver>-net8.zip` into `game/csgo/` (it creates `addons/counterstrikesharp/plugins/SwbsJailbreak`).
 4. Recommended server cvars (put in `cfg/server.cfg`; the plugin also forces the first few at map start):
    ```
    mp_autoteambalance 0
@@ -45,7 +42,7 @@ reference is compile-only).
 5. Admins: CounterStrikeSharp `configs/admins.json`. Default capability → flag mapping is in `Core/Perms.cs` and can be
    changed in the plugin config (`General.Permissions`). Root (`@css/root`) can open/edit cells; `@css/generic` admin
    commands; `@css/ban` CT bans; `@css/unban` `!daysedit`; `@css/config` LR/rebel points.
-6. Start the server, then check the console for `SWBS Ultimate Jailbreak v0.9.0 loaded: <n> modules` and `css_plugins list`.
+6. Start the server, then check the console for `SWBS Ultimate Jailbreak v0.10.0 loaded: <n> modules` and `css_plugins list`.
 7. Config is generated at `addons/counterstrikesharp/configs/plugins/SwbsJailbreak/SwbsJailbreak.json`. Data (bans, CT bans,
    points, play time) lives in `addons/counterstrikesharp/configs/plugins/SwbsJailbreak/data/` and per-map documents (cell
    doors, LR/rebel points, enabled days) in `addons/counterstrikesharp/configs/plugins/SwbsJailbreak/maps/`.
@@ -55,7 +52,7 @@ reference is compile-only).
 
 | What | How |
 |---|---|
-| Cell doors | Usually automatic (original name lists or auto-detect). Check with root: `!celldoors_edit` → look at doors, "Add/Remove", "Save doors.". Console alternative: `css_celldoors_list`, `css_celldoors_add <#>`, `css_celldoors_save`. |
+| Cell doors | Usually automatic (original name lists or auto-detect). Check with root: `!celldoors_edit` → ping (middle mouse) or look at doors, "Add/Remove", "Save doors.". Console alternative: `css_celldoors_list`, `css_celldoors_add <#>`, `css_celldoors_save`. |
 | LR teleport spot | Stand in the LR area: `!lr_setpoint` |
 | Rebel / free-for-all spawns | Walk around and `!rebelpoint_add` many times (free-for-all days need 90 by default, `Days.FreeForAllMinRebelPoints`) |
 | Capture the Flag points | `!ctf_setflag` at the flag / defender spawn, `!ctf_setcapture` at the capture point / attacker spawn |

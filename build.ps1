@@ -1,7 +1,6 @@
-# Builds SwbsJailbreak for both supported CounterStrikeSharp lines (Windows PowerShell / pwsh):
-#   artifacts/SwbsJailbreak-<version>-net10.zip -> CounterStrikeSharp 1.0.370 .. 1.0.376 (.NET 10)  [recommended]
-#   artifacts/SwbsJailbreak-<version>-net8.zip  -> CounterStrikeSharp <= 1.0.368 (.NET 8)
-# Requires the .NET 10 SDK.
+# Builds SwbsJailbreak (.NET 8 / CounterStrikeSharp 1.0.368) and produces the drop-in server package (Windows PowerShell / pwsh):
+#   artifacts/SwbsJailbreak-<version>-net8.zip -> contains addons/counterstrikesharp/plugins/SwbsJailbreak/...
+# Unzip it into game/csgo/. Requires the .NET 8 SDK (a newer SDK also works; the target stays net8.0).
 param([string]$Configuration = "Release")
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
@@ -9,17 +8,14 @@ $version = (Select-String -Path src/SwbsJailbreak/JailbreakPlugin.cs -Pattern 'P
 if (Test-Path artifacts) { Remove-Item artifacts -Recurse -Force }
 dotnet build src/SwbsJailbreak/SwbsJailbreak.csproj -c $Configuration
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
-foreach ($tfm in @("net10.0", "net8.0")) {
-  $tag = $tfm.Split('.')[0]
-  $out = "artifacts/$tag"
-  $pluginDir = "$out/addons/counterstrikesharp/plugins/SwbsJailbreak"
-  $bin = "src/SwbsJailbreak/bin/$Configuration/$tfm"
-  New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
-  Copy-Item "$bin/SwbsJailbreak.dll" $pluginDir
-  if (Test-Path "$bin/SwbsJailbreak.pdb") { Copy-Item "$bin/SwbsJailbreak.pdb" $pluginDir }
-  if (Test-Path "$bin/SwbsJailbreak.deps.json") { Copy-Item "$bin/SwbsJailbreak.deps.json" $pluginDir }
-  Copy-Item "$bin/lang" $pluginDir -Recurse
-  if (Test-Path package) { Copy-Item "package/*" $out -Recurse -Force }
-  Compress-Archive -Path "$out/addons" -DestinationPath "artifacts/SwbsJailbreak-$version-$tag.zip" -Force
-  Write-Host "Package: artifacts/SwbsJailbreak-$version-$tag.zip"
-}
+$out = "artifacts/net8"
+$pluginDir = "$out/addons/counterstrikesharp/plugins/SwbsJailbreak"
+$bin = "src/SwbsJailbreak/bin/$Configuration/net8.0"
+New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+Copy-Item "$bin/SwbsJailbreak.dll" $pluginDir
+if (Test-Path "$bin/SwbsJailbreak.pdb") { Copy-Item "$bin/SwbsJailbreak.pdb" $pluginDir }
+if (Test-Path "$bin/SwbsJailbreak.deps.json") { Copy-Item "$bin/SwbsJailbreak.deps.json" $pluginDir }
+Copy-Item "$bin/lang" $pluginDir -Recurse
+if (Test-Path package) { Copy-Item "package/*" $out -Recurse -Force }
+Compress-Archive -Path "$out/addons" -DestinationPath "artifacts/SwbsJailbreak-$version-net8.zip" -Force
+Write-Host "Package: artifacts/SwbsJailbreak-$version-net8.zip"

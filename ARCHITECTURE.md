@@ -73,5 +73,6 @@ currently exists.)
 * Everything round-scoped is torn down on round end (round timers, HUD layers, beams, pickup rules, movement keys).
 * Every networked field write is followed by `Utilities.SetStateChanged`.
 * No text stand-ins for in-world effects (see DECISIONS.md D10).
-* The plugin builds for net8.0 (CSS 1.0.368) and net10.0 (CSS 1.0.376); API differences are isolated with
-  `#if NET10_0_OR_GREATER`.
+* The plugin targets net8.0 only (CSS 1.0.368, DECISIONS.md D13). There is no managed ray trace on that API line:
+  aimed features read real engine aim data from `Core/Aim` (last `player_ping` per player: point + pinged entity) or
+  `bullet_impact`, never invented points.

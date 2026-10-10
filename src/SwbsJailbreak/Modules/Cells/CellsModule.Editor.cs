@@ -22,9 +22,9 @@ internal sealed class CellEditSession
 
 /// <summary>
 /// Commands (sm_celldoors_open / sm_cdo / sm_celldoors_edit) and the in-game cell door editor (spec 02 §1.2.10-11).
-/// Look-at detection uses the real CSS ray trace on the net10.0 build; the net8.0 build (no trace API) picks the
-/// door-type entity closest to the admin's crosshair direction from real entity bounds, and the console commands
-/// css_celldoors_list / _add / _remove / _save work on both builds.
+/// CounterStrikeSharp 1.0.368 has no ray trace: look-at detection uses the admin's ping (the engine's crosshair trace and
+/// pinged entity), else the door-type entity closest to the crosshair direction from real entity bounds. The console
+/// commands css_celldoors_list / _add / _remove / _save are the precise alternative.
 /// </summary>
 public sealed partial class CellsModule
 {
@@ -65,7 +65,7 @@ public sealed partial class CellsModule
         s.LookingAt = 0;
         s.ConfirmClear = false;
         RefreshGlows();
-        if (!VectorUtil.HasRayTrace) Chat.Tell(caller, "cells.editor.no_trace");
+        Chat.Tell(caller, "cells.editor.no_trace");
         ShowEditor(caller, s);
     }
 
@@ -413,52 +413,29 @@ public sealed partial class CellsModule
         var pawn = p.PawnOrNull();
         if (pawn == null || pawn.AbsOrigin == null) return null;
         var eye = p.EyePosition();
-#if NET10_0_OR_GREATER
-        try
+        // A recent ping (stock CS2 ping key) is the engine's own crosshair trace: the pinged entity (or its door-type
+        // parent) wins; else the nearest door-type entity whose bounds are within 64 units of the pinged point
+        // (invisible / nodraw doors).
+        if (Aim.TryGetPing(p, PingPickSeconds, out var ping, out var pinged))
         {
-            const Contents baseMask = Contents.Solid | Contents.Window | Contents.PassBullets | Contents.Debris |
-                                      Contents.PhysicsProp | Contents.CsgoMoveable | Contents.WorldGeometry | Contents.StaticLevel;
-            var tr = Trace.TraceShape(eye, pawn.EyeAngles, pawn, new TraceOptions
-            {
-                InteractsAs = Contents.Player, InteractsWith = baseMask,
-                InteractsExclude = Contents.Player | Contents.Hitbox | Contents.Trigger | Contents.PlayerClip
-            });
-            var hit = tr.DidHit() ? DoorFromHit(tr.HitEntity()) : null;
+            var hit = DoorFromHit(Aim.Entity<CEntityInstance>(pinged));
             if (hit != null) return hit;
-
-            // Pass 2: stop at player clips too (finds clip func_brush doors).
-            var tr2 = Trace.TraceShape(eye, pawn.EyeAngles, pawn, new TraceOptions
-            {
-                InteractsAs = Contents.Player, InteractsWith = baseMask | Contents.PlayerClip,
-                InteractsExclude = Contents.Player | Contents.Hitbox | Contents.Trigger
-            });
-            hit = tr2.DidHit() ? DoorFromHit(tr2.HitEntity()) : null;
-            if (hit != null) return hit;
-
-            // Invisible / nodraw doors: nearest door-type entity whose bounds are within 64 units of the hit point.
-            var end = tr.DidHit() ? tr.EndPos : null;
-            if (end == null) return null;
-            CBaseEntity? best = null;
-            var bestDist = 64f;
+            CBaseEntity? near = null;
+            var nearDist = 64f;
             foreach (var e in DoorTypeEntities(null))
             {
                 if (!EntityBounds.TryGet(e, out var mn, out var mx)) continue;
-                var d = EntityBounds.DistanceToBox(end, mn, mx);
-                if (d > bestDist) continue;
-                bestDist = d;
-                best = e;
+                var d = EntityBounds.DistanceToBox(ping, mn, mx);
+                if (d > nearDist) continue;
+                nearDist = d;
+                near = e;
             }
 
-            return best;
+            if (near != null) return near;
         }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "[Cells] editor trace failed");
-            return null;
-        }
-#else
-        // net8.0 build: no ray-trace API. Pick the door-type entity nearest to the crosshair direction (within ~6
-        // degrees and 2048 units) from the entities' real bounds.
+
+        // No ping: pick the door-type entity nearest to the crosshair direction (within ~6 degrees and 2048 units) from
+        // the entities' real bounds (CSS 1.0.368 has no ray trace).
         var fwd = VectorUtil.Forward(pawn.EyeAngles);
         CBaseEntity? best = null;
         var bestCos = 0.9945f;
@@ -478,8 +455,10 @@ public sealed partial class CellsModule
         }
 
         return best;
-#endif
     }
+
+    /// <summary>How long (seconds) a ping keeps selecting the pinged door in the editor.</summary>
+    private const double PingPickSeconds = 6.0;
 
     /// <summary>The hit entity if it is a door type / button, else its first door-type ancestor (up to 8 levels).</summary>
     private static CBaseEntity? DoorFromHit(CEntityInstance? hit)

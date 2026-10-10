@@ -38,5 +38,5 @@
   "cells.editor.none_on_map": "{red}This map has no door-type entities.",
   "cells.editor.cycled": "{olive}Door {lightred}{0}{olive}/{1}: {2}",
   "cells.editor.not_found": "{red}No door-type entity matches \"{0}\" (see css_celldoors_list).",
-  "cells.editor.no_trace": "{olive}This server build has no ray-trace API: the editor selects the door closest to your crosshair direction. css_celldoors_list / _add also work."
+  "cells.editor.no_trace": "{olive}Ping a door (CS2 ping key, middle mouse by default) to select it, or aim straight at it. css_celldoors_list / _add also work."
 }

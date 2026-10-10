@@ -1,6 +1,6 @@
 # Compatibility
 
-Last updated: 2026-10-10 (session 1). Nothing below has been tested on a live CS2 server yet — see TEST_PLAN.md.
+Last updated: 2026-10-10 (session 3: .NET 8 only). Nothing below has been tested on a live CS2 server yet — see TEST_PLAN.md.
 
 ## Verified facts (with evidence)
 
@@ -12,37 +12,40 @@ Last updated: 2026-10-10 (session 1). Nothing below has been tested on a live CS
 | Latest stable CSS on NuGet (2026-10-10) | 1.0.376 (a `2.0.0-alpha.1` also exists; not targeted) | `api.nuget.org/v3-flatcontainer/counterstrikesharp.api/index.json` |
 | eGo Jailbreak release | Built for `.NETCoreApp,Version=v10.0` against CSS 1.0.376 | `Jailbreak.deps.json` in the uploaded eGo release |
 | Ray trace API (`Modules.Utils.Trace`, `TraceOptions`, `Contents`) | Present in 1.0.376, **absent** in 1.0.368 | Decompiled both API assemblies |
-| Native damage listeners (`OnPlayerTakeDamagePre/Post`), `OnPlayerButtonsChanged`, `OnPlayerChat` | Present in both 1.0.368 and 1.0.376 | Both builds compile against them |
+| `player_ping` game event (`EventPlayerPing`: userid, entityid, x, y, z, urgent) | Present in 1.0.368 | Decompiled 1.0.368 API (`CounterStrikeSharp.API.Core/Even## Target: .NET 8 only (owner decision D13)
 
-## What this means for the owner's ".NET 8" requirement
+The owner's servers run CounterStrikeSharp on .NET 8 (the "with runtime" package bundles .NET 8). The plugin therefore
+targets **`net8.0` only**, compiled against **CounterStrikeSharp.API 1.0.368** (the last CSS release built for .NET 8).
+There is no `net10.0` build any more; do not add one.
 
-The owner reported that plugins only ran on .NET 8. That is correct **for CounterStrikeSharp 1.0.368 and older**.
-CounterStrikeSharp 1.0.370 and newer (including the 1.0.376 build supplied for this project) run on .NET 10.
+Consequence: CSS 1.0.368 has no managed ray-trace API. Aimed features use real engine data instead:
 
-The plugin is therefore multi-targeted from one source tree:
-
-| Build | Compiled against | Install on servers running |
-|---|---|---|
-| `net8.0` | CounterStrikeSharp.API 1.0.368 | CSS ≤ 1.0.368 (.NET 8 runtime). Should also load on newer CSS because .NET 10 runs .NET 8 assemblies, but this is not verified. |
-| `net10.0` | CounterStrikeSharp.API 1.0.376 | CSS 1.0.370 – 1.0.376 (.NET 10 runtime). **Recommended**, has the ray-trace features. |
-
-Feature difference between builds: the warden laser/paint/aim-placed markers use the ray-trace API and are only
-aim-accurate in the `net10.0` build; the `net8.0` build places those markers at a real fallback position
-(the warden's own position or the last bullet impact) and says so in chat.
+| Feature | Aim source on CSS 1.0.368 |
+|---|---|
+| Warden pointer laser | The warden's **ping** (stock CS2 `player_ping` key, middle mouse by default) shows the pointer there; double-tap USE uses the newest ping or bullet impact |
+| Warden menu rings / healing area | Recent ping (≤ `Warden.PingMaxAge` s), else the warden's feet |
+| Warden line / gesture ring / paintballs | Bullet impacts (`bullet_impact`), as in the original |
+| Cell door editor | Pinged entity (or nearest door within 64 u of the ping), else the door nearest the crosshair direction |
+| LR "teleport next to" | Anchor's own spot (no hull trace for a free spot; players do not collide) |
+| RPG warday | **Blocked**: rockets need a world-collision point. Planned: the engine's bullet trace (`weapon_fire` + `bullet_impact`). |
 
 ## Target server stack (recommended)
 
 | Component | Version | Notes |
 |---|---|---|
-| Counter-Strike 2 dedicated server | current Steam build | CSS gamedata must match the game build; update CSS when Valve updates CS2. |
-| Metamod:Source | 2.0.0-git1474 (uploaded) | CS2 requires the 2.0 dev branch. 1.12 (also uploaded) is for Source 1 games and will not work with CS2. |
-| CounterStrikeSharp | 1.0.376 **with runtime** build | The "with-runtime" zip bundles .NET 10. The uploaded zip is the no-runtime build; if the server has no .NET 10 runtime installed, download the with-runtime zip from the CSS GitHub releases page. |
+| Counter-Strike 2 dedicated server | current Steam build | CSS gamedata must match the game build. |
+| Metamod:Source | 2.0 dev build matching the CS2 update (2.0.0-git1474 was uploaded) | 1.12 is for Source 1 games and will not work with CS2. |
+| CounterStrikeSharp | **1.0.368 with runtime** (or another .NET 8 CSS build ≤ 1.0.368) | Bundles .NET 8. |
+| This plugin | `net8.0` build (`SwbsJailbreak-<ver>-net8.zip`) | `addons/counterstrikesharp/plugins/SwbsJailbreak/` |
+
+rver has no .NET 10 runtime installed, download the with-runtime zip from the CSS GitHub releases page. |
 | This plugin | `net10.0` build | `addons/counterstrikesharp/plugins/SwbsJailbreak/` |
 
 ## Not yet verified (needs a live server)
 
-* That the plugin loads on CSS 1.0.376 (Windows and Linux).
-* That the `net8.0` build loads on CSS 1.0.376 (cross-runtime).
+* That the plugin loads on CSS 1.0.368 (Windows and Linux) — and whether CS2's current game build still works with
+  CSS 1.0.368 gamedata (owner to confirm on the test server).
+* That `player_ping` fires for every ping with the pinged point in x/y/z and the entity index in entityid.
 * Every gameplay feature — see TEST_PLAN.md.
 * User-message ids for screen fade/shake are resolved at runtime by name (`CUserMessageFade`, `CUserMessageShake`)
   with fallbacks 106/120; the fallbacks are unverified.

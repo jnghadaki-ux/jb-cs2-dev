@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0 — .NET 8 only (session 3, 2026-10-10) — not yet verified on a live server
+### Changed
+- Target `net8.0` only, against CounterStrikeSharp.API 1.0.368 (owner directive); the net10 build, its package and all
+  `NET10_0_OR_GREATER` trace code were removed. `build.sh`/`build.ps1` produce one `SwbsJailbreak-<ver>-net8.zip`.
+- Aimed features use real engine aim data through the new `Core/Aim` (player_ping): warden ping → pointer laser + pulse ring
+  (`Warden.PingPointerTime`), menu rings/healing area at the recent ping (`Warden.PingMaxAge`), cell editor selects the
+  pinged door.
+- Credits: "Gdaki (enhanced with Claude Code) - inspired by HlStriker, SWBS development/lead admins".
+### Known
+- RPG warday is Blocked on CSS 1.0.368 (no world collision source); not registered, logged at load.
+
 ## 0.9.0 — first complete test build (session 2, 2026-10-10) — not yet verified on a live server
 ### Added
 - Last Request API and all 26 original LRs (Freeday ×4, Draw, Rebel ×8, Weapon Battle ×5, Contest ×7).

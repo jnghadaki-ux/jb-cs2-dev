@@ -1,6 +1,6 @@
 # Test plan
 
-Record each run as `date / tester / CSS version / package (net10|net8) / result`. A feature becomes **Verified** in
+Record each run as `date / tester / CSS version / package / result` (package = net8 build on CSS 1.0.368). A feature becomes **Verified** in
 FEATURE_INVENTORY.md only after its row below passed on a real server.
 
 ## 1. Level 1 — automated (done by every build)
@@ -13,12 +13,12 @@ Status: **passing** (session 2).
 
 | # | Step | Expected |
 |---|---|---|
-| 2.1 | Start server with the package | Console: `SWBS Ultimate Jailbreak v0.9.0 loaded: <n> modules ...` with no `failed to load` lines |
-| 2.2 | `css_plugins list` | SwbsJailbreak listed, author "Gdaki (designed after HlStriker, SWBS development/lead admins)" |
+| 2.1 | Start server with the package | Console: `SWBS Ultimate Jailbreak v0.10.0 loaded: <n> modules ...` with no `failed to load` lines |
+| 2.2 | `css_plugins list` | SwbsJailbreak listed, author "Gdaki (enhanced with Claude Code) - inspired by HlStriker, SWBS development/lead admins" |
 | 2.3 | Check `configs/plugins/SwbsJailbreak/SwbsJailbreak.json` | Generated with all sections |
 | 2.4 | `css_plugins reload SwbsJailbreak` twice | No errors, commands work once (no duplicate chat lines) |
 | 2.5 | `changelevel` to another JB map | Cells log line `[Cells] <map>: source=...`, no exceptions |
-| 2.6 | net8 package on CSS 1.0.368 | Loads; warden markers/cell editor say "no ray-trace API" and use the fallback |
+| 2.6 | Console: `[Days] RPG warday is not registered` | Expected on CSS 1.0.368 (RPG blocked, see FEATURE_GAPS.md) |
 
 ## 3. Level 3 — in game (at least 2 players + bots: `bot_add_t`, `bot_add_ct`)
 
@@ -36,13 +36,13 @@ Status: **passing** (session 2).
 
 ### Warden
 9. `!w` as guard → queue message; first warden picked after 10 s countdown (centre HUD), heavy model, "Warden" tag.
-10. Double-tap USE → pointer marker; triple-tap WALK → line; triple-tap DUCK → ring (net10: at crosshair).
-11. `!wm` → rings (set/resize/remove), healing area (heals prisoners +5 every 0.5 s), client colours; `!cc ring` / `!cc remove`.
+10. Warden pings (middle mouse) → orange pointer laser + pulse ring at the pinged spot for 3 s, visible to prisoners too. Double-tap USE → pointer at the newest ping/bullet impact. Shoot twice, triple-tap WALK → line between the impacts; triple-tap DUCK → ring through them.
+11. Ping a floor spot, then `!wm` → rings placed at the ping (set/resize/remove; without a ping: at your feet), healing area (heals prisoners +5 every 0.5 s), client colours; `!cc ring` / `!cc remove`.
 12. `!uw`, `!rw` (admin), `!sw <name>` (root), `!wwho`, `!kiss`. Warden death → "The warden has died!" + reselection.
 
 ### Cells
 13. Wait 60 s → cells open; logger shows "Cell doors opened." once. Press the cell button as CT → opened detected.
-14. Root `!cdo` → "Admin X forced the cell doors open." `!celldoors_edit` → green glow on doors, yellow box on looked-at door, add/remove/save → `maps/cells/<map>.json`.
+14. Root `!cdo` → "Admin X forced the cell doors open." `!celldoors_edit` → green glow on doors, yellow box on the pinged / looked-at door, add/remove/save → `maps/cells/<map>.json`.
 
 ### Last guard / mute / logger / jihad
 15. Kill all guards but one → "is the last guard!", beacons, damage timer.
@@ -59,7 +59,7 @@ Status: **passing** (session 2).
 ### Days
 23. As warden (warden twice this map, within 15 s): `!day` → Freeday/Warday menus; wardays refused once cells are open.
 24. Warday freeze countdown → unfreeze; FFA option appears once the map has 90 rebel points.
-25. Spot-check each day (one per round): Gang, Jihad (FFA), Taser, No Scope, Fat Kid, Low Gravity, Scoutz Knivez, Weapon Selection, Classic (effect), Heavy Assault (buy time), One In The Chamber, Hunger Games (crates), Zombie, Throwing Knives, CT Retake, Horror Movie (fog), Freeze Tag, RPG (net10).
+25. Spot-check each day (one per round): Gang, Jihad (FFA), Taser, No Scope, Fat Kid, Low Gravity, Scoutz Knivez, Weapon Selection, Classic (effect), Heavy Assault (buy time), One In The Chamber, Hunger Games (crates), Zombie, Throwing Knives, CT Retake, Horror Movie (fog), Freeze Tag. (RPG is blocked on CSS 1.0.368.)
 26. `!daysedit` disables a day for the map; persists after map change.
 
 ### Admin / extras
@@ -75,4 +75,5 @@ Status: **passing** (session 2).
 
 | Date | Tester | CSS | Package | Section | Result | Notes |
 |---|---|---|---|---|---|---|
-| 2026-10-10 | Claude (automated) | — | both | §1 | Pass (21/21) | build 0 warnings |
+| 2026-10-10 | Claude (automated) | — | net8+net10 | §1 | Pass (21/21) | build 0 warnings |
+| 2026-10-10 | Claude (automated) | API 1.0.368 | net8 only | §1 | Pass (21/21) | v0.10.0, build 0 warnings 0 errors |

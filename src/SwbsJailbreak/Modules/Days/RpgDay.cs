@@ -42,7 +42,9 @@ internal sealed class RpgPlayer
 /// 1.25 s per reloaded rocket), rockets push everyone within 115 units, deal up to 30 damage (self quarter, guards x1.5,
 /// airshots kill), no fall damage. The custom launcher/missile models and sounds cannot load in CS2: rockets are real
 /// beam trails with a CS2 explosion particle, and the rocket count is shown in the HUD.
-/// Requires the CSS ray-trace API (net10.0 build); on the net8.0 build this day is not registered.
+/// BLOCKED on CounterStrikeSharp 1.0.368 (.NET 8): rockets need a world-collision point and that CSS line has no ray
+/// trace, so the day is not registered (logged at load). Planned replacement: take the point from the engine's own
+/// bullet trace (weapon_fire + bullet_impact) - see FEATURE_GAPS.md. The simulation below is kept for that work.
 /// </summary>
 public sealed class RpgDay : JbModule
 {
@@ -64,9 +66,9 @@ public sealed class RpgDay : JbModule
     public override void OnLoad(bool hotReload)
     {
         if (Jb.Days is not DaysModule) return;
-        if (!VectorUtil.HasRayTrace)
+        if (!HasWorldCollision)
         {
-            Logger.LogInformation("[Days] RPG warday needs the CSS ray-trace API (net10.0 build / CSS 1.0.370+) - not available on this build");
+            Logger.LogInformation("[Days] RPG warday is not registered: rockets need a world-collision source (no ray trace in CSS 1.0.368)");
             return;
         }
 
@@ -179,7 +181,7 @@ public sealed class RpgDay : JbModule
         var right = new Vector(MathF.Sin(yaw), -MathF.Cos(yaw), 0f);
         var spawn = new Vector(eye.X + fwd.X * 16f + right.X * 7f, eye.Y + fwd.Y * 16f + right.Y * 7f, eye.Z + fwd.Z * 16f - 6f);
         // Aim at the crosshair point so the offset muzzle still hits what the player looks at.
-        var aim = VectorUtil.AimPoint(c) ?? new Vector(eye.X + fwd.X * 8192f, eye.Y + fwd.Y * 8192f, eye.Z + fwd.Z * 8192f);
+        var aim = new Vector(eye.X + fwd.X * 8192f, eye.Y + fwd.Y * 8192f, eye.Z + fwd.Z * 8192f);
         var dir = new Vector(aim.X - spawn.X, aim.Y - spawn.Y, aim.Z - spawn.Z);
         var len = MathF.Max(0.001f, dir.Length());
         _rockets.Add(new Rocket
@@ -231,27 +233,11 @@ public sealed class RpgDay : JbModule
         }
     }
 
-    private static Vector? WorldImpact(Vector from, Vector to, CCSPlayerController? owner)
-    {
-#if NET10_0_OR_GREATER
-        try
-        {
-            var tr = Trace.TraceEndShape(from, to, owner?.PawnOrNull(), new TraceOptions
-            {
-                InteractsAs = Contents.Player,
-                InteractsWith = Contents.Solid | Contents.Window | Contents.PlayerClip | Contents.WorldGeometry | Contents.StaticLevel,
-                InteractsExclude = Contents.Player | Contents.Hitbox
-            });
-            return tr.DidHit() ? tr.EndPos : null;
-        }
-        catch
-        {
-            return null;
-        }
-#else
-        return null;
-#endif
-    }
+    /// <summary>False until a real world-collision source exists on CSS 1.0.368 (see the class summary).</summary>
+    private static bool HasWorldCollision => false;
+
+    /// <summary>World hit on the segment, or null. No source on CSS 1.0.368 yet (never an invented point).</summary>
+    private static Vector? WorldImpact(Vector from, Vector to, CCSPlayerController? owner) => null;
 
     private void Explode(Rocket r, Vector at, CCSPlayerController? direct, CCSPlayerController? owner)
     {

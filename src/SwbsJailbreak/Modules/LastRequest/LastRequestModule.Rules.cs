@@ -433,61 +433,18 @@ public sealed partial class LastRequestModule
 
     // ================================================================== teleports
 
-    /// <summary>TeleportNearClient(anchor, mover): put the mover next to the anchor (free spot on net10, else same spot).</summary>
+    /// <summary>
+    /// TeleportNearClient(anchor, mover). The original hull-traced a free spot beside the anchor; CSS 1.0.368 has no
+    /// trace, so the mover is put on the anchor's own spot (players do not collide while noblock is on) and keeps its
+    /// own view angles (faceAnchor needs a spot beside the anchor, so it has no effect here).
+    /// </summary>
     internal static void TeleportNear(CCSPlayerController anchor, CCSPlayerController mover, bool faceAnchor)
     {
         var ap = anchor.PawnOrNull();
         var mp = mover.PawnOrNull();
         if (ap?.AbsOrigin == null || mp == null) return;
-        var start = new Vector(ap.AbsOrigin.X, ap.AbsOrigin.Y, ap.AbsOrigin.Z);
-        var dest = FindFreeSpotNear(start, ap, mp) ?? start;
-        QAngle? ang = null;
-        if (faceAnchor)
-        {
-            var dx = start.X - dest.X;
-            var dy = start.Y - dest.Y;
-            if (Math.Abs(dx) + Math.Abs(dy) > 1f) ang = new QAngle(0, MathF.Atan2(dy, dx) * 180f / MathF.PI, 0);
-        }
-
-        mover.TeleportTo(dest, ang, new Vector(0, 0, 0));
-    }
-
-    private static Vector? FindFreeSpotNear(Vector start, CBaseEntity ignoreA, CBaseEntity ignoreB)
-    {
-#if NET10_0_OR_GREATER
-        try
-        {
-            var mins = new Vector(-16, -16, 0);
-            var maxs = new Vector(16, 16, 72);
-            var opts = new TraceOptions
-            {
-                InteractsAs = Contents.Player,
-                InteractsWith = Contents.Solid | Contents.PlayerClip | Contents.Window | Contents.Player,
-                InteractsExclude = Contents.Trigger
-            };
-            var dirs = new (float x, float y)[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1) };
-            var from = new Vector(start.X, start.Y, start.Z + 30f);
-            for (var hop = 1; hop <= 6; hop++)
-            {
-                foreach (var (dx, dy) in dirs)
-                {
-                    var to = new Vector(from.X + dx * 36f * hop, from.Y + dy * 36f * hop, from.Z);
-                    var tr = Trace.TraceHullShape(from, to, mins, maxs, ignoreA, opts);
-                    if (tr.DidHit()) continue;
-                    // drop to the floor
-                    var down = Trace.TraceHullShape(to, new Vector(to.X, to.Y, to.Z - 256f), mins, maxs, ignoreB, opts);
-                    if (!down.DidHit()) continue;
-                    var end = down.EndPos;
-                    return new Vector(end.X, end.Y, end.Z + 1f);
-                }
-            }
-        }
-        catch
-        {
-            // fall back to the anchor's own position (players do not collide)
-        }
-#endif
-        return null;
+        var dest = new Vector(ap.AbsOrigin.X, ap.AbsOrigin.Y, ap.AbsOrigin.Z);
+        mover.TeleportTo(dest, null, new Vector(0, 0, 0));
     }
 
     private void TeleportToLrPoint(JbPlayer p)

@@ -27,7 +27,7 @@
   "warden.died": "{olive}The warden has died!",
   "warden.hud": "<font class='fontSize-s' color='#6FC41A'>Warden:</font> <font class='fontSize-s' color='#DE2626'>{0}</font>",
   "warden.pointer.tip": "{olive}Double-tap {lightred}USE {olive}to point, triple-tap {lightred}WALK {olive}to draw a line and triple-tap {lightred}DUCK {olive}to draw a ring.",
-  "warden.pointer.no_trace": "{red}This server build has no ray-trace API: markers are placed at your own position instead of where you aim.",
+  "warden.pointer.no_trace": "{olive}Ping (your CS2 ping key, middle mouse by default) or shoot where the pointer should go - this server has no ray trace to follow your crosshair.",
 
   "wm.type_wm": "{olive}Type {lightred}!wm {olive} to open the warden's menu.",
   "wm.must_be_warden": "{red}You must be warden to use this command.",
@@ -60,7 +60,7 @@
   "wm.heal.removed": "{olive}Healing area removed.",
   "wm.heal.log": "Warden healed {0} for {1}.",
   "wm.flat": "{red}You must place this on a flat surface.",
-  "wm.no_trace": "{red}This server build has no ray-trace API: rings and the healing area are placed at your feet.",
+  "wm.no_trace": "{olive}Tip: ping a spot (CS2 ping key, middle mouse by default) right before choosing a position to place it there. Without a ping it is placed at your feet.",
   "wm.cc.ring": "{olive}Client colors have been set based on ring colors.",
   "wm.cc.remove": "{olive}Client colors have all been removed.",
   "wm.cc.usage": "Please enter 'ring' or 'remove'.",

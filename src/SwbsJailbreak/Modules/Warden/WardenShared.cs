@@ -232,75 +232,15 @@ internal sealed class PulseRings
 }
 
 /// <summary>
-/// World traces. The CSS ray-trace API (Trace/TraceOptions) only exists in the net10.0 build (CSS 1.0.370+). On the
-/// net8.0 build every method returns false and callers fall back to a REAL position (the player's own origin or a
-/// recorded bullet_impact) - never an invented point.
+/// Aim points for warden markers. CounterStrikeSharp 1.0.368 (.NET 8) has no ray-trace API, so the aimed position is the
+/// warden's last ping (player_ping = the engine's own crosshair trace, see Core/Aim). Without a recent ping callers fall
+/// back to a REAL position (a recorded bullet impact or the warden's own feet) - never an invented point.
 /// </summary>
-internal static class WTrace
+internal static class WAim
 {
-    public static bool Available => VectorUtil.HasRayTrace;
+    public static bool RecentPing(CCSPlayerController c, float maxAge, out Vector end) =>
+        Aim.TryGetPing(c, Math.Max(0.1f, maxAge), out end, out _);
 
-    /// <summary>Eye trace along the view, ignoring players (MASK_PLAYERSOLID + TraceFilter_DontHitPlayers).</summary>
-    public static bool EyeTrace(CCSPlayerController c, out Vector end, out Vector normal)
-    {
-#if NET10_0_OR_GREATER
-        var pawn = c.PawnOrNull();
-        if (pawn?.AbsOrigin != null)
-        {
-            var eye = c.EyePosition();
-            var tr = Trace.TraceShape(eye, pawn.EyeAngles, pawn, new TraceOptions
-            {
-                InteractsAs = Contents.Player,
-                InteractsWith = Contents.Solid | Contents.Window | Contents.PlayerClip,
-                InteractsExclude = Contents.Player | Contents.NoDraw
-            });
-            if (tr.DidHit())
-            {
-                end = tr.EndPos;
-                normal = tr.Normal;
-                return true;
-            }
-        }
-#endif
-        end = new Vector(0, 0, 0);
-        normal = new Vector(0, 0, 0);
-        return false;
-    }
-
-    /// <summary>
-    /// Trace from the eye to just past an impact point. worldHit = the first thing hit is the world (not a player or
-    /// other entity). Returns false when tracing is unavailable.
-    /// </summary>
-    public static bool ImpactTrace(CCSPlayerController c, Vector impact, out bool worldHit, out Vector normal)
-    {
-#if NET10_0_OR_GREATER
-        var pawn = c.PawnOrNull();
-        if (pawn?.AbsOrigin != null)
-        {
-            var eye = c.EyePosition();
-            var dir = WDraw.Normalize(new Vector(impact.X - eye.X, impact.Y - eye.Y, impact.Z - eye.Z));
-            var end = new Vector(impact.X + dir.X * 2f, impact.Y + dir.Y * 2f, impact.Z + dir.Z * 2f);
-            var tr = Trace.TraceEndShape(eye, end, pawn, new TraceOptions
-            {
-                InteractsAs = Contents.Player,
-                InteractsWith = Contents.Solid | Contents.Window | Contents.PlayerClip | Contents.Player | Contents.Hitbox
-                                | Contents.PhysicsProp | Contents.Debris,
-                InteractsExclude = Contents.NoDraw
-            });
-            normal = tr.Normal;
-            if (!tr.DidHit())
-            {
-                worldHit = false;
-                return true;
-            }
-
-            var hit = tr.HitEntity();
-            worldHit = !hit.IsValid || hit.Index == 0 || hit.DesignerName == "worldent";
-            return true;
-        }
-#endif
-        worldHit = false;
-        normal = new Vector(0, 0, 0);
-        return false;
-    }
+    public static bool RecentPing(CCSPlayerController c, float maxAge, out Vector end, out double time) =>
+        Aim.TryGetPing(c, Math.Max(0.1f, maxAge), out end, out _, out time);
 }

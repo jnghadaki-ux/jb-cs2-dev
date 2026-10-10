@@ -302,7 +302,7 @@ internal static class CellDoorStore
     public static float[] ToArray(Vector v) => new[] { MathF.Round(v.X, 2), MathF.Round(v.Y, 2), MathF.Round(v.Z, 2) };
 }
 
-/// <summary>World-space bounds of an entity: CSS Trace AABB on the net10.0 build, collision OBB + origin otherwise.</summary>
+/// <summary>World-space bounds of an entity from its collision property + origin.</summary>
 internal static class EntityBounds
 {
     public static bool TryGet(CBaseEntity e, out Vector mins, out Vector maxs)
@@ -310,22 +310,6 @@ internal static class EntityBounds
         mins = new Vector(0, 0, 0);
         maxs = new Vector(0, 0, 0);
         if (!e.IsValid) return false;
-#if NET10_0_OR_GREATER
-        try
-        {
-            CounterStrikeSharp.API.Modules.Utils.Trace.GetEntityWorldSpaceAABB(e, out var mn, out var mx);
-            if (mx.X - mn.X > 0.01f || mx.Y - mn.Y > 0.01f || mx.Z - mn.Z > 0.01f)
-            {
-                mins = mn;
-                maxs = mx;
-                return true;
-            }
-        }
-        catch
-        {
-            // fall back to the collision property
-        }
-#endif
         var o = e.AbsOrigin;
         var col = e.Collision;
         if (o == null || col == null) return false;

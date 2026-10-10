@@ -14,16 +14,17 @@ namespace SwbsJailbreak;
 /// <summary>
 /// SWBS Ultimate Jailbreak for Counter-Strike 2 (CounterStrikeSharp + Metamod:Source 2).
 /// A port of hlstriker's SMPlugins "Ultimate Jailbreak" (Swoobles) and its companion plugins.
-/// Created by Gdaki - designed after HlStriker, SWBS development/lead admins.
+/// Created by Gdaki (original work). Enhanced with Claude Code (CS2 port and enhancements).
+/// Inspired by: designed after HlStriker (SMPlugins Ultimate Jailbreak), SWBS development/lead admins.
 /// </summary>
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.9.0"; // first complete test build (not yet verified on a live server)
+    public const string PluginVersion = "0.10.0"; // .NET 8 / CSS 1.0.368 test build (not yet verified on a live server)
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
-    public override string ModuleAuthor => "Gdaki (designed after HlStriker, SWBS development/lead admins)";
+    public override string ModuleAuthor => "Gdaki (enhanced with Claude Code) - inspired by HlStriker, SWBS development/lead admins";
     public override string ModuleDescription => "Ultimate Jailbreak for CS2 - warden, cells, last requests, days, effects, admin & fun commands";
 
     public static JailbreakPlugin? Instance { get; private set; }
@@ -65,6 +66,7 @@ public sealed class JailbreakPlugin : BasePlugin
         RegisterEventHandler<EventPlayerDeath>(DamageService.OnPlayerDeathPre, HookMode.Pre);
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterEventHandler<EventPlayerTeam>(OnPlayerTeam);
+        RegisterEventHandler<EventPlayerPing>(Aim.OnPlayerPing);
         AddCommandListener("drop", WeaponService.OnDropCommand);
         AddCommand("css_jb_reload", "Reload SWBS Jailbreak config and phrases", OnReloadCommand);
         AddCommand("css_jb_version", "Show SWBS Jailbreak version", OnVersionCommand);
@@ -143,7 +145,7 @@ public sealed class JailbreakPlugin : BasePlugin
             Round.FreezeEndTime = Server.CurrentTime;
         }
 
-        Logger.LogInformation("{Name} v{Version} loaded: {Count} modules, {Phrases} phrases. Created by Gdaki - designed after HlStriker, SWBS development/lead admins.",
+        Logger.LogInformation("{Name} v{Version} loaded: {Count} modules, {Phrases} phrases. Created by Gdaki, enhanced with Claude Code - inspired by HlStriker, SWBS development/lead admins.",
             ModuleName, ModuleVersion, _modules.Count, Lang.Count);
     }
 
@@ -159,6 +161,7 @@ public sealed class JailbreakPlugin : BasePlugin
         Cvars.RestoreAll();
         Storage.Flush(false);
         JbEvents.ClearAll();
+        Aim.Unload();
         Jb.Reset();
         foreach (var c in Players.Humans())
         {
@@ -195,6 +198,7 @@ public sealed class JailbreakPlugin : BasePlugin
         Round.Machine.ResetForMap();
         Round.KillRoundTimers();
         Hud.ResetAll();
+        Aim.Reset();
         Dispatch(m => m.OnMapStart(map), "OnMapStart");
     }
 
@@ -224,6 +228,7 @@ public sealed class JailbreakPlugin : BasePlugin
         if (p.Connected) Dispatch(m => m.OnPlayerDisconnect(p), "OnPlayerDisconnect");
         Players.OnDisconnect(slot);
         Movement.Reset(slot);
+        Aim.Forget(slot);
         Hud.ResetSlot(slot);
         MenuService.ResetSlot(slot);
     }
@@ -380,6 +385,6 @@ public sealed class JailbreakPlugin : BasePlugin
 
     private void OnVersionCommand(CCSPlayerController? player, CommandInfo info)
     {
-        Chat.Reply(player, info, $"{{green}}{ModuleName}{{default}} v{ModuleVersion} - created by {{gold}}Gdaki{{default}}, designed after {{lightblue}}HlStriker{{default}}, SWBS development/lead admins.");
+        Chat.Reply(player, info, $"{{green}}{ModuleName}{{default}} v{ModuleVersion} - created by {{gold}}Gdaki{{default}}, enhanced with Claude Code. Inspired by {{lightblue}}HlStriker{{default}}, SWBS development/lead admins.");
     }
 }

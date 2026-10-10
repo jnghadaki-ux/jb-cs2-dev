@@ -104,6 +104,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
         Jb.Warden = this;
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
         Plugin.RegisterListener<Listeners.OnPlayerButtonsChanged>(OnButtonsChanged);
+        Aim.Pinged += OnPing;
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(OnPrecache);
     }
 
@@ -137,6 +138,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
         JbEvents.LastRequestInitialized -= OnLastRequestInitialized;
         JbEvents.DayStarted -= OnDayStarted;
         JbEvents.SettingsSpawnPost -= OnSpawnPost;
+        Aim.Pinged -= OnPing;
         StopWardenTimer();
         CleanupVisuals(true);
         Hud.ClearPrefix("warden.");

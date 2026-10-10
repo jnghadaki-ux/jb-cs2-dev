@@ -4,7 +4,7 @@ Status legend (master prompt §5): **Verified** · **Implemented, unverified** �
 **Unsupported** · **Out of scope** (plugin belongs to another SWBS server type, not to the jailbreak server).
 
 Nothing has been tested on a live CS2 server yet, so no row is **Verified**. "Implemented, unverified" = code exists, builds
-for net8.0 and net10.0, and follows the original source; it still needs the in-game test in TEST_PLAN.md.
+for net8.0 (CounterStrikeSharp 1.0.368, the only target), and follows the original source; it still needs the in-game test in TEST_PLAN.md.
 
 Original sources: `SMPlugins-master/Mods/UltimateJailbreak/*` (hlstriker), `SMPlugins-master/Plugins/*`, plus the owner's
 SimpleAdmin mod. CS2 implementation: `src/SwbsJailbreak/Modules/<Module>`.
@@ -13,10 +13,10 @@ SimpleAdmin mod. CS2 implementation: `src/SwbsJailbreak/Modules/<Module>`.
 
 | Original | Behaviour | CS2 module | Status | Notes / limits |
 |---|---|---|---|---|
-| UltJB_Warden.sp | warden queue (!w), selection timer, !uw, !wwho, !rw, !sw/!setwarden, kiss, pointer/line/ring gestures, heavy model, clan tag | Warden/WardenModule | Implemented, unverified | Pointer/line/ring aim needs ray trace (net10); net8 uses the warden's own position. Custom kiss/death sounds need an addon. |
+| UltJB_Warden.sp | warden queue (!w), selection timer, !uw, !wwho, !rw, !sw/!setwarden, kiss, pointer/line/ring gestures, heavy model, clan tag | Warden/WardenModule | Implemented, unverified | No ray trace on CSS 1.0.368: the pointer and menu rings use the warden's ping (stock CS2 ping key); line/ring gestures use bullet impacts as the original. Custom kiss/death sounds need an addon. |
 | UltJB_WardenMenu.sp | !wm rings (4 colours, sizes), healing area, client colours, !cc | Warden/WardenMenuModule | Implemented, unverified | Rings are real beam entities; m_nSkin tint replaced by render colour. Healing particle is a CS2 particle. |
 | UltJB_LastGuard.sp | last guard enable check, beacons, damage timer/slap | LastGuard | Implemented, unverified | |
-| UltJB_API_CellDoors.sp / UltJB_CellDoors.sp | per-map cell doors, auto-open (60 s), opened detection, !cdo, editor | Cells | Implemented, unverified | Per-map JSON + 154 original CS:GO name lists + auto-detect; editor with real trace (net10) or crosshair-direction pick (net8); buttons-only maps supported. |
+| UltJB_API_CellDoors.sp / UltJB_CellDoors.sp | per-map cell doors, auto-open (60 s), opened detection, !cdo, editor | Cells | Implemented, unverified | Per-map JSON + 154 original CS:GO name lists + auto-detect; editor picks the pinged door (player_ping entity) or the door nearest the crosshair direction; buttons-only maps supported. |
 | UltJB_Logger.sp | round event log, !log / !logs | Logger | Implemented, unverified | |
 | UltJB_MuteManager.sp | warden mute power, guard audibility | Mute | Implemented, unverified | Voice via CSS listen overrides / VoiceFlags. |
 | UltJB_VoiceChat.sp | prisoners muted 60 s at round start, dead muted, notices | Mute | Implemented, unverified | |
@@ -42,7 +42,7 @@ SimpleAdmin mod. CS2 implementation: `src/SwbsJailbreak/Modules/<Module>`.
 | Wardays: Gang, Jihad, Taser, No Scope, Fat Kid, Low Gravity, Scoutz Knivez, Weapon Selection, Classic, Heavy Assault, One In The Chamber | | Days/SimpleDays | Implemented, unverified | Heavy Assault uses item_heavyassaultsuit (no m_bHasHeavyArmor in CS2). |
 | Wardays: Hunger Games, Zombie, Throwing Knives, CT Retake, Horror Movie | | Days/LargeDays | Partial | Crate/knife models and fog rendering need in-game verification; custom sounds need an addon. |
 | Warday: Freeze Tag | | Days/FreezeTagDay | Implemented, unverified | |
-| Warday: RPG | | Days/RpgDay | Partial | net10 build only (needs trace); custom launcher/missile models → beam trail + CS2 particle. |
+| Warday: RPG | | Days/RpgDay | Blocked | Rockets need a world-collision point; CSS 1.0.368 has no ray trace, so the day is not registered. Plan: engine bullet trace (weapon_fire + bullet_impact). Simulation code kept. |
 | Warday: Capture the Flag | side selection, flag carry/drop/return/capture, respawns, HP balance | Days/CaptureTheFlagDay | Partial | Flag/capture point are beam visuals (custom models impossible); map points via !ctf_setflag / !ctf_setcapture. |
 | Commands: Freekill, OneUp, Roll, Rules, Speed, Timer, Xray, CTMessage (!g) | | Commands | Implemented, unverified | Rules opens the URL in chat (no MOTD browser in CS2). |
 

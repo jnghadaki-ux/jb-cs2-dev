@@ -1,15 +1,15 @@
 # Project status — SWBS Ultimate Jailbreak for CS2
 
-_Last updated: end of session 2 (2026-10-10), version 0.9.0. Nothing has been tested on a live CS2 server yet: every gameplay feature is
+_Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has been tested on a live CS2 server yet: every gameplay feature is
 **Implemented, unverified** unless stated otherwise._
 
 ## Build
 
 | Item | State |
 |---|---|
-| `dotnet build -c Release` (net8.0 → CSS 1.0.368, net10.0 → CSS 1.0.376) | **Passes**, 0 warnings, 0 errors |
+| `dotnet build -c Release` (net8.0 only → CSS 1.0.368) | **Passes**, 0 warnings, 0 errors (session 3) |
 | Unit tests (`tests/SwbsJailbreak.Tests`, 21 tests: round state machine, storage, targets, config) | **Pass** |
-| Packaging (`build.sh` / `build.ps1` → `SwbsJailbreak-<ver>-net10.zip` / `-net8.zip`) | **Works** (zips produced); not yet loaded on a server |
+| Packaging (`build.sh` / `build.ps1` → `SwbsJailbreak-<ver>-net8.zip`) | **Works** (zip produced, CSS API not bundled); not yet loaded on a server |
 | Live server load test | **Not done** (no CS2 server in this environment) |
 
 ## Modules (single plugin, `src/SwbsJailbreak/Modules/*`)
@@ -34,16 +34,17 @@ _Last updated: end of session 2 (2026-10-10), version 0.9.0. Nothing has been te
 | Last Request API (slots, menus, rebel-as-team, admin freedays, opponent selection, slay timers, isolation, beacons, LR/rebel map points) | UltJB_API_LastRequest | Implemented, unverified |
 | All 26 LRs (Freeday x4, Draw, Rebel x8, Weapon Battle x5, Contest x7) | LastRequests/* | Implemented, unverified |
 | Days API (menus + rules, team/FFA, warday freeze, weapon rules, !daysedit) | UltJB_API_Days | Implemented, unverified |
-| All 23 days | Days/* | Implemented, unverified (RPG net10 only; CTF needs !ctf_setflag/!ctf_setcapture per map) |
-| Other SMPlugins extras (AFK manager, rotating messages, rules/help menus, spectate menu, radio spam block, ...) | Plugins/* | Not started — see FEATURE_GAPS.md (to be written) |
+| All 23 days | Days/* | 22 Implemented, unverified (CTF needs !ctf_setflag/!ctf_setcapture per map); RPG **Blocked** on CSS 1.0.368 |
+| Other SMPlugins extras (AFK manager, rotating messages, rules/help menus, spectate menu, radio spam block, ...) | Plugins/* | Not started — see FEATURE_GAPS.md |
 
 ## Blockers
 * No CS2 dedicated server available to the agent: Level 2/3 tests must be run by the owner.
 * Account usage window limits session length; sub-agents are kept to a minimum on request.
 
 ## Next actions (priority order)
-1. Owner: run TEST_PLAN.md §2–§3 on a CS2 server with the net10 package and report failures.
-2. Remaining small server plugins (FEATURE_GAPS.md).
-3. Review salvaged Warden/Cells/Logger/Mute/WeaponSelection code paths against specs.
-4. Remaining SMPlugins extras; FEATURE_INVENTORY / FEATURE_GAPS / BUILD_AND_TEST / TEST_PLAN / CHANGELOG / RELEASE_NOTES.
-5. Owner runs the in-game test plan; fix loop.
+1. Owner: run TEST_PLAN.md §2–§3 on a CS2 server with CSS 1.0.368 + the net8 package; report console errors and failures.
+2. Review pass for runtime bugs (LR, Days, Jihad, Settings, Teams, Cells editor, Warden ping) — highest code risk.
+3. RPG warday on CSS 1.0.368 via the engine bullet trace (FEATURE_GAPS.md plan).
+4. Remaining small server plugins (FEATURE_GAPS.md "Not ported yet").
+5. Validate admin + JB commands against current CSS plugins (CS2-SimpleAdmin, eGo/destoer JB) and research extra
+   CS:GO/CS:S JB features (owner request, before declaring finished).

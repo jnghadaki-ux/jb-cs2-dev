@@ -299,20 +299,21 @@ public sealed class WardenMenuModule : JbModule
     // ================================================================= positioning
 
     /// <summary>
-    /// SetPosition(type, ring): trace from the eyes (ignoring players), show the set-position effect and require a
-    /// flat surface (normal.z >= 0.85). ringIndex -1 = healing area. net8.0 build (no ray trace): the warden's own
-    /// feet are used and "on the ground" stands in for the flat-surface test.
+    /// SetPosition(type, ring): the original traced from the eyes and required a flat surface (normal.z >= 0.85).
+    /// ringIndex -1 = healing area. CounterStrikeSharp 1.0.368 has no ray trace, so the position is the warden's recent
+    /// ping (the engine's crosshair trace; no surface normal, so it is accepted as is) or, without one, the warden's own
+    /// feet with "on the ground" standing in for the flat-surface test.
     /// </summary>
     private void SetPosition(CCSPlayerController c, int ringIndex)
     {
         Vector pos;
         bool flat;
-        if (WTrace.EyeTrace(c, out var end, out var normal))
+        if (WAim.RecentPing(c, Section<WardenConfig>("Warden").PingMaxAge, out var end))
         {
             pos = end;
-            flat = normal.Z >= 0.85f;
+            flat = true;
         }
-        else if (!WTrace.Available)
+        else
         {
             var o = c.Origin();
             if (o == null) return;
@@ -323,11 +324,6 @@ public sealed class WardenMenuModule : JbModule
                 _noTraceWarned = true;
                 Chat.Print(c, WText.T("wm.no_trace"));
             }
-        }
-        else
-        {
-            Chat.Print(c, WText.T("wm.flat")); // aiming at nothing (sky)
-            return;
         }
 
         // Set-position effect: TE ring diameter 35 -> 2 over 0.25 s (radius 17.5 -> 1), cyan, width 2.
