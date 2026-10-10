@@ -451,6 +451,8 @@ public sealed partial class LastRequestModule
     {
         var c = p.Controller;
         if (c == null || !c.IsAliveP()) return;
+        // Original: the Teleport Destination zone named "lr_tele" (ZoneManager). Falls back to the !lr_setpoint spot.
+        if (Jb.Zones.TeleportToDestination("lr_tele", c)) return;
         if (_points.LrTeleport is { Length: 3 } t)
         {
             c.TeleportTo(new Vector(t[0], t[1], t[2]), null, new Vector(0, 0, 0));

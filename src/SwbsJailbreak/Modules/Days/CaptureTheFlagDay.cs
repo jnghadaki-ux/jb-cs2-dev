@@ -107,6 +107,7 @@ public sealed class CaptureTheFlagDay : JbModule
 
     public override void OnRoundStart()
     {
+        ApplyZonePoints(); // zones edited during the map apply from the next round
         _roundStart = (float)Server.EngineTime;
         var rt = ConVar.Find("mp_roundtime")?.GetPrimitiveValue<float>() ?? 5f;
         _roundTime = rt * 60f + 3f;
@@ -119,6 +120,7 @@ public sealed class CaptureTheFlagDay : JbModule
     {
         try { _points = Storage.LoadMapDoc<CtfMapPoints>("ctf", (_map ?? "").ToLowerInvariant()); }
         catch { _points = new CtfMapPoints(); }
+        ApplyZonePoints();
         // Disabled without both points (original: without both zones); never re-enables a day disabled with !daysedit.
         if (_day != null) _day.Enabled = _day.Enabled && _points.Flag != null && _points.Capture != null;
     }
@@ -251,6 +253,22 @@ public sealed class CaptureTheFlagDay : JbModule
 
     private static bool IsFreeday(JbPlayer p) =>
         Jb.LastRequests.HasStartedLastRequest(p) && (Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0;
+
+    /// <summary>
+    /// The original used Teleport Destination zones named "ctf_flag" / "ctf_capture"; when such zones exist they win over
+    /// the !ctf_setflag / !ctf_setcapture points (floor centre of the zone, facing its yaw).
+    /// </summary>
+    private void ApplyZonePoints()
+    {
+        if (Jb.Zones.FindByName(ZoneTypeKeys.TeleportDestination, "ctf_flag") is { } flag) _points.Flag = ZonePoint(flag);
+        if (Jb.Zones.FindByName(ZoneTypeKeys.TeleportDestination, "ctf_capture") is { } capture) _points.Capture = ZonePoint(capture);
+    }
+
+    private static float[] ZonePoint(Zone z)
+    {
+        var p = z.Box.BottomCenter;
+        return new[] { p.X, p.Y, p.Z, z.Angles.Y };
+    }
 
     private void Prepare(JbPlayer p)
     {

@@ -10,5 +10,7 @@
   "core.only_prisoner": "{red}Only prisoners can use this.",
   "core.only_guard": "{red}Only guards can use this.",
   "core.usage": "{grey}Usage: {0}",
-  "core.console_only_ingame": "This command can only be used in-game."
+  "core.console_only_ingame": "This command can only be used in-game.",
+  "core.input.hint": "{grey}Type it in chat now (or type cancel).",
+  "core.input.cancelled": "{grey}Cancelled."
 }

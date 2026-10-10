@@ -28,12 +28,16 @@ public static class Jb
     public static IPointsService Points { get; set; } = NullServices.Instance;
     public static IMuteService Mute { get; set; } = NullServices.Instance;
     public static IRebelService Rebels { get; set; } = NullServices.Instance;
+    public static IZoneService Zones { get; set; } = NullZoneService.Instance;
+    public static ICrewService Crews { get; set; } = NullCrewService.Instance;
 
     internal static void Reset()
     {
         var n = NullServices.Instance;
         Warden = n; Cells = n; LastRequests = n; Days = n; Effects = n; WeaponSelection = n; Settings = n;
         LastGuard = n; Log = n; Jihad = n; Models = n; Teams = n; Points = n; Mute = n; Rebels = n;
+        Zones = NullZoneService.Instance;
+        Crews = NullCrewService.Instance;
     }
 }
 

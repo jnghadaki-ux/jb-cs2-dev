@@ -58,6 +58,7 @@ public sealed class JailbreakPlugin : BasePlugin
         RegisterListener<Listeners.OnPlayerButtonsChanged>(OnPlayerButtonsChanged);
         RegisterListener<Listeners.OnPlayerTakeDamagePre>(DamageService.OnPlayerTakeDamagePre);
         RegisterListener<Listeners.CheckTransmit>(Glow.OnCheckTransmit);
+        RegisterListener<Listeners.CheckTransmit>(Visibility.OnCheckTransmit);
         RegisterEventHandler<EventRoundPrestart>(OnRoundPrestart);
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventRoundFreezeEnd>(OnRoundFreezeEnd);
@@ -68,6 +69,9 @@ public sealed class JailbreakPlugin : BasePlugin
         RegisterEventHandler<EventPlayerTeam>(OnPlayerTeam);
         RegisterEventHandler<EventPlayerPing>(Aim.OnPlayerPing);
         AddCommandListener("drop", WeaponService.OnDropCommand);
+        // Before any module's say listener, so a pending chat prompt captures the line first.
+        AddCommandListener("say", ChatInput.OnSay, HookMode.Pre);
+        AddCommandListener("say_team", ChatInput.OnSay, HookMode.Pre);
         AddCommand("css_jb_reload", "Reload SWBS Jailbreak config and phrases", OnReloadCommand);
         AddCommand("css_jb_version", "Show SWBS Jailbreak version", OnVersionCommand);
 
@@ -156,6 +160,8 @@ public sealed class JailbreakPlugin : BasePlugin
         _modules.Clear();
         Round.KillRoundTimers();
         Glow.RemoveAll();
+        Visibility.Reset();
+        ChatInput.Reset();
         WeaponService.Clear();
         DamageService.Clear();
         Cvars.RestoreAll();
@@ -199,6 +205,7 @@ public sealed class JailbreakPlugin : BasePlugin
         Round.KillRoundTimers();
         Hud.ResetAll();
         Aim.Reset();
+        ChatInput.Reset();
         Dispatch(m => m.OnMapStart(map), "OnMapStart");
     }
 
@@ -229,6 +236,7 @@ public sealed class JailbreakPlugin : BasePlugin
         Players.OnDisconnect(slot);
         Movement.Reset(slot);
         Aim.Forget(slot);
+        ChatInput.Forget(slot);
         Hud.ResetSlot(slot);
         MenuService.ResetSlot(slot);
     }
