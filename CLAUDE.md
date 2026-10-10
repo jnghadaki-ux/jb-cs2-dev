@@ -24,6 +24,9 @@ read other docs only as the task needs them.
    plugins (e.g. CS2-SimpleAdmin, eGo / destoer jailbreak) and research CS:GO / CS:S jailbreak plugins for missing
    features that are feasible in CSS (report suggestions).
 9. Security: never hardcode admin SteamIDs or credentials; validate all command arguments and targets.
+10. **Model fit**: if the next task needs a different model than the one running, pause before starting and say which model
+    and why (owner: "If needed pause and suggest a different model if required"). Rule of thumb: mechanical ports, docs and
+    small commands = Sonnet; crash-risk reviews, new-system design and hard debugging = a stronger model.
 
 ## Project facts (verify before relying on them)
 
