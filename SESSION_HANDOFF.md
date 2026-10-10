@@ -9,7 +9,7 @@ _Updated: end of session 3 (2026-10-10), v0.10.0, branch `claude/swbs-jailbreak-
 * Aim on CSS 1.0.368 (no ray trace): `Core/Aim` stores each player's last `player_ping` (engine crosshair point +
   pinged entity). Warden ping → pointer laser + pulse ring; warden menu rings/healing at the recent ping; cell editor
   selects the pinged door. Line/ring gestures and paint use `bullet_impact` (as the original).
-* All 26 LRs and 22 of 23 days are Implemented, unverified. RPG warday is **Blocked** (needs world collision).
+* All 25 LRs and 22 of 23 days are Implemented, unverified. RPG warday is **Blocked** (needs world collision).
 * Nothing has been run on a live CS2 server yet.
 
 ## Exact next actions (priority order)

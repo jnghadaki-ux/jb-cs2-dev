@@ -32,10 +32,23 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 | Jihad | UltJB_Jihad | Implemented, unverified |
 | BhopCheck, ServerTweaks (noblock, grenade noblock, admin tags, clan tag filter, spam messages, kill feed) | Plugins/* | Implemented, unverified |
 | Last Request API (slots, menus, rebel-as-team, admin freedays, opponent selection, slay timers, isolation, beacons, LR/rebel map points) | UltJB_API_LastRequest | Implemented, unverified |
-| All 26 LRs (Freeday x4, Draw, Rebel x8, Weapon Battle x5, Contest x7) | LastRequests/* | Implemented, unverified |
+| All 25 LRs (Freeday x4, Draw, Rebel x8, Weapon Battle x5, Contest x7) | LastRequests/* | Implemented, unverified |
 | Days API (menus + rules, team/FFA, warday freeze, weapon rules, !daysedit) | UltJB_API_Days | Implemented, unverified |
 | All 23 days | Days/* | 22 Implemented, unverified (CTF needs !ctf_setflag/!ctf_setcapture per map); RPG **Blocked** on CSS 1.0.368 |
 | Other SMPlugins extras (AFK manager, rotating messages, rules/help menus, spectate menu, radio spam block, ...) | Plugins/* | Not started — see FEATURE_GAPS.md |
+
+## Counts (session 3, from the code and the original sources)
+
+| Item | Count |
+|---|---|
+| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 29 / 15 / 66 / ~23,000 |
+| Console commands + aliases registered (`[ConsoleCommand]`) | 135 (Admin 71, Commands 14, Warden 12, LastRequest 8, Days 7, Cells 7, Extras 5, Teams 4, Logger 4, Mute 2, PlayerExtras 1) |
+| Chat/HUD phrases (17 files) | 577 defined; every literal phrase key used in code resolves |
+| LRs / days / effects / admin+fun command groups | 25 / 23 (22 usable) / 6 (+1 unsupported) / see Admin |
+| Original UJB sources (81): usable in code | 79 (70 Implemented-unverified + 9 Partial); 1 Blocked, 1 Unsupported |
+| Automated tests | 21 passing (round state machine, config, storage, phrases, targets, weapons, perms); **0 in-game / server tests** |
+
+SMPlugins source coverage (390 `.sp`): see FEATURE_INVENTORY.md §4.
 
 ## Blockers
 * No CS2 dedicated server available to the agent: Level 2/3 tests must be run by the owner.

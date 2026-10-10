@@ -73,3 +73,28 @@ Blocks/* + BlockMaker (block-maker servers), MovementStyles/* + timers/replays/M
 Multigames*/MinigamesAutoBhop, CourseAutoRespawn, AutoBhop/AutoStrafe/BhopCap/PreStrafe/ClientAirAccelerate (movement servers),
 Skill-server plugins, Jetpacks, HidePlayers, HideHud, FootstepsMenu, MapVoting, ServerNeed, ShowForumThreads, Unsafe/*,
 EntityPatches/* (CS:GO map fixes) — **Out of scope**: they never ran on the jailbreak server; listed so nothing is silently dropped.
+
+## 4. Coverage summary by original `.sp` file (computed 2026-10-10)
+
+Method: all 390 `.sp` files in the owner's SMPlugins-master upload were counted. "Used by Ultimate Jailbreak" is the
+dependency closure of `Mods/UltimateJailbreak/*.sp` over `#include` + `RegPluginLibrary`/`LibraryExists` (a script, not
+a guess). Which *other* plugins the SWBS jailbreak server ran is **not recorded in the repository**: buckets C/D below
+are inferred from what each plugin does — the owner should correct them.
+
+| Bucket | `.sp` files | Result |
+|---|---:|---|
+| SourceMod 1.6 stock compiler samples (`_SourceMod 1.6 Compiler`) | 92 | n/a — not SWBS code; their admin/base commands are re-created by the Admin module |
+| **A. Ultimate Jailbreak itself** (`Mods/UltimateJailbreak`) | 81 | 70 Implemented/unverified · 9 Partial · 1 Blocked (RPG day) · 1 Unsupported (Third Person effect) · 0 Verified |
+| **B. Libraries/helpers UJB pulls in** | 38 | 26 replaced by core services (DB/admin/cookies/stats/file/web libs → JSON storage + CSS admin; EntityHooker, ModelSkinManager, ParticleManager, PathPoints, PlayerChat, SquelchManager, ZoneManager → Fx/Chat/Mute/per-map points) · UserPoints Partial · ZoneType_Teleport replaced by `!lr_setpoint` · **Parachute and HidePlayers not ported** · 8 store/cosmetic items out of scope (DonatorItem ColoredChat/PlayerModels/Titles, Item_Equipment, Item_Paintballs, SkinsForMapWeapons, TokensUpdate, Unsafe_Gloves — skins/gloves also barred by the GSLT rule) |
+| **C1.** Other server plugins already ported | 14 | AdminTags, BhopCheck, BlockSpamMessages, ClanTagFilter, DisableKillFeed, GrenadeNoblock, Heal, LogAdminActivity, MagicTargetFilter, NoBlock, Noclip, Respawn, Teamswitch, TimedMuteGag — all Implemented, unverified |
+| **C2.** Jailbreak-relevant, **not ported yet** | 18 | AFKManager, CommandList, DisableFallDrownDamage, FixGravityOnNewRound, HelpMenu, InfoMenus, Information, MOTD, MapArmour, NoTextSpam, RadioSpamBlock, RotatingMessages, ServerRules, ShowSpectators, SpectateMenu, StopMapMusic, StopWeaponSounds, UnlimitedReserveAmmo |
+| C3. Superseded by a ported day | 2 | ThrowingKnife → Throwing Knives day; CustomWeapons/RPG → RPG day (blocked) |
+| C4. Economy / store | 10 | CoinPoints, DonatorItems (2), StoreItems (7) — out of scope |
+| **D1.** CS:GO-only engine/map fixes (meaningless on CS2) | 19 | AllowMorePlayers, BlockGameStart, DetectTeleportHacking, DisableDuckDelay, EntityPatches (13), FixCameraBug, FixRoundEndClassnames |
+| **D2.** Generic server utilities (not jailbreak, optional) | 12 | ClientFootsteps, DisablePlayerDamage, FootstepsMenu, ForceMapEnd, HideHud, MapRatings, MapStats, MapVoting, MeasureGap, ServerNeed, ShowForumThreads, SteamIdToConsole |
+| **D3.** Other server types — unused entirely | 97 | Blocks (30) + BlockMaker, MovementStyles (27), SpeedRuns (14), HideAndSeek, ZoneTypes (8), AutoBhop, AutoStrafe, BhopCap, PreStrafe, ClientAirAccelerate, CourseAutoRespawn, DeathrunQueue, GrenadesForSkillServers, Jetpacks, MinigamesAutoBhop, MultigamesQueue, NoScopeRounds, PlayerModelsForSkillServers, SkillServerWeapons, Unsafe (2) |
+| D4. Stats/DB plumbing for other features | 7 | DatabaseMapStats, DatabaseUserBans, DatabaseUsernameStats, MapCookies, Replays, UserPointsForMinigamesWinner, UserStats |
+| **Total** | **390** | |
+
+Original UJB content: 25 last requests (Freeday 4, Draw 1, Rebel 8, Weapon Battle 5, Contest 7), 23 days (Freeday 4, Warday 19),
+7 effects, 9 commands, 17 core/API plugins — all accounted for in bucket A.
