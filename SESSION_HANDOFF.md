@@ -26,7 +26,7 @@ _Updated: session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-cs2` (p
 
 * CS:GO/CS:S feature research (report only): `docs/research/JB_FEATURE_RESEARCH.md`. Owner usage: weekly 76 %.
 
-* Minigames / game-mode suite plan (SMPlugins HideAndSeek, SpeedRuns, BlockMaker, multigame helpers): `docs/design/MINIGAMES_SUITE_PLAN.md` (plan only; owner to approve).
+* Minigames / game-mode suite plan (SMPlugins HideAndSeek, SpeedRuns, BlockMaker, multigame helpers): `docs/design/MINIGAMES_SUITE_PLAN.md` + full design/implementation steps `docs/design/MINIGAMES_SUITE_DESIGN.md` (design only — owner said do not implement yet).
 
 ## Exact next actions (priority order)
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.

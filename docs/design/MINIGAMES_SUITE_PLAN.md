@@ -1,6 +1,6 @@
 # Minigames & game-mode suite: porting plan (session 3, rev. 2)
 
-Status: **Plan only.** Nothing built. Scope (owner): plugins written by **hlstriker and the contributors to his
+Status: **Plan only.** Nothing built. Full design and step-by-step implementation plan: `MINIGAMES_SUITE_DESIGN.md`. Scope (owner): plugins written by **hlstriker and the contributors to his
 SMPlugins repo**, from the owner's SMPlugins-master upload. The author fields were checked in every file. The parts that
 make sense become SwbsJailbreak **games and days** on our existing systems (Zones, Days API, menus, HUD, CheckTransmit,
 Crews), not separate server types. **BlockMaker and Blocks are excluded** (owner): nothing ported depends on them.
