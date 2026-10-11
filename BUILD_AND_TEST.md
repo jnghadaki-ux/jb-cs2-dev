@@ -13,11 +13,11 @@
 ```bash
 dotnet restore
 dotnet build -c Release            # net8.0 only
-dotnet test  -c Release            # 21 unit tests (round state machine, storage, targets, config)
+dotnet test  -c Release            # 178 unit tests (core logic, zones, crews, warden games, command catalogue ...)
 ./build.sh                         # (Windows: build.ps1) -> artifacts/SwbsJailbreak-<ver>-net8.zip
 ```
 
-Expected: `0 Warning(s) 0 Error(s)`, tests `Passed: 21`. The zip holds `addons/counterstrikesharp/plugins/SwbsJailbreak/`
+Expected: `0 Warning(s) 0 Error(s)`, tests `Passed: 178`. A ready-made package is also committed in `releases/`. The zip holds `addons/counterstrikesharp/plugins/SwbsJailbreak/`
 (`SwbsJailbreak.dll`, `.deps.json`, `.pdb`, `lang/en/*.json`). CounterStrikeSharp itself is **not** bundled (the package
 reference is compile-only).
 
@@ -25,7 +25,7 @@ reference is compile-only).
 
 1. Install MetaMod:Source into `game/csgo/addons/metamod` and add the `Game csgo/addons/metamod` line to `gameinfo.gi`.
 2. Install CounterStrikeSharp **1.0.368 with runtime** (.NET 8) into `game/csgo/addons/counterstrikesharp`.
-3. Unzip `SwbsJailbreak-<ver>-net8.zip` into `game/csgo/` (it creates `addons/counterstrikesharp/plugins/SwbsJailbreak`).
+3. Unzip `SwbsJailbreak-<ver>-net8.zip` (from `releases/` or `artifacts/`) into `game/csgo/` (it creates `addons/counterstrikesharp/plugins/SwbsJailbreak`).
 4. Recommended server cvars (put in `cfg/server.cfg`; the plugin also forces the first few at map start):
    ```
    mp_autoteambalance 0
@@ -57,6 +57,7 @@ reference is compile-only).
 | Rebel / free-for-all spawns | Walk around and `!rebelpoint_add` many times (free-for-all days need 90 by default, `Days.FreeForAllMinRebelPoints`) |
 | Capture the Flag points | `!ctf_setflag` at the flag / defender spawn, `!ctf_setcapture` at the capture point / attacker spawn |
 | Disabled days for the map | `!daysedit` |
+| Warden Games (optional) | `!zm` Named zones: `mgwin` (win zone / map-game finish), arenas and finish lines (any name), `music1`, `music2` ... (Musical Zones). Map game buttons: `!gamebuttons` → ping the button → label. |
 | Zones (optional) | `!zm`: Teleport Destination named `lr_tele` (LR spot, wins over `!lr_setpoint`), `ctf_flag` / `ctf_capture` (CTF), **Cell Block** zones over each cell block (Crews turf), Notify zones (armory alerts), Kill / Blockade / Teleport as the map needs. Guide: docs/design/ZONE_MANAGER_PLAN.md |
 
 ## 5. Tests
