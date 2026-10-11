@@ -683,11 +683,20 @@ public sealed class NullServices : IWardenService, ICellService, ILastRequestSer
     public bool StopEffect(JbPlayer player, int effectId) => false;
     public void StopAllEffects(JbPlayer player) { }
     public bool HasEffect(JbPlayer player, int effectId) => false;
-    public bool DisplaySelectionMenu(JbPlayer player, Action<JbPlayer, int> onSelected, Action<JbPlayer>? onFailed = null, int selectTimeOverride = 0) => false;
+    // Like the real modules when nothing can be offered: report failure through onFailed, so callers never stall.
+    public bool DisplaySelectionMenu(JbPlayer player, Action<JbPlayer, int> onSelected, Action<JbPlayer>? onFailed = null, int selectTimeOverride = 0)
+    {
+        onFailed?.Invoke(player);
+        return false;
+    }
     bool IEffectService.CancelSelection(JbPlayer player) => false;
 
     // weapon selection
-    public bool DisplaySelectionMenu(JbPlayer player, Action<JbPlayer, string> onSelected, Action<JbPlayer>? onFailed, WeaponFilter filter) => false;
+    public bool DisplaySelectionMenu(JbPlayer player, Action<JbPlayer, string> onSelected, Action<JbPlayer>? onFailed, WeaponFilter filter)
+    {
+        onFailed?.Invoke(player);
+        return false;
+    }
     bool IWeaponSelectionService.CancelSelection(JbPlayer player) => false;
     public string? GetRandomWeapon(WeaponFilter filter) => null;
     public WeaponCategory? GetCategory(string weapon) => null;

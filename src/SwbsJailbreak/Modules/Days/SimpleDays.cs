@@ -180,6 +180,7 @@ public sealed class SimpleDays : JbModule
             Name = "Fat Kid", Type = DayType.Warday,
             Flags = StripBoth | DayFlags.GiveGuardsInfiniteAmmo | DayFlags.KillWorldWeapons,
             OnStart = _ => { },
+            OnEnd = _ => Movement.ClearKeyAll("day.fatkid"),
             OnFreezeEnd = () =>
             {
                 var guards = Players.AliveGuards().Count();

@@ -410,6 +410,8 @@ public sealed class LargeDays : JbModule
 
     // ================================================================== Throwing Knives
 
+    private static bool IsLrFreeday(CCSPlayerController c) => c.Jb() is { } p && (Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0;
+
     private HookResult OnWeaponFire(EventWeaponFire ev, GameEventInfo info)
     {
         if (!Active(_knives)) return HookResult.Continue;
@@ -418,6 +420,7 @@ public sealed class LargeDays : JbModule
         if (c == null || !c.IsValid || !c.IsAliveP() || weapon.Length < 8) return HookResult.Continue;
         var w = weapon.Length >= 12 ? weapon[7..12] : weapon[7..];
         if (w != "knife" && w != "bayon") return HookResult.Continue;
+        if (IsLrFreeday(c)) return HookResult.Continue; // freeday LR players take no part (the original's TakeDamage applied LR rules)
         if (!ThrowKnife(c)) return HookResult.Continue;
         var delay = Jb.Days.IsFreeForAll || c.Team == CsTeam.Terrorist ? 1f : 1.2f;
         var knife = c.ActiveWeapon();
@@ -488,6 +491,7 @@ public sealed class LargeDays : JbModule
             {
                 if (owner != null && c.Slot == owner.Slot) continue;
                 if (!Jb.Days.IsFreeForAll && owner != null && c.Team == owner.Team) continue;
+                if (IsLrFreeday(c)) continue;
                 var po = c.PawnOrNull()?.AbsOrigin;
                 if (po == null) continue;
                 if (VectorUtil.Distance(pos, new Vector(po.X, po.Y, po.Z + 36f)) <= 36f && Math.Abs(pos.Z - (po.Z + 36f)) <= 40f)

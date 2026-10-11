@@ -235,7 +235,7 @@ public sealed class FreezeTagDay : JbModule
                 });
             }
 
-            CheckRemaining();
+            Server.NextFrame(CheckRemaining); // may slay the prisoners: never inside the damage hook
         }
 
         return HookResult.Handled;

@@ -19,7 +19,7 @@ public sealed class RebelSpecialLastRequests : JbModule
     public override string Name => "LastRequests.RebelSpecial";
     public override int Order => 10;
 
-    private int _phatSlot = -1;
+    private readonly HashSet<int> _phatSlots = new(); // Phat Kid can run for several prisoners (rebel as a team)
     private int _ghostSlot = -1;
     private bool _ghostVisible;
     private Timer? _ghostRadarTimer;
@@ -47,14 +47,14 @@ public sealed class RebelSpecialLastRequests : JbModule
 
                 Movement.SetGravity(p.Controller, "lr.phatkid", 2f);
                 Movement.SetSpeed(p.Controller, "lr.phatkid", 1.1f);
-                _phatSlot = p.Slot;
+                _phatSlots.Add(p.Slot);
             },
             OnEnd = (p, _) =>
             {
                 SimpleLastRequests.RestoreIfAlive(p);
                 Movement.ClearGravity(p.Controller, "lr.phatkid");
                 Movement.ClearSpeed(p.Controller, "lr.phatkid");
-                if (_phatSlot == p.Slot) _phatSlot = -1;
+                _phatSlots.Remove(p.Slot);
             }
         });
 
@@ -109,9 +109,14 @@ public sealed class RebelSpecialLastRequests : JbModule
         StopRadarTimer();
     }
 
-    public override void OnRoundStart()
+    public override void OnRoundStart() => ResetRound();
+
+    public override void OnMapStart(string mapName) => ResetRound(); // warmup has no round_start
+
+    private void ResetRound()
     {
-        _phatSlot = _ghostSlot = -1;
+        _phatSlots.Clear();
+        _ghostSlot = -1;
         StopRadarTimer();
     }
 
@@ -135,13 +140,10 @@ public sealed class RebelSpecialLastRequests : JbModule
 
     private HookResult OnDamage(DamageContext ctx)
     {
-        var rebelSlot = _ghostSlot >= 0 ? _ghostSlot : _phatSlot;
-        if (rebelSlot < 0) return HookResult.Continue;
-        var ghost = _ghostSlot >= 0;
+        if (_ghostSlot < 0 && _phatSlots.Count == 0) return HookResult.Continue;
 
-        if (ctx.Victim.Slot == rebelSlot)
+        if (ctx.Victim.Slot == _ghostSlot)
         {
-            if (!ghost) return HookResult.Continue;
             // Ghost is immune to falls, grenades and fire.
             if (ctx.IsFall) return HookResult.Handled;
             var w = ctx.Weapon;
@@ -149,7 +151,8 @@ public sealed class RebelSpecialLastRequests : JbModule
             return HookResult.Continue;
         }
 
-        if (ctx.Victim.Team != CsTeam.CounterTerrorist || ctx.Attacker == null || ctx.Attacker.Slot != rebelSlot) return HookResult.Continue;
+        if (ctx.Victim.Team != CsTeam.CounterTerrorist || ctx.Attacker == null) return HookResult.Continue;
+        if (ctx.Attacker.Slot != _ghostSlot && !_phatSlots.Contains(ctx.Attacker.Slot)) return HookResult.Continue;
         // Guards: the rebel's knife kills in one hit, anything else does nothing.
         if (!ctx.IsKnife) return HookResult.Handled;
         ctx.Damage = 1337f;

@@ -12,6 +12,20 @@
 - **Crews** prisoner gang system + **Crew War** warday (docs/design/CREWS.md); Days API `CanStart`.
 - Core `ChatInput` (typed chat prompts) and `Visibility` (per-player entity visibility).
 ### Fixed
+- Review of Warden Games / game days (12 findings, all fixed): Hide and Seek loadout was stripped by the day start (now
+  given the frame after); a mass failure no longer makes everyone a winner (shared win only for the last two); stale menus
+  cannot control a game after the warden changes; quick Simon taps count; Red Light opens with a 3 s stop window; Last One
+  Standing is played by the prisoners in the arena; `!declare winner` is warden-only and needs a still-playing player;
+  `!hide` also hides weapons and builds its list once per tick; no-scope rounds restore scopes; menus refresh only when on screen.
+- Review of Last Requests / Days (9 findings, all fixed): a day forced during the round-end delay or kept through
+  `mp_restartgame` no longer carries into the next round (ends on round start and on cs_pre_restart / cs_match_end_restart;
+  days only start during a round); an admin-ended CTF no longer decides the next round's winner; Throwing Knives respects
+  LR freedays; ending an LR on disconnect or "abort all" no longer restarts LR selection; Weapon Battles / Contests no
+  longer stall when Effects or WeaponSelection is disabled; Phat Kid works for several rebels at once; LR / Draw / Ghost /
+  Phat Kid state no longer leaks into the next map's warmup; Freeze Tag slays outside the damage hook; Fat Kid speed is cleared.
+- `!commands` treated subcommand names (`case "kick":`) as permission gates (hid `!crew`); `!games` is listed for wardens.
+### Added (polish)
+- Warden menu items "Warden Games" and "Crew shakedown" (`WardenMenu.ShowGamesItem` / `ShowShakedownItem`).
 - Review of Zones + Crews (22 findings, all fixed; none could crash the server):
   - Zones: records with a missing/duplicate id or above `MaxZones` are renumbered instead of dropped (the next save erased
     them); unreadable map files are kept as `.corrupt-*` before a fresh start; a bad `BlockadeColor` value no longer

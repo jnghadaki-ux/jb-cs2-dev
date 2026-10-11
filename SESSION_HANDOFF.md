@@ -21,6 +21,8 @@ _Updated: end of session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-
   `Modules/Zones/*` (remake of SMPlugins ZoneManager + ZoneTypes, guide in docs/design/ZONE_MANAGER_PLAN.md) and
   `Modules/Crews/*` + Crew War day (docs/design/CREWS.md). Also fixed: phrases mixing colour tags and arguments printed raw `{0}`.
 
+* **Warden Games + LR/Days review done** (2 agents, 21 findings, all fixed; CHANGELOG 0.10.0). Full README and
+  `releases/SwbsJailbreak-0.10.0-net8.zip` committed.
 * **Zones + Crews review done** (2 bounded agents, 22 findings, all fixed — CHANGELOG 0.10.0 "Review of Zones + Crews";
   TEST_PLAN 27r). Build 0/0, tests 139/139.
 
@@ -35,8 +37,8 @@ _Updated: end of session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-
    logic + tests, B2 zone types + run tracking + HUD, B3 checkpoints + records) — **Opus** (new system, per-tick timing); then
    **C** (Course Race, Deathrun, course auto-respawn, scoreboard tag — Sonnet), then **D** review (≤2 agents).
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
-2. **Review pass for runtime bugs** (Zones/Crews done) — read-only review of LR (`Modules/LastRequest/*`), Days (`Modules/Days/*`),
-   Jihad, Settings, Teams, Cells editor, Warden ping code. Acceptance: each finding fixed or documented; build 0/0;
+2. **Review pass for runtime bugs** (Zones/Crews, Games, LR/Days done) — remaining: Jihad, Settings, Teams, Cells editor,
+   Warden ping code, Admin. Acceptance: each finding fixed or documented; build 0/0;
    tests pass; push. (The last attempt died on a usage limit — keep it to ≤2 agents or do it inline.)
 3. **RPG warday on CSS 1.0.368** — launcher = real gun with bullet damage blocked; rocket flies to the shot's
    `bullet_impact` point (engine trace); `weapon_accuracy_nospread 1` during the day (restore after). Acceptance: day

@@ -126,6 +126,8 @@ public sealed class SimpleLastRequests : JbModule
 
     public override void OnRoundStart() => _drawRound = false;
 
+    public override void OnMapStart(string mapName) => _drawRound = false; // warmup has no round_start
+
     private HookResult OnDamage(DamageContext ctx) => _drawRound ? HookResult.Handled : HookResult.Continue;
 
     /// <summary>Freeday LRs span a respawn: re-apply their modifier on every spawn while active (original SpawnPost hooks).</summary>

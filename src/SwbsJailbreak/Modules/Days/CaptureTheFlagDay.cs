@@ -234,6 +234,7 @@ public sealed class CaptureTheFlagDay : JbModule
         {
             Jb.Settings.StopAutoRespawning();
             Jb.Settings.BlockTerminateRound(false);
+            Jb.Settings.SetNextRoundEndReason(false); // an admin-ended CTF must not decide the round's winner later
         }
 
         Movement.ClearKeyAll("day.ctf");

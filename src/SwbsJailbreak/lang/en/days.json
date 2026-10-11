@@ -73,5 +73,6 @@
   "days.ctf.returned": "<font color='#DE2626'>Flag returned!</font>",
   "days.ctf.returned_by": "<font color='#DE2626'>Flag returned by</font><br><font color='#{0}'>{1}</font>",
   "days.ctf.dropped": "<font color='#DE2626'>Flag dropped!</font><br><font color='#6FC41A'>Returning in <font color='#DE2626'>{0}</font> seconds.</font>",
-  "days.unavailable": "{red}{0} cannot start right now."
+  "days.unavailable": "{red}{0} cannot start right now.",
+  "days.not_in_round": "{red}A day can only start while a round is running."
 }

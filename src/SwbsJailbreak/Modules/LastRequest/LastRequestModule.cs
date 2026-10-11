@@ -125,6 +125,7 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
 
     public override void OnMapStart(string mapName)
     {
+        _roundStarted = false; // warmup has no round_start: no LR until the first real round
         _roundNumber = 0;
         _shownRebelAsTeamMenu = false;
         _rebelAsTeamStarted = false;
@@ -430,7 +431,7 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
                 continue;
             }
 
-            if (s.Initialized) continue;
+            if (s.Initialized || p.Slot == _leavingSlot) continue;
             candidates.Add(p);
         }
 
@@ -835,8 +836,20 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
 
     public void EndAll()
     {
-        foreach (var p in Players.Connected().Where(p => S(p).Initialized || S(p).Started).ToList()) EndLastRequest(p);
+        // Ending every LR must not re-open LR selection after each one (menus/teleports would come straight back).
+        _suppressReinit = true;
+        try
+        {
+            foreach (var p in Players.Connected().Where(p => S(p).Initialized || S(p).Started).ToList()) EndLastRequest(p);
+        }
+        finally { _suppressReinit = false; }
     }
+
+    /// <summary>Set while ending LRs that must not restart LR selection (abort all, a disconnecting prisoner).</summary>
+    private bool _suppressReinit;
+
+    /// <summary>The slot that is disconnecting this frame: never an LR candidate (its pawn still counts as alive).</summary>
+    private int _leavingSlot = -1;
 
     private void AbortAllNonFreeday()
     {
@@ -979,7 +992,7 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
 
         JbEvents.RaiseLastRequestEnded(p, opponent);
 
-        if (!Jb.Days.IsInProgress && _roundStarted && p.Controller is { IsValid: true } c && c.IsAliveP() && AvailableGuards() > 0)
+        if (!_suppressReinit && !Jb.Days.IsInProgress && _roundStarted && p.Controller is { IsValid: true } c && c.IsAliveP() && AvailableGuards() > 0)
             TryInitializeLastRequest(p);
     }
 
@@ -1394,7 +1407,12 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
         var team = c?.Team ?? CsTeam.None;
         var s = S(player);
         Kill(ref s.SlayClientTimer);
-        EndLastRequest(player);
+        // The original ran this in OnClientDisconnect_Post (client gone); here the pawn still counts as alive this frame.
+        _leavingSlot = player.Slot;
+        _suppressReinit = true;
+        try { EndLastRequest(player); }
+        finally { _suppressReinit = false; }
+        Server.NextFrame(() => { if (_leavingSlot == player.Slot) _leavingSlot = -1; });
         KillAllTimers(s);
         s.HasSavedWeapons = false;
         s.SavedWeapons.Clear();

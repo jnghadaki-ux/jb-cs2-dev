@@ -77,6 +77,9 @@ public sealed partial class DaysModule : JbModule, IDayService
         Plugin.AddCommandListener("autobuy", OnBuy, HookMode.Pre);
         Plugin.AddCommandListener("rebuy", OnBuy, HookMode.Pre);
         Plugin.RegisterEventHandler<EventWeaponReload>(OnWeaponReload);
+        // UltJB_API_Days ended the day on cs_pre_restart / cs_match_end_restart (mp_restartgame skips round_end).
+        Plugin.RegisterEventHandler<EventCsPreRestart>((_, _) => { EndDay(); return HookResult.Continue; });
+        Plugin.RegisterEventHandler<EventCsMatchEndRestart>((_, _) => { EndDay(); return HookResult.Continue; });
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
         _map = Server.MapName;
     }
@@ -109,6 +112,7 @@ public sealed partial class DaysModule : JbModule, IDayService
 
     public override void OnRoundStart()
     {
+        EndDay(); // a day forced during the round-end delay, or a restart that skipped round_end, never carries over
         _wardenCountForRound = 0;
         _spawnedByDay.Clear();
         for (var i = 0; i < _roundsAfterDay.Length; i++)
@@ -327,6 +331,12 @@ public sealed partial class DaysModule : JbModule, IDayService
         if (IsInProgress)
         {
             c?.PrintToChat(" " + Lang.T("days.already_plain"));
+            return false;
+        }
+
+        if (!Round.InProgress)
+        {
+            c?.PrintToChat(" " + Lang.T("days.not_in_round"));
             return false;
         }
 
