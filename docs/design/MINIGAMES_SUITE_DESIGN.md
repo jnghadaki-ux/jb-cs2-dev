@@ -1,6 +1,6 @@
 # Minigames & game-mode suite: full design and implementation plan
 
-Status: **Block A1–A4 (Warden Games) implemented, unverified** (session 3, owner: "finish all warden games"). Everything else is design only.
+Status: **Step 0 checks done (COMPATIBILITY.md) and block A1–A7 implemented, unverified** (Warden Games, Hide & Seek, Jetpack, no-scope chance, !hide, Auto Bhop zone, !measure) (session 3, owner: "finish all warden games"). Everything else is design only.
 As built: rewards are None / Points / Crew respect (Freeday and First LR pick are not wired: the plugin has no next-round freeday or LR queue to hand them to);
 Course Race waits for Courses (block B); map games auto-press is not used, the 45 s auto-select applies to the prisoner picker.
 Scope summary and source inventory: `MINIGAMES_SUITE_PLAN.md`. Sources: hlstriker's SMPlugins and its contributors

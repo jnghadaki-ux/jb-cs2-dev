@@ -103,6 +103,9 @@ public sealed partial class WardenGamesModule : JbModule
     internal IReadOnlyList<WardenGame> Games => _games;
     internal bool Running => _session is { Over: false };
 
+    /// <summary>True while the player takes part in the running game (used by !hide).</summary>
+    internal bool IsPlaying(int slot) => _session is { Over: false } s && s.Players.Contains(slot);
+
     public override void OnLoad(bool hotReload)
     {
         _games.AddRange(new WardenGame[]

@@ -5,6 +5,9 @@
 - **Warden Games** (`!games`, `!gamebuttons`; Games module): Win Zone, Last One Standing, Simon Says, Red Light / Green Light,
   Musical Zones and map games, auto-judged from real input; picker queue; per-round reward; 23 new unit tests. Based on
   SMPlugins MultigamesGameSelect / MultigamesQueue / UserPointsForMinigamesWinner (hlstriker).
+- **Hide and Seek** day, **Jetpack** day, random **no-scope rounds** (`GameDays.NoScopeChance`, off by default), `!hide`,
+  **Auto Bhop** zone type and `!measure` / `!gap` (SMPlugins HideAndSeek, Jetpacks, NoScopeRounds, HidePlayers,
+  MinigamesAutoBhop by hlstriker; MeasureGap by Hymns For Disco); 7 new unit tests.
 - **Zone Manager** remake of SMPlugins ZoneManager + ZoneTypes (`!zm`, 12 types, per-map JSON, LR/CTF use named destinations).
 - **Crews** prisoner gang system + **Crew War** warday (docs/design/CREWS.md); Days API `CanStart`.
 - Core `ChatInput` (typed chat prompts) and `Visibility` (per-player entity visibility).

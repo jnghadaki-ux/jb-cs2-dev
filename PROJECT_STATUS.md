@@ -8,7 +8,7 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 | Item | State |
 |---|---|
 | `dotnet build -c Release` (net8.0 only → CSS 1.0.368) | **Passes**, 0 warnings, 0 errors (session 3) |
-| Unit tests (`tests/SwbsJailbreak.Tests`, 162 tests) | **Pass** (session 3) |
+| Unit tests (`tests/SwbsJailbreak.Tests`, 169 tests) | **Pass** (session 3) |
 | Packaging (`build.sh` / `build.ps1` → `SwbsJailbreak-<ver>-net8.zip`) | **Works** (zip produced, CSS API not bundled); not yet loaded on a server |
 | Live server load test | **Not done** (no CS2 server in this environment) |
 
@@ -43,12 +43,12 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 
 | Item | Count |
 |---|---|
-| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 34 / 17 / 83 / ~29,100 |
-| Console commands + aliases registered (`[ConsoleCommand]`) | 150 (Admin 71, Commands 14, Warden 12, Cells 9, LastRequest 8, Days 7, Extras 6, Crews 6, Teams 4, Logger 4, Zones 4, Games 2, Mute 2, PlayerExtras 1) |
+| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 36 / 17 / 85 / ~29,500 |
+| Console commands + aliases registered (`[ConsoleCommand]`) | 153 (Admin 71, Commands 14, Warden 12, Cells 9, LastRequest 8, Days 7, Extras 6, Crews 6, Teams 4, Logger 4, Zones 4, Games 5, Mute 2, PlayerExtras 1) |
 | Chat/HUD phrases (17 files) | 581 defined; every literal phrase key used in code resolves |
 | LRs / days / effects / admin+fun command groups | 25 / 23 (22 usable) / 6 (+1 unsupported) / see Admin |
 | Original UJB sources (81): usable in code | 79 (70 Implemented-unverified + 9 Partial); 1 Blocked, 1 Unsupported |
-| Automated tests | 162 passing (round state machine, config, storage, phrases incl. colour-tag formatting, targets, weapons, perms, command catalogue, warden bonus, zone geometry/edit rules/timers/JSON, crew rules/respect/turf/JSON, warden-game judging/queue/buttons JSON); **0 in-game / server tests** |
+| Automated tests | 169 passing (round state machine, config, storage, phrases incl. colour-tag formatting, targets, weapons, perms, command catalogue, warden bonus, zone geometry/edit rules/timers/JSON, crew rules/respect/turf/JSON, warden-game judging/queue/buttons JSON, jetpack/gap math); **0 in-game / server tests** |
 
 SMPlugins source coverage (390 `.sp`): see FEATURE_INVENTORY.md §4.
 

@@ -129,3 +129,31 @@ public class PickerQueueTests
         Assert.Equal(3f, back.Buttons[0].Origin[2]);
     }
 }
+
+public class GameHelperMathTests
+{
+    [Theory]
+    [InlineData(0f, 22f, 350f, 22f)]
+    [InlineData(-300f, 22f, 350f, -278f)] // thrust brakes a fall
+    [InlineData(340f, 22f, 350f, 350f)]   // capped
+    [InlineData(600f, 22f, 350f, 600f)]   // a faster climb (jump pad) is kept
+    [InlineData(10f, -5f, 350f, 10f)]     // negative thrust config is ignored
+    public void JetpackClimb(float vz, float thrust, float max, float expected) => Assert.Equal(expected, Jetpack.Climb(vz, thrust, max));
+
+    [Fact]
+    public void FuelBar_ShowsTheShare()
+    {
+        Assert.Contains(">|||||</font><font color='#555555'>|||||<", Jetpack.FuelBar(2f, 4f));
+        Assert.Contains(">||||||||||</font>", Jetpack.FuelBar(9f, 4f));
+        Assert.Contains("'#555555'>||||||||||<", Jetpack.FuelBar(1f, 0f));
+    }
+
+    [Fact]
+    public void Gap_TotalHorizontalVertical()
+    {
+        var (total, horizontal, vertical) = GapMath.Measure(new System.Numerics.Vector3(0, 0, 0), new System.Numerics.Vector3(30, 40, -64));
+        Assert.Equal(50f, horizontal, 3);
+        Assert.Equal(64f, vertical, 3);
+        Assert.Equal(MathF.Sqrt(50 * 50 + 64 * 64), total, 3);
+    }
+}

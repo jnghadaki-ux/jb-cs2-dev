@@ -132,3 +132,26 @@ public sealed class GameButtonsDoc
 {
     public List<GameButtonRecord> Buttons { get; set; } = new();
 }
+
+/// <summary>Jetpacks (hlstriker): climb speed while jump is held in the air, and the HUD fuel bar.</summary>
+public static class Jetpack
+{
+    /// <summary>New vertical speed: thrust is added (it also brakes a fall) up to the cap; faster climbs (jump pads) are kept.</summary>
+    public static float Climb(float vz, float thrust, float maxUp) => vz >= maxUp ? vz : Math.Min(maxUp, vz + Math.Max(0f, thrust));
+
+    public static string FuelBar(float fuel, float max, int blocks = 10)
+    {
+        var filled = max <= 0 ? 0 : (int)Math.Round(Math.Clamp(fuel / max, 0f, 1f) * blocks);
+        return "Fuel <font color='#55FF55'>" + new string('|', filled) + "</font><font color='#555555'>" + new string('|', blocks - filled) + "</font>";
+    }
+}
+
+/// <summary>MeasureGap (Hymns For Disco): distance between two points.</summary>
+public static class GapMath
+{
+    public static (float Total, float Horizontal, float Vertical) Measure(System.Numerics.Vector3 a, System.Numerics.Vector3 b)
+    {
+        var d = b - a;
+        return (d.Length(), MathF.Sqrt(d.X * d.X + d.Y * d.Y), Math.Abs(d.Z));
+    }
+}

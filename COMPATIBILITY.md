@@ -12,7 +12,13 @@ Last updated: 2026-10-10 (session 3: .NET 8 only). Nothing below has been tested
 | Latest stable CSS on NuGet (2026-10-10) | 1.0.376 (a `2.0.0-alpha.1` also exists; not targeted) | `api.nuget.org/v3-flatcontainer/counterstrikesharp.api/index.json` |
 | eGo Jailbreak release | Built for `.NETCoreApp,Version=v10.0` against CSS 1.0.376 | `Jailbreak.deps.json` in the uploaded eGo release |
 | Ray trace API (`Modules.Utils.Trace`, `TraceOptions`, `Contents`) | Present in 1.0.376, **absent** in 1.0.368 | Decompiled both API assemblies |
-| `player_ping` game event (`EventPlayerPing`: userid, entityid, x, y, z, urgent) | Present in 1.0.368 | Decompiled 1.0.368 API (`CounterStrikeSharp.API.Core/Even## Target: .NET 8 only (owner decision D13)
+| `player_ping` game event (`EventPlayerPing`: userid, entityid, x, y, z, urgent) | Present in 1.0.368 | Decompiled 1.0.368 API (`CounterStrikeSharp.API.Core/EventPlayerPing.cs`) |
+| `CCSPlayerController.ReplicateConVar(conVar, value)` | Present in 1.0.368 (not needed: per-player auto-bhop is done server-side by `Movement.SetAutoBhop`) | Decompiled `CCSPlayerController.cs` |
+| `Server.TickCount`, `Server.TickInterval` (1/64), `Server.TickedTime` | Present in 1.0.368 | Decompiled `Server.cs` |
+| `CUserMessageFade` screen fade (`UserMessage.FindIdByName`) | Present in 1.0.368, wrapped by `Fx.Fade` (Hide & Seek seekers' black screen) | Decompiled `Modules/UserMessages`; `Core/Effects.cs` |
+| `func_button` inputs `Unlock` + `Press` via `AcceptInput` | Used by cell doors and map game buttons (same call); runtime unverified | `Modules/Cells/CellsModule.cs` |
+
+## Target: .NET 8 only (owner decision D13)
 
 The owner's servers run CounterStrikeSharp on .NET 8 (the "with runtime" package bundles .NET 8). The plugin therefore
 targets **`net8.0` only**, compiled against **CounterStrikeSharp.API 1.0.368** (the last CSS release built for .NET 8).
