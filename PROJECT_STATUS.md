@@ -8,7 +8,7 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 | Item | State |
 |---|---|
 | `dotnet build -c Release` (net8.0 only → CSS 1.0.368) | **Passes**, 0 warnings, 0 errors (session 3) |
-| Unit tests (`tests/SwbsJailbreak.Tests`, 21 tests: round state machine, storage, targets, config) | **Pass** |
+| Unit tests (`tests/SwbsJailbreak.Tests`, 139 tests) | **Pass** (session 3) |
 | Packaging (`build.sh` / `build.ps1` → `SwbsJailbreak-<ver>-net8.zip`) | **Works** (zip produced, CSS API not bundled); not yet loaded on a server |
 | Live server load test | **Not done** (no CS2 server in this environment) |
 
@@ -28,6 +28,8 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 | WeaponSelection API | UltJB_API_WeaponSelection | Implemented, unverified (salvaged) |
 | Settings (spawn loadout, stable spawns, late-join respawn, cell weapon nerf, suicide wipe, round-end banner, natives) | UltJB_Settings | Implemented, unverified |
 | Teams (guard queue, pre-queue, ratio, jointeam, CT bans) | UltJB_TeamRatio / Command_CTBan | Implemented, unverified |
+| Zones (Zone Manager remake: editor, 12 types, per-map JSON, LR/CTF destinations) | Libraries/ZoneManager + Plugins/ZoneTypes | Implemented, unverified |
+| Crews + Crew War day (owner request, new design) | — | Implemented, unverified |
 | PlayerModels, Points | UltJB_PlayerModels / UltJB_Points | Implemented, unverified |
 | Jihad | UltJB_Jihad | Implemented, unverified |
 | BhopCheck, ServerTweaks (noblock, grenade noblock, admin tags, clan tag filter, spam messages, kill feed) | Plugins/* | Implemented, unverified |
@@ -41,12 +43,12 @@ _Last updated: session 3 (2026-10-10), version 0.10.0 (.NET 8 only). Nothing has
 
 | Item | Count |
 |---|---|
-| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 30 / 15 / 67 / ~23,500 |
-| Console commands + aliases registered (`[ConsoleCommand]`) | 136 (Admin 71, Commands 14, Warden 12, LastRequest 8, Days 7, Cells 7, Extras 6, Teams 4, Logger 4, Mute 2, PlayerExtras 1) |
+| Plugin modules (`JbModule` classes) / core service contracts / source files / lines | 33 / 17 / 79 / ~27,800 |
+| Console commands + aliases registered (`[ConsoleCommand]`) | 148 (Admin 71, Commands 14, Warden 12, Cells 9, LastRequest 8, Days 7, Extras 6, Crews 6, Teams 4, Logger 4, Zones 4, Mute 2, PlayerExtras 1) |
 | Chat/HUD phrases (17 files) | 581 defined; every literal phrase key used in code resolves |
 | LRs / days / effects / admin+fun command groups | 25 / 23 (22 usable) / 6 (+1 unsupported) / see Admin |
 | Original UJB sources (81): usable in code | 79 (70 Implemented-unverified + 9 Partial); 1 Blocked, 1 Unsupported |
-| Automated tests | 35 passing (round state machine, config, storage, phrases, targets, weapons, perms, command catalogue + permission gates, no duplicate command names); **0 in-game / server tests** |
+| Automated tests | 139 passing (round state machine, config, storage, phrases incl. colour-tag formatting, targets, weapons, perms, command catalogue, warden bonus, zone geometry/edit rules/timers/JSON, crew rules/respect/turf/JSON); **0 in-game / server tests** |
 
 SMPlugins source coverage (390 `.sp`): see FEATURE_INVENTORY.md §4.
 

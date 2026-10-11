@@ -57,6 +57,7 @@ reference is compile-only).
 | Rebel / free-for-all spawns | Walk around and `!rebelpoint_add` many times (free-for-all days need 90 by default, `Days.FreeForAllMinRebelPoints`) |
 | Capture the Flag points | `!ctf_setflag` at the flag / defender spawn, `!ctf_setcapture` at the capture point / attacker spawn |
 | Disabled days for the map | `!daysedit` |
+| Zones (optional) | `!zm`: Teleport Destination named `lr_tele` (LR spot, wins over `!lr_setpoint`), `ctf_flag` / `ctf_capture` (CTF), **Cell Block** zones over each cell block (Crews turf), Notify zones (armory alerts), Kill / Blockade / Teleport as the map needs. Guide: docs/design/ZONE_MANAGER_PLAN.md |
 
 ## 5. Tests
 

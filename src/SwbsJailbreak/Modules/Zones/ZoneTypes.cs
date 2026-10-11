@@ -155,10 +155,13 @@ internal sealed class BlockadeZone : ZoneType
             }
 
             var from = _lastFeet.TryGetValue(c.Slot, out var lf) ? lf : feet;
+            // A jump of more than 64 units in one tick is a teleport (LR, rebel points, days, respawn), not movement:
+            // never sweep across the map, only check where the player landed.
+            var teleported = System.Numerics.Vector3.DistanceSquared(from, feet) > 64f * 64f;
             Zone? hit = null;
             foreach (var z in solid)
             {
-                if (!z.Box.HullSweepHits(from, feet)) continue;
+                if (teleported ? !z.Box.OverlapsHull(feet) : !z.Box.HullSweepHits(from, feet)) continue;
                 hit = z;
                 break;
             }
@@ -170,8 +173,9 @@ internal sealed class BlockadeZone : ZoneType
                 continue;
             }
 
-            // Back to the last free spot, or (spawned inside / wall turned solid on top of them) out through the nearest side.
-            var back = _lastFree.TryGetValue(c.Slot, out var free) && !solid.Any(z => z.Box.OverlapsHull(free))
+            // Back to the last free spot, or (teleported / spawned inside, or the wall turned solid on top of them) out
+            // through the nearest side.
+            var back = !teleported && _lastFree.TryGetValue(c.Slot, out var free) && !solid.Any(z => z.Box.OverlapsHull(free))
                 ? free
                 : hit.Box.NearestOutside(feet);
             pawn.Teleport(new CssVector(back.X, back.Y, back.Z), null, new CssVector(0, 0, 0));

@@ -96,7 +96,6 @@ public sealed partial class CrewsModule : JbModule, ICrewService
     private CrewTurfDoc _turf = new();
     private string _map = "";
     private int _tick;
-    private float _roundStartTime;
 
     /// <summary>Set by the Crew War day: its own rewards replace the normal end-of-round respect.</summary>
     internal bool WarThisRound;
@@ -116,7 +115,6 @@ public sealed partial class CrewsModule : JbModule, ICrewService
     {
         JbEvents.CellsOpened += OnCellsOpened;
         JbEvents.LastRequestEnded += OnLastRequestEnded;
-        JbEvents.SettingsSpawnPost += OnSpawnPost;
         Aim.Pinged += OnPing;
     }
 
@@ -124,7 +122,6 @@ public sealed partial class CrewsModule : JbModule, ICrewService
     {
         JbEvents.CellsOpened -= OnCellsOpened;
         JbEvents.LastRequestEnded -= OnLastRequestEnded;
-        JbEvents.SettingsSpawnPost -= OnSpawnPost;
         Aim.Pinged -= OnPing;
         ClearRoundVisuals();
         RemoveTurfBanners();
@@ -146,11 +143,11 @@ public sealed partial class CrewsModule : JbModule, ICrewService
 
     public override void OnRoundStart()
     {
-        _roundStartTime = Server.CurrentTime;
         _earnedRound.Clear();
         WarThisRound = false;
         ResetRoundState();
         Round.Timer(0.5f, DrawTurfBanners); // after the engine's round-start cleanup
+        Round.Timer(0.3f, MoveCrewsHome);   // after spawn preparation (players spawn before round_start in CS2)
     }
 
     public override void OnRoundEnd(CsTeam winner, int reason)
@@ -458,38 +455,40 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         _turfBanners.Clear();
     }
 
-    // ---- home spawns: crew members of a turf holder spawn on a free spawn point inside their block ----
+    // ---- home spawns: at round start, members of a turf holder move to a free spawn point inside their block ----
 
-    private readonly HashSet<int> _usedSpawns = new();
-    private List<(Vector3 Pos, float Yaw, int Index)>? _tSpawns;
-
-    private void OnSpawnPost(JbPlayer p)
+    private void MoveCrewsHome()
     {
-        if (!Cfg.TurfEnabled || !Cfg.HomeSpawns || Jb.Days.IsInProgress) return;
-        if (Server.CurrentTime - _roundStartTime > 5f) return; // round-start spawns only
-        var c = p.Controller;
-        var crew = CrewOf(p);
-        if (c == null || crew == null || c.Team != CsTeam.Terrorist || !c.IsAliveP()) return;
-        var turf = TurfOf(crew);
-        if (turf.Count == 0) return;
-        _tSpawns ??= Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_terrorist")
+        if (!Cfg.TurfEnabled || !Cfg.HomeSpawns || Jb.Days.IsInProgress || _turf.Holders.Count == 0) return;
+        var spawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_terrorist")
             .Where(e => e.AbsOrigin != null)
-            .Select(e => (new Vector3(e.AbsOrigin!.X, e.AbsOrigin.Y, e.AbsOrigin.Z), e.AbsRotation?.Y ?? 0f, (int)e.Index))
+            .Select(e => (Pos: new Vector3(e.AbsOrigin!.X, e.AbsOrigin.Y, e.AbsOrigin.Z), Yaw: e.AbsRotation?.Y ?? 0f))
             .ToList();
-        foreach (var block in turf)
+        if (spawns.Count == 0) return;
+        var used = new HashSet<int>();
+        foreach (var crew in _turf.Holders.Values.Distinct().Select(id => _crews.GetValueOrDefault(id)).Where(c => c != null))
         {
-            var free = _tSpawns.FirstOrDefault(s => !_usedSpawns.Contains(s.Index) && block.Box.OverlapsHull(s.Pos));
-            if (free.Index == 0) continue;
-            _usedSpawns.Add(free.Index);
-            c.TeleportTo(new CssVector(free.Pos.X, free.Pos.Y, free.Pos.Z), new QAngle(0, free.Yaw, 0), new CssVector(0, 0, 0));
-            return;
+            var blocks = TurfOf(crew!);
+            foreach (var c in OnlineMembers(crew!).Where(x => x.IsAliveP() && x.Team == CsTeam.Terrorist).ToList())
+            {
+                if (blocks.Any(b => Jb.Zones.IsInside(c, b))) continue; // already home
+                for (var i = 0; i < spawns.Count; i++)
+                {
+                    var s = spawns[i];
+                    if (used.Contains(i) || !blocks.Any(b => b.Box.OverlapsHull(s.Pos))) continue;
+                    // Free spot: nobody else standing on it.
+                    if (Players.Alive().Any(o => o.Slot != c.Slot && o.PawnOrNull()?.AbsOrigin is { } oo &&
+                                                 Vector3.DistanceSquared(new Vector3(oo.X, oo.Y, oo.Z), s.Pos) < 32f * 32f)) continue;
+                    used.Add(i);
+                    c.TeleportTo(new CssVector(s.Pos.X, s.Pos.Y, s.Pos.Z), new QAngle(0, s.Yaw, 0), new CssVector(0, 0, 0));
+                    break;
+                }
+            }
         }
     }
 
     private void ResetRoundState()
     {
-        _usedSpawns.Clear();
-        _tSpawns = null;
         _favorUsed.Clear();
         _shakedownUsed = false;
         _rollCallUntil.Clear();

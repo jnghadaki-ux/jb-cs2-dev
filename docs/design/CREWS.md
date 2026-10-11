@@ -1,49 +1,47 @@
-# Crews — a gang system for SWBS Jailbreak (design proposal, not built)
+# Crews — prisoner gangs for SWBS Jailbreak (built, session 3)
 
-Status: **proposal** for the owner. Nothing here is implemented. Built on this plugin's own systems (JSON storage, zones,
-points, days, chat), so no external plugin, database or credit shop is needed.
+Status: **Implemented, unverified** (`Modules/Crews`, rules in `Core/Crews.cs`, 30 unit tests). Config section `Crews`.
+Everything uses this plugin's own systems: JSON storage, Zone Manager zones, Days API, glow, beams, HUD, chat.
 
-## Why not copy eGo's Gangs
-eGo's Gangs are an external plugin: a persistent group plus a credit-funded **cosmetic perk shop** (warden icon colour, LR
-colour, special-day colour, bomb icon, paint colour, cells perk). Progress is bought, nothing in the round itself depends on
-the gang. Crews keep the idea (prisoners belong to a persistent group with an identity) and change the engine:
+## The idea
+eGo's Gangs are an external plugin plus a credit-funded **cosmetic perk shop**. Crews keep a persistent prisoner group
+but make it about **play, territory and reputation**:
 
 | | eGo Gangs | Crews |
 |---|---|---|
-| What you get | cosmetic perks bought with credits | status, coordination and map-based "turf", earned by conduct |
-| Currency | credits (economy, database) | **reputation**: cannot be bought, decays, lost for freekilling |
-| Tie to the round | colours on LR / days | cells (zones), Last Requests, a dedicated Crew War day, rebel/CT-ban rules |
-| Storage | external plugin + DB | JSON (`Storage` ns `crews`), keyed by SteamID64 |
-| Balance rule | pay-to-look-good | **no combat stats, ever**; only information, convenience, identity |
+| What you get | cosmetic perks bought with credits | identity, coordination, turf, status — earned |
+| Currency | credits (economy + database) | **respect**: only earned by clean play, decays weekly, cannot be bought |
+| Tie to the round | colours on LR / days | cell blocks (zones), last requests, Crew War day, warden shakedown |
+| Storage | external plugin + MySQL | JSON (`data/crews.json`, `maps/crew_turf/<map>.json`) |
+| Balance | pay-to-look-good | **never changes damage, health or speed** (outside the Crew War day) |
 
-## Core design
-1. **Roster** — `!crew create <name> <TAG>`, `invite`, `accept`, `kick`, `leave`, `promote`. Ranks Boss / Lieutenant / Member,
-   max 6 members (config), 3–4 letter tag + colour. Create/leave cooldowns; name and tag go through the existing clan-tag
-   filter. Persisted by SteamID64; a crew with no members disbands.
-2. **Identity** — prisoners show `[TAG]` in chat and as scoreboard clan tag (guards never do). Crew chat `!crew say <msg>` is
-   visible to crewmates, dead ones included, and is written to the admin log.
-3. **Turf** — with the Zone Manager, each cell block is a zone. The crew that survived best last round *claims* the block:
-   its members get their stable spawn spots there (next to each other) and a ring/banner in the crew colour (real beam
-   entities) appears in front of the cell door. Pure cohesion, no combat advantage.
-4. **Reputation (rep)** — earned per round for clean play: surviving, finishing a freeday without rebelling, winning an LR,
-   winning a Crew War. Lost for freekills, CT-ban, abusing LR. Rep sets the crew **level** (more roster slots, more banner
-   styles). Rep decays weekly, so it stays about recent conduct.
-5. **Favors** — a crew may spend rep on at most one favor per round, picked before the cells open. Information and
-   convenience only, e.g. *Lookout* (crewmates glow to each other for 5 s), *Banner* (colour of their LR beacon),
-   *Early bird* (first pick of cell). Nothing that changes damage, speed or health.
-6. **Crew War day** — a new special day (uses the Days API): prisoners fight as crews against each other (or all crews
-   against the guards); the winner earns rep. Optional guard-side counterpart ("squads") is left for later.
-7. **Fair play** — CT-banned players cannot be Boss; crew members get no protection from rebel rules or special treatment;
-   `!crewadmin disband|kick|rename` under a `crews.admin` capability; every crew action is logged.
+## Systems
+1. **Roster** — Boss / Lieutenants / Members. `!crew` menu or subcommands: `create <name> <TAG>`, `invite`, `accept`,
+   `decline`, `kick`, `promote`, `demote`, `boss` (transfer), `motd`, `rival`, `favor`, `info [TAG]`, `leave`, `disband`.
+   Invites expire (60 s). Leaving puts you on a 10 min cooldown, disbanding the Boss on 60 min. A Boss who leaves is
+   replaced by the top Lieutenant (then top member); an empty crew disbands. CT-banned players cannot found or lead a crew.
+   Names 3–24 chars, tags 2–5 letters/digits, both unique and checked against `Crews.BannedWords`.
+2. **Identity** — the crew tag is the prisoner's scoreboard clan tag (guards never; an admin tag wins). Crew colour (8
+   colours, more unlock with level). Crew chat `!cr <msg>`: dead members only reach dead crewmates (no ghosting); logged.
+   `!crews` leaderboard, `!crew info <TAG>`.
+3. **Respect & levels** — earned per member, per round (cap 10): survive the round +2, prisoners win +3, win an LR duel +5,
+   hold turf +1, take turf +5; Crew War win +25 to the crew, +5 per survivor, +10 if the rival crew was beaten. Nothing
+   below 6 humans online. Spendable respect decays 10 %/week; lifetime **legacy** sets the level (100/300/700/1500/3000/6000):
+   more roster slots (4 → 8), colours, a third Lieutenant at level 5.
+4. **Turf** — admins mark cell blocks with **Cell Block** zones (`!zm`). When the cells open (everyone is still in their
+   cell) the crew with the most living members inside a block (min 2) takes it; ties keep the holder. Held blocks show a
+   beam ring and pillar in the crew colour, and the holder's members spawn inside their block next round. Saved per map.
+5. **Favors** — one per crew per round, called by the Boss or a Lieutenant with respect: *Crew Banner* (10, lvl 1) beam
+   pillar rendezvous point; *Crew Colours* (15, lvl 2) members glow in the crew colour for everyone (15 s); *Lookout* (25, lvl 3)
+   crewmates see each other through walls (8 s); *Roll Call* (20, lvl 4) HUD list of crewmates and the named zone each is in
+   (30 s). Information and identity only.
+6. **Crew pings** — a crew member's CS2 ping also draws a ring in the crew colour that only crewmates can see.
+7. **Warden shakedown** — `!shakedown` (warden, once per round): the chosen crew's living members glow red for the guards
+   for 10 s. Powerful crews attract attention.
+8. **Crew War** (warday) — crews fight each other (prisoners without a crew alone), crewmates cannot hurt each other,
+   guards are untouchable referees with knives, each crew starts together at a rebel point, AK + Deagle + armour. Last
+   crew standing wins; the round ends as a prisoner win. Needs 2 crews with 2+ living members (hidden from the day menu otherwise).
+9. **Admin** — `!crewadmin` (capability `crews.admin`, default `@css/ban`): rename, retag, set respect, kick, disband; logged.
 
-## Integration points
-Zone Manager (turf) · Points service (rep) · Days API (Crew War) · Teams/CT bans · Chat · Logger · Perms (`crews.admin`) ·
-Storage. Needs no engine feature beyond what the plugin already uses (beams, glow via CheckTransmit, clan tags).
-
-## Phases
-- **v1** (small): roster, tag, crew chat, persistence, admin tools.
-- **v2**: rep + levels, turf and banners (needs the Zone Manager).
-- **v3**: favors, Crew War day.
-
-## Open questions for the owner
-Max crew size, whether guards get squads, weekly rep decay, and whether crew chat may be shown to admins live or only logged.
+## Not done / ideas for later
+Guard-side squads; crew statistics history; seasonal resets; crew-vs-crew challenges outside wardays.

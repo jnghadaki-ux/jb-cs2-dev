@@ -65,7 +65,9 @@ SimpleAdmin mod. CS2 implementation: `src/SwbsJailbreak/Modules/<Module>`.
 | Parachute, UnlimitedReserveAmmo, DisableFallDrownDamage, FixGravityOnNewRound, MapArmour | — | Not started | Small; candidates for the next session. |
 | ThrowingKnife (standalone), CustomWeapons/RPG | — | Superseded | Their behaviour lives in the Throwing Knives / RPG wardays. |
 | UserPoints, Store, StoreItems/*, DonatorItems/*, CoinPoints, TokensUpdate | — | Out of scope (for now) | Shop/donator economy; the points hook (IPointsService) is ready. |
-| ZoneManager + ZoneTypes/*, PathPoints, EntityHooker | Partial replacements | Partial | Only the jailbreak uses are replaced (LR point, rebel points, cell door hammer ids). |
+| ZoneManager (Libraries/ZoneManager) | Zones/ZonesModule (+ Editor) | Implemented, unverified | Remade for CS2: per-map JSON (same fields as the SQL rows), named types, polling enter/exit/touch (no SDKHooks), max 256, `!zm`/`!zonemanager` editor with the original menus (position/size by look + click, angles, type, type data, delete, import trigger, import map, noclip) plus feet/ping placement, two-corner sizing, duplicate, label, teleport-to; editor boxes are beams only the editing admin sees; `!showtriggernames`, `css_zones_list`. Expand-to-wall (needed a trace) → expand to a pinged point. |
+| ZoneTypes/* (9 plugins) | Zones/ZoneTypes | Implemented, unverified (7) · Unsupported (2) | Kill (timers), Blockade (push-back wall, visible, timers), Respawn, Teleport, Teleport Destination, Weapon Strip, Damage Blocker (+fire) ported; Flashlight (no CS2 flashlight effect) and Hide Toggle (needs HidePlayers) not registered. Additions: Push (jump pad), Notify (area alert), Cell Block (Crews turf). LR uses the `lr_tele` destination, CTF `ctf_flag` / `ctf_capture`, falling back to the point commands. |
+| PathPoints, EntityHooker | Partial replacements | Partial | Rebel points (`!rebelpoint_add`) and cell door hammer ids replace the jailbreak uses. |
 | Database*, UserStats, UserLogs, ClientTimes, ClientCookies, ClientSettings, Admins, DemoSessions, Replays, WebPageViewer, FileDownloader, ParticleManager, ModelSkinManager, SquelchManager, TimedPunishments | Core services | Replaced | JSON storage, CSS admin system, CSS particles/voice; MySQL is not required. |
 
 ## 3. SMPlugins plugins for other SWBS servers (not part of the jailbreak)
@@ -93,9 +95,20 @@ are inferred from what each plugin does — the owner should correct them.
 | C4. Economy / store | 10 | CoinPoints, DonatorItems (2), StoreItems (7) — out of scope |
 | **D1.** CS:GO-only engine/map fixes (meaningless on CS2) | 19 | AllowMorePlayers, BlockGameStart, DetectTeleportHacking, DisableDuckDelay, EntityPatches (13), FixCameraBug, FixRoundEndClassnames |
 | **D2.** Generic server utilities (not jailbreak, optional) | 12 | ClientFootsteps, DisablePlayerDamage, FootstepsMenu, ForceMapEnd, HideHud, MapRatings, MapStats, MapVoting, MeasureGap, ServerNeed, ShowForumThreads, SteamIdToConsole |
-| **D3.** Other server types — unused entirely | 97 | Blocks (30) + BlockMaker, MovementStyles (27), SpeedRuns (14), HideAndSeek, ZoneTypes (8), AutoBhop, AutoStrafe, BhopCap, PreStrafe, ClientAirAccelerate, CourseAutoRespawn, DeathrunQueue, GrenadesForSkillServers, Jetpacks, MinigamesAutoBhop, MultigamesQueue, NoScopeRounds, PlayerModelsForSkillServers, SkillServerWeapons, Unsafe (2) |
+| **D3.** Other server types — unused entirely | 97 | Blocks (30) + BlockMaker, MovementStyles (27), SpeedRuns (14), HideAndSeek, other ZoneTypes (8, speedrun/other servers), AutoBhop, AutoStrafe, BhopCap, PreStrafe, ClientAirAccelerate, CourseAutoRespawn, DeathrunQueue, GrenadesForSkillServers, Jetpacks, MinigamesAutoBhop, MultigamesQueue, NoScopeRounds, PlayerModelsForSkillServers, SkillServerWeapons, Unsafe (2) |
 | D4. Stats/DB plumbing for other features | 7 | DatabaseMapStats, DatabaseUserBans, DatabaseUsernameStats, MapCookies, Replays, UserPointsForMinigamesWinner, UserStats |
 | **Total** | **390** | |
 
 Original UJB content: 25 last requests (Freeday 4, Draw 1, Rebel 8, Weapon Battle 5, Contest 7), 23 days (Freeday 4, Warday 19),
 7 effects, 9 commands, 17 core/API plugins — all accounted for in bucket A.
+
+## 5. Additions that are not SMPlugins ports (owner requests)
+
+| Feature | Module | Status | Notes |
+|---|---|---|---|
+| Crews (prisoner gang system) | Crews/CrewsModule | Implemented, unverified | Design: docs/design/CREWS.md. Roster + ranks, respect (no buying), levels, turf on Cell Block zones, favors, crew chat, tags, rivals, warden shakedown, admin tools. |
+| Crew War warday | Crews/CrewWarDay | Implemented, unverified | Crews vs crews, guards are referees; needs 2 crews with 2+ living members (`DayDefinition.CanStart`). |
+| `!commands` | Extras/CommandListModule | Implemented, unverified | SMPlugins CommandList port. |
+| `!open` / `!o` (admin) | Cells | Implemented, unverified | Owner decision: admin-only. |
+| Auto warden setting, warden bonus with ≤2 guards | Warden | Implemented, unverified | Owner rules. |
+

@@ -2,6 +2,11 @@
 
 ## 0.10.0 — .NET 8 only (session 3, 2026-10-10) — not yet verified on a live server
 ### Added
+- **Zone Manager** remake of SMPlugins ZoneManager + ZoneTypes (`!zm`, 12 types, per-map JSON, LR/CTF use named destinations).
+- **Crews** prisoner gang system + **Crew War** warday (docs/design/CREWS.md); Days API `CanStart`.
+- Core `ChatInput` (typed chat prompts) and `Visibility` (per-player entity visibility).
+### Fixed
+- Phrases mixing colour tags and arguments (133) were shown with a raw `{0}`: `Lang.T` now escapes colour tags before formatting.
 - `!open` / `!o` (admin only, capability `cells.open` = @css/generic, cooldown `Cells.AdminOpenCooldown`); `!cdo` stays root-only.
 - Auto warden setting (`Warden.AutoWarden`, `AutoWardenMode`): a guard is picked automatically when nobody queued, with its own chat line.
 - Warden bonus only with few guards (`Warden.Bonus*`): +25 HP / +25 armor per step, stacking as guards die when ≤ 2 are alive, taken back when the warden ends; 12 new unit tests.

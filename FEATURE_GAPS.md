@@ -52,16 +52,24 @@ original SMPlugins, so each is an optional addition; adopt by owner choice and m
 | 17 | Days: Rocket Jump | rocket-jump FFA | RPG day blocked (no trace) | blocked |
 | 18 | Day rules | cooldown rounds between days, must start within N s of round start, random "shuffle bag" pick, zone/cell/armory-restricted days | warden 15 s window only | M |
 | 19 | RTD (`!rtd`, `!rtdstats`, auto-RTD) | roll the dice at round end / while dead: ammo, armor, HP, bomb, fake bomb, colour, transparent, random teleport, chat spy, guaranteed warden, no-weapon, cannot-scope/use/knife, credits | none | M |
-| 20 | Zone manager | box / sphere / hull zones in SQL, random zone generator, movement restrictor, "near open" test | **owner approved: remake the SMPlugins ZoneManager** — plan in docs/design/ZONE_MANAGER_PLAN.md | L (next) |
+| 20 | Zone manager | box / sphere / hull zones in SQL, random zone generator, movement restrictor, "near open" test | **Done: SMPlugins ZoneManager remade** (Zones module, 12 types incl. Blockade push-back, Notify, Cell Block) | done |
 | 21 | Player trails, rainbow colourizer | cosmetic beam trails and colour cycling | none | M |
 | 22 | `css_debug` test commands | end round, force LR / last guard, mark rebel / ST, pardon, set time, RTD, zone — a tester's toolbox | none (would speed up the v1 test) | S |
-| 23 | Gangs + perks, credits, MySQL stats | external economy | **new design proposed instead: "Crews"** — docs/design/CREWS.md (needs the Zone Manager for turf) | design |
+| 23 | Gangs + perks, credits, MySQL stats | external economy | **Done differently: Crews** (respect earned by play, turf, favors, Crew War day) — docs/design/CREWS.md | done |
 
 Also in the owner's earlier 12-plugin attempt (not eGo): Hot Potato / Sumo / Fruit Ninja LRs, CT queue, round-flow cvars,
 contraband, Discord logging, SQLite leaderboards.
 
 Where ours is ahead of eGo: 25 LRs (eGo 8), 23 days (eGo 14), effects, CT bans + team ratio, cell-door editor, Jihad, weapon
 selection, 71 admin commands, last-guard beacons.
+
+## Zone Manager / Crews limits
+* Zones detect players by polling hull overlap (16 checks/s, blockades every tick), not engine touch events; grenades and other
+  entities do not trigger zones (the original's touch also fired for props; no jailbreak type used that).
+* Blockade cannot be a real solid wall from managed code: players are pushed back (swept test against tunnelling); thrown
+  grenades and bullets pass through.
+* Flashlight and Hide Toggle zone types are not registered (no CS2 flashlight effect; HidePlayers not ported).
+* Crew respect / turf need real players: nothing is earned below `Crews.MinPlayersForRespect` (6) humans online.
 
 ## CS2 engine / API limits (cannot be reproduced 1:1)
 | Original feature | CS2 status | What the port does |

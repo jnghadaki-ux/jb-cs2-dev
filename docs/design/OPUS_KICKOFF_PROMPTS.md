@@ -1,4 +1,8 @@
-# Kickoff prompts for the two Opus sessions (run separately)
+# Kickoff prompts for the two Opus sessions — OBSOLETE
+
+Both the Zone Manager and Crews were built in session 3 on `claude/swbs-jailbreak-cs2`; kept for history only.
+
+## (old) Kickoff prompts for the two Opus sessions (run separately)
 
 Run `/model claude-opus-5-5` first. Both sessions read `CLAUDE.md` (owner rules, .NET 8 only, credits) automatically.
 **Use separate branches** so the two sessions never push to the same branch, and merge Zone Manager first:

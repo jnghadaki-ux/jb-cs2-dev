@@ -1,4 +1,4 @@
-# Zone Manager remake — plan (owner approved; not built yet)
+# Zone Manager remake — built in session 3 (Implemented, unverified)
 
 Original: `Libraries/ZoneManager/API_ZoneManager.sp` (3,227 lines) + `zone_manager.inc` + 9 zone types
 (`Blockade`, `DamageBlocker`, `Flashlight`, `HideToggle`, `Kill`, `Named`, `Respawn`, `Teleport`, `WeaponStrip`; 1,701 lines).
@@ -28,3 +28,14 @@ manual test: create a Teleport zone, LR teleports into it, zone survives map cha
 ## Risks
 CS2 entity-free zones cannot block movement physically (Blockade is a push-back approximation); ping-based placement
 needs the CS2 ping key; coordinates assume the map is not rotated at runtime.
+
+## Admin quick guide (built)
+* `!zm` (capability `zones`) → **Add new zone** at your feet (200×200×98 like the original) → **Edit**:
+  position (look + left/right click, or *to my feet* / *to my last ping*), size (look at a side + click, or *expand to my
+  last ping*), *Set size from two corners* (feet or pings), angles (look direction = facing of destinations / push), type,
+  type data (generated menus; text is typed in chat), label. Green box = selected zone, red = nearby zones (only you see them).
+* Jailbreak names: Teleport Destination `lr_tele` (LR teleport), `ctf_flag` / `ctf_capture` (Capture the Flag); Cell Block
+  zones for Crews turf; Notify zones for "X entered the armory" alerts.
+* **Import trigger from map**: type a trigger's targetname (find names with `!showtriggernames`). Imported zones follow the
+  map trigger's bounds and cannot be moved/resized.
+* Zones save automatically (15 s after edits, when the menu closes and at map end) to `maps/zones/<map>.json`.
