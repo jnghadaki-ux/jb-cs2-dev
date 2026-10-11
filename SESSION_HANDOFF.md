@@ -21,9 +21,12 @@ _Updated: session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-cs2` (p
   `Modules/Zones/*` (remake of SMPlugins ZoneManager + ZoneTypes, guide in docs/design/ZONE_MANAGER_PLAN.md) and
   `Modules/Crews/*` + Crew War day (docs/design/CREWS.md). Also fixed: phrases mixing colour tags and arguments printed raw `{0}`.
 
+* **Zones + Crews review done** (2 bounded agents, 22 findings, all fixed — CHANGELOG 0.10.0 "Review of Zones + Crews";
+  TEST_PLAN 27r). Build 0/0, tests 139/139.
+
 ## Exact next actions (priority order)
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
-2. **Review pass for runtime bugs** — read-only review of LR (`Modules/LastRequest/*`), Days (`Modules/Days/*`),
+2. **Review pass for runtime bugs** (Zones/Crews done) — read-only review of LR (`Modules/LastRequest/*`), Days (`Modules/Days/*`),
    Jihad, Settings, Teams, Cells editor, Warden ping code. Acceptance: each finding fixed or documented; build 0/0;
    tests pass; push. (The last attempt died on a usage limit — keep it to ≤2 agents or do it inline.)
 3. **RPG warday on CSS 1.0.368** — launcher = real gun with bullet damage blocked; rocket flies to the shot's

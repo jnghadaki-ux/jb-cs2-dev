@@ -28,6 +28,7 @@ public sealed class CrewWarDay : JbModule
     private bool _fighting;
     private bool _decided;
     private readonly HashSet<string> _startedCrews = new();
+    private readonly Dictionary<int, string> _faction = new(); // slot -> faction, fixed when the day starts
 
     private bool Active => _day != null && ReferenceEquals(Jb.Days.Current, _day);
 
@@ -61,8 +62,12 @@ public sealed class CrewWarDay : JbModule
 
     // ---------------------------------------------------------------- factions
 
-    /// <summary>Crew id, or "solo:slot" for a prisoner without a crew.</summary>
-    private string Faction(CCSPlayerController c) => _crews?.CrewOf(c)?.Id ?? "solo:" + c.Slot;
+    /// <summary>
+    /// Crew id, or "solo:slot" for a prisoner without a crew. Once the day runs, factions are the ones fixed at its start,
+    /// so joining, leaving or kicking mid-war cannot change who can hurt whom or who shares the win.
+    /// </summary>
+    private string Faction(CCSPlayerController c) =>
+        Active && _faction.TryGetValue(c.Slot, out var f) ? f : _crews?.CrewOf(c)?.Id ?? "solo:" + c.Slot;
 
     private Dictionary<string, List<CCSPlayerController>> AliveFactions() =>
         Players.AlivePrisoners().GroupBy(Faction).ToDictionary(g => g.Key, g => g.ToList());
@@ -78,7 +83,9 @@ public sealed class CrewWarDay : JbModule
         _fighting = false;
         _decided = false;
         _startedCrews.Clear();
+        _faction.Clear();
         foreach (var id in ReadyCrews()) _startedCrews.Add(id);
+        foreach (var c in Players.AlivePrisoners()) _faction[c.Slot] = _crews?.CrewOf(c)?.Id ?? "solo:" + c.Slot;
         if (_crews != null) _crews.WarThisRound = true;
         Chat.TellAll("crews.war.start", _startedCrews.Count);
 
@@ -143,6 +150,18 @@ public sealed class CrewWarDay : JbModule
         return HookResult.Continue;
     }
 
+    // A disconnect or team switch raises no player_death, but can still leave one faction standing.
+    public override void OnPlayerDisconnect(JbPlayer player)
+    {
+        _faction.Remove(player.Slot);
+        if (Active && _fighting && !_decided) Server.NextFrame(CheckWinner);
+    }
+
+    public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
+    {
+        if (Active && _fighting && !_decided) Server.NextFrame(CheckWinner);
+    }
+
     private void CheckWinner()
     {
         if (!Active || !_fighting || _decided || _crews == null) return;
@@ -152,7 +171,7 @@ public sealed class CrewWarDay : JbModule
         if (factions.Count == 0) return; // nobody left: the round ends on its own
 
         var (id, survivors) = factions.First();
-        var crew = id.StartsWith("solo:", StringComparison.Ordinal) ? null : _crews.CrewOf(survivors[0]);
+        var crew = id.StartsWith("solo:", StringComparison.Ordinal) ? null : _crews.CrewById(id);
         if (crew == null)
         {
             Chat.TellAll("crews.war.lone_wolf", Chat.Name(survivors[0]));
@@ -163,7 +182,8 @@ public sealed class CrewWarDay : JbModule
             _crews.Save(crew);
             _crews.GrantCrew(crew, Cfg.RespectWarWin, "crews.reason.war_win");
             if (crew.RivalId.Length > 0 && _startedCrews.Contains(crew.RivalId)) _crews.GrantCrew(crew, Cfg.RespectRivalBonus, "crews.reason.rival_beaten");
-            foreach (var c in survivors) _crews.Grant(c, Cfg.RespectWarSurvivor, "crews.reason.war_survivor", ignoreCap: true);
+            foreach (var c in survivors.Where(x => _crews.CrewOf(x) == crew)) // still in the crew
+                _crews.Grant(c, Cfg.RespectWarSurvivor, "crews.reason.war_survivor", ignoreCap: true);
             Chat.TellAll("crews.war.won", _crews.Label(crew), survivors.Count);
         }
 

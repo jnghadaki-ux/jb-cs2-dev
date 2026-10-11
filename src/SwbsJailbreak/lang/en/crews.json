@@ -30,6 +30,7 @@
   "crews.err.no_invite": "{red}You have no pending crew invite.",
   "crews.err.no_such_crew": "{red}No crew with that tag.",
   "crews.err.no_target": "{red}Player not found (or more than one match).",
+  "crews.err.no_steam": "{red}Your Steam ID is not verified yet. Try again in a moment.",
   "crews.err.not_member": "{red}You are not in a crew. Type !crew.",
   "crews.err.rank": "{red}Your crew rank cannot do that.",
   "crews.err.tag_chars": "{red}Tags use letters and digits only.",

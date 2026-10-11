@@ -195,7 +195,8 @@ internal sealed class BlockadeZone : ZoneType
         if (have && _beamVersion.TryGetValue(z.Id, out var v) && v == z.Version) return;
         RemoveBeams(z.Id);
         var c = _m.Cfg.BlockadeColor;
-        var color = c is { Length: >= 3 } ? Color.FromArgb(c.Length >= 4 ? c[3] : 255, c[0], c[1], c[2]) : Color.Red;
+        static int B(int v) => Math.Clamp(v, 0, 255);
+        var color = c is { Length: >= 3 } ? Color.FromArgb(B(c.Length >= 4 ? c[3] : 255), B(c[0]), B(c[1]), B(c[2])) : Color.Red;
         var corners = z.Box.Corners();
         list = new List<CBeam>(12);
         foreach (var (a, b) in ZoneBox.Edges)
@@ -336,11 +337,12 @@ internal sealed class WeaponStripZone : ZoneType
 /// <summary>
 /// ZoneType_DamageBlocker: blocks the chosen damage types for players inside. Port fix: leaving one blocker no longer
 /// clears the protection of another blocker the player is still standing in (the original reset all bits on any exit).
+/// The check uses the victim's position when the damage happens (not the 16 Hz enter/exit poll), so a fast fall into a
+/// fall blocker is caught and flag edits apply at once.
 /// </summary>
 internal sealed class DamageBlockerZone : ZoneType
 {
     private readonly ZonesModule _m;
-    private readonly Dictionary<int, Dictionary<int, int>> _bits = new(); // slot -> zone id -> bits
     private bool _registered;
 
     public DamageBlockerZone(ZonesModule m) => _m = m;
@@ -369,25 +371,15 @@ internal sealed class DamageBlockerZone : ZoneType
         DamageService.Register("Zones.DamageBlocker", 210, OnDamage);
     }
 
-    public override void OnRoundStart() => _bits.Clear();
-
-    public override void OnEnter(Zone zone, CCSPlayerController player)
-    {
-        if (!_bits.TryGetValue(player.Slot, out var map)) _bits[player.Slot] = map = new Dictionary<int, int>();
-        map[zone.Id] = zone.GetInt(1);
-    }
-
-    public override void OnExit(Zone zone, CCSPlayerController player)
-    {
-        if (_bits.TryGetValue(player.Slot, out var map)) map.Remove(zone.Id);
-    }
-
     private HookResult OnDamage(DamageContext ctx)
     {
-        if (!_bits.TryGetValue(ctx.Victim.Slot, out var map) || map.Count == 0) return HookResult.Continue;
-        var combined = 0;
-        foreach (var b in map.Values) combined |= b;
-        return (combined & (int)ctx.Info.BitsDamageType) != 0 ? HookResult.Handled : HookResult.Continue;
+        var dmg = (int)ctx.Info.BitsDamageType;
+        var o = ctx.VictimPawn.AbsOrigin;
+        if (dmg == 0 || o == null) return HookResult.Continue;
+        var feet = new Vector3(o.X, o.Y, o.Z);
+        foreach (var z in _m.OfType(Key))
+            if ((z.GetInt(1) & dmg) != 0 && ReferenceEquals(z.Type, this) && z.Box.OverlapsHull(feet)) return HookResult.Handled;
+        return HookResult.Continue;
     }
 
     internal void Stop()

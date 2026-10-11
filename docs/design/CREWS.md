@@ -22,14 +22,14 @@ but make it about **play, territory and reputation**:
    replaced by the top Lieutenant (then top member); an empty crew disbands. CT-banned players cannot found or lead a crew.
    Names 3–24 chars, tags 2–5 letters/digits, both unique and checked against `Crews.BannedWords`.
 2. **Identity** — the crew tag is the prisoner's scoreboard clan tag (guards never; an admin tag wins). Crew colour (8
-   colours, more unlock with level). Crew chat `!cr <msg>`: dead members only reach dead crewmates (no ghosting); logged.
+   colours, more unlock with level). Crew chat `!cr <msg>`: only reaches crewmates on the sender's team, dead members only reach dead crewmates (no ghosting); logged.
    `!crews` leaderboard, `!crew info <TAG>`.
 3. **Respect & levels** — earned per member, per round (cap 10): survive the round +2, prisoners win +3, win an LR duel +5,
    hold turf +1, take turf +5; Crew War win +25 to the crew, +5 per survivor, +10 if the rival crew was beaten. Nothing
    below 6 humans online. Spendable respect decays 10 %/week; lifetime **legacy** sets the level (100/300/700/1500/3000/6000):
    more roster slots (4 → 8), colours, a third Lieutenant at level 5.
 4. **Turf** — admins mark cell blocks with **Cell Block** zones (`!zm`). When the cells open (everyone is still in their
-   cell) the crew with the most living members inside a block (min 2) takes it; ties keep the holder. Held blocks show a
+   cell, and at least `MinPlayersForRespect` humans are online) the crew with the most living members inside a block (min 2) takes it; ties keep the holder. Held blocks show a
    beam ring and pillar in the crew colour, and the holder's members spawn inside their block next round. Saved per map.
 5. **Favors** — one per crew per round, called by the Boss or a Lieutenant with respect: *Crew Banner* (10, lvl 1) beam
    pillar rendezvous point; *Crew Colours* (15, lvl 2) members glow in the crew colour for everyone (15 s); *Lookout* (25, lvl 3)
@@ -39,7 +39,7 @@ but make it about **play, territory and reputation**:
 7. **Warden shakedown** — `!shakedown` (warden, once per round): the chosen crew's living members glow red for the guards
    for 10 s. Powerful crews attract attention.
 8. **Crew War** (warday) — crews fight each other (prisoners without a crew alone), crewmates cannot hurt each other,
-   guards are untouchable referees with knives, each crew starts together at a rebel point, AK + Deagle + armour. Last
+   guards are untouchable referees with knives, factions are fixed when the day starts, each crew starts together at a rebel point, AK + Deagle + armour. Last
    crew standing wins; the round ends as a prisoner win. Needs 2 crews with 2+ living members (hidden from the day menu otherwise).
 9. **Admin** — `!crewadmin` (capability `crews.admin`, default `@css/ban`): rename, retag, set respect, kick, disband; logged.
 

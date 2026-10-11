@@ -6,6 +6,19 @@
 - **Crews** prisoner gang system + **Crew War** warday (docs/design/CREWS.md); Days API `CanStart`.
 - Core `ChatInput` (typed chat prompts) and `Visibility` (per-player entity visibility).
 ### Fixed
+- Review of Zones + Crews (22 findings, all fixed; none could crash the server):
+  - Zones: records with a missing/duplicate id or above `MaxZones` are renumbered instead of dropped (the next save erased
+    them); unreadable map files are kept as `.corrupt-*` before a fresh start; a bad `BlockadeColor` value no longer
+    disables every blockade; the damage blocker checks the victim's position when the damage happens (fast falls, flag
+    edits, no stale protection across maps); per-map state resets at map load (respawn spawn cache, timers, notify
+    cooldowns, autosave); ids are never reused while editors hold them; opening a zone menu drops a pending chat prompt;
+    "move to feet / ping" no longer sinks the zone; unloaded type keys survive duplicate and map import; import-map name
+    validated as a file name.
+  - Crews: stale menus/prompts can no longer re-save a disbanded crew, leave a player in two crews or make a departed member
+    Boss; Crew War factions are fixed when the day starts and a disconnect/team change runs the winner check; crew chat,
+    Lookout, crew pings and Roll Call stay among prisoners (no guard↔prisoner back channel); turf needs `MinPlayersForRespect`
+    humans; MOTD braces sanitized; SteamID 0 rejected; heir skips CT-banned members; old Boss respects the Lieutenant cap;
+    ping/invite timers use engine time; ping/Lookout visibility uses a slot cache (no per-tick SteamID strings).
 - Phrases mixing colour tags and arguments (133) were shown with a raw `{0}`: `Lang.T` now escapes colour tags before formatting.
 - `!open` / `!o` (admin only, capability `cells.open` = @css/generic, cooldown `Cells.AdminOpenCooldown`); `!cdo` stays root-only.
 - Auto warden setting (`Warden.AutoWarden`, `AutoWardenMode`): a guard is picked automatically when nobody queued, with its own chat line.

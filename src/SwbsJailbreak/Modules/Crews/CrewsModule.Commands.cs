@@ -10,7 +10,7 @@ namespace SwbsJailbreak.Modules.Crews;
 
 public sealed partial class CrewsModule
 {
-    private readonly Dictionary<int, (string CrewId, string Inviter, float Expires)> _invites = new();
+    private readonly Dictionary<int, (string CrewId, string Inviter, double Expires)> _invites = new();
 
     // ====================================================================== !crew
 
@@ -61,8 +61,8 @@ public sealed partial class CrewsModule
         var line = Lang.T("crews.chat.line", CrewColors.Of(crew.Color).Chat, crew.Tag, alive ? "" : Lang.T("crews.chat.dead"), Chat.Name(caller), text);
         foreach (var c in OnlineMembers(crew))
         {
-            // No ghosting: a dead member's crew chat only reaches dead crewmates.
-            if (!alive && c.IsAliveP()) continue;
+            // No back channel between teams, and no ghosting: a dead member's crew chat only reaches dead crewmates.
+            if (c.Team != caller.Team || (!alive && c.IsAliveP())) continue;
             Chat.Print(c, line, false);
         }
 
@@ -92,7 +92,7 @@ public sealed partial class CrewsModule
         if (crew == null)
         {
             var m = new JbMenu(Lang.T("crews.menu.title_none"));
-            if (_invites.TryGetValue(c.Slot, out var inv) && Server.CurrentTime < inv.Expires && _crews.TryGetValue(inv.CrewId, out var invCrew))
+            if (_invites.TryGetValue(c.Slot, out var inv) && Server.EngineTime < inv.Expires && _crews.TryGetValue(inv.CrewId, out var invCrew))
             {
                 m.Subtitle = Hud.Escape(Lang.T("crews.menu.invited", $"[{invCrew.Tag}] {invCrew.Name}", inv.Inviter));
                 m.Add(Lang.T("crews.menu.accept"), Accept);
@@ -277,6 +277,7 @@ public sealed partial class CrewsModule
 
     private bool CanCreate(CCSPlayerController c)
     {
+        if (c.SteamID == 0) { Chat.Tell(c, "crews.err.no_steam"); return false; }
         if (CrewOf(c) != null) { Chat.Tell(c, "crews.err.already_member"); return false; }
         if (Jb.Teams.IsCtBanned(c.SteamID)) { Chat.Tell(c, "crews.err.ctbanned"); return false; }
         var until = CooldownUntil(c.SteamID);
@@ -330,22 +331,23 @@ public sealed partial class CrewsModule
         var crew = CrewOf(c);
         if (crew == null) { Chat.Tell(c, "crews.err.not_member"); return; }
         if (!CrewRules.CanInvite(crew.Member(Steam(c))!.Rank)) { Chat.Tell(c, "crews.err.rank"); return; }
-        if (target.IsBot || CrewOf(target) != null) { Chat.Tell(c, "crews.err.target_in_crew"); return; }
+        if (target.IsBot || target.SteamID == 0 || CrewOf(target) != null) { Chat.Tell(c, "crews.err.target_in_crew"); return; }
         if (crew.Members.Count >= SlotsOf(crew)) { Chat.Tell(c, "crews.err.full", SlotsOf(crew)); return; }
         if (CooldownUntil(target.SteamID) > Now) { Chat.Tell(c, "crews.err.target_cooldown"); return; }
-        _invites[target.Slot] = (crew.Id, c.PlayerName, Server.CurrentTime + Math.Max(10, Cfg.InviteSeconds));
+        _invites[target.Slot] = (crew.Id, c.PlayerName, Server.EngineTime + Math.Max(10, Cfg.InviteSeconds));
         Chat.Tell(target, "crews.invite.received", Label(crew), Chat.Name(c));
         Chat.Tell(c, "crews.invite.sent", Chat.Name(target));
     }
 
     private void Accept(CCSPlayerController c)
     {
-        if (!_invites.Remove(c.Slot, out var inv) || Server.CurrentTime > inv.Expires || !_crews.TryGetValue(inv.CrewId, out var crew))
+        if (!_invites.Remove(c.Slot, out var inv) || Server.EngineTime > inv.Expires || !_crews.TryGetValue(inv.CrewId, out var crew))
         {
             Chat.Tell(c, "crews.err.no_invite");
             return;
         }
 
+        if (c.SteamID == 0) { Chat.Tell(c, "crews.err.no_steam"); return; }
         if (CrewOf(c) != null) { Chat.Tell(c, "crews.err.already_member"); return; }
         if (crew.Members.Count >= SlotsOf(crew)) { Chat.Tell(c, "crews.err.full", SlotsOf(crew)); return; }
         crew.Members.Add(new CrewMember { SteamId = Steam(c), Name = c.PlayerName, Rank = CrewRank.Member, JoinedUnix = Now });
@@ -375,6 +377,7 @@ public sealed partial class CrewsModule
 
     private void Kick(CCSPlayerController c, Crew crew, CrewMember target)
     {
+        if (!IsLiveMember(crew, target)) { Chat.Tell(c, "crews.err.no_target"); return; }
         var me = crew.Member(Steam(c));
         if (me == null || target.SteamId == me.SteamId || !CrewRules.CanKick(me.Rank, target.Rank)) { Chat.Tell(c, "crews.err.rank"); return; }
         RemoveMember(crew, target);
@@ -384,6 +387,7 @@ public sealed partial class CrewsModule
 
     private void SetRank(CCSPlayerController c, Crew crew, CrewMember target, bool promote)
     {
+        if (!IsLiveMember(crew, target)) { Chat.Tell(c, "crews.err.no_target"); return; }
         if (crew.Member(Steam(c))?.Rank != CrewRank.Boss) { Chat.Tell(c, "crews.err.rank"); return; }
         if (promote)
         {
@@ -414,11 +418,13 @@ public sealed partial class CrewsModule
 
     private void Transfer(CCSPlayerController c, Crew crew, CrewMember target)
     {
+        if (!IsLiveMember(crew, target)) { Chat.Tell(c, "crews.err.no_target"); return; }
         var me = crew.Member(Steam(c));
         if (me?.Rank != CrewRank.Boss || target.SteamId == me.SteamId) { Chat.Tell(c, "crews.err.rank"); return; }
-        if (ulong.TryParse(target.SteamId, out var s) && Jb.Teams.IsCtBanned(s)) { Chat.Tell(c, "crews.err.target_ctbanned"); return; }
-        me.Rank = CrewRank.Lieutenant;
+        if (IsCtBanned(target)) { Chat.Tell(c, "crews.err.target_ctbanned"); return; }
         target.Rank = CrewRank.Boss;
+        // The old Boss becomes a Lieutenant while there is room under the level's cap, else a member.
+        me.Rank = crew.Members.Count(m => m.Rank == CrewRank.Lieutenant) < CrewRules.MaxLieutenants(LevelOf(crew)) ? CrewRank.Lieutenant : CrewRank.Member;
         Save(crew);
         TellCrew(crew, "crews.new_boss", target.Name, Label(crew));
     }
@@ -427,7 +433,7 @@ public sealed partial class CrewsModule
     {
         var crew = CrewOf(c);
         if (crew == null || !CrewRules.CanSetMotd(crew.Member(Steam(c))!.Rank)) { Chat.Tell(c, "crews.err.rank"); return; }
-        text = text.Trim();
+        text = text.Trim().Replace('{', '(').Replace('}', ')');
         crew.Motd = text.Equals("-", StringComparison.Ordinal) ? "" : text.Length > 120 ? text[..120] : text;
         Save(crew);
         TellCrew(crew, "crews.motd_set", crew.Motd.Length > 0 ? crew.Motd : "-");
@@ -497,8 +503,8 @@ public sealed partial class CrewsModule
     /// <summary>Remove a member; the Boss is replaced by the top Lieutenant (else top member), an empty crew disbands.</summary>
     private void RemoveMember(Crew crew, CrewMember member)
     {
-        crew.Members.Remove(member);
-        _memberOf.Remove(member.SteamId);
+        if (!IsLive(crew) || !crew.Members.Remove(member)) return;
+        if (_memberOf.TryGetValue(member.SteamId, out var linked) && linked == crew.Id) _memberOf.Remove(member.SteamId);
         if (crew.Members.Count == 0)
         {
             DeleteCrew(crew);
@@ -507,7 +513,7 @@ public sealed partial class CrewsModule
 
         if (member.Rank == CrewRank.Boss)
         {
-            var heir = crew.Members.OrderByDescending(m => m.Rank).ThenByDescending(m => m.Earned).First();
+            var heir = crew.Members.OrderBy(IsCtBanned).ThenByDescending(m => m.Rank).ThenByDescending(m => m.Earned).First();
             heir.Rank = CrewRank.Boss;
             TellCrew(crew, "crews.new_boss", heir.Name, Label(crew));
         }
@@ -515,6 +521,8 @@ public sealed partial class CrewsModule
         Save(crew);
         if (Players.Humans().FirstOrDefault(x => Steam(x) == member.SteamId) is { } c && c.Jb() is { } jp) ApplyTag(jp);
     }
+
+    private static bool IsCtBanned(CrewMember m) => ulong.TryParse(m.SteamId, out var s) && Jb.Teams.IsCtBanned(s);
 
     // ====================================================================== admin
 
@@ -548,7 +556,7 @@ public sealed partial class CrewsModule
         {
             if (!CrewRules.ValidName(name, Cfg.BannedWords, out var why)) Chat.Tell(x, why);
             else if (_crews.Values.Any(o => o.Id != id && o.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) Chat.Tell(x, "crews.err.name_taken");
-            else { crew.Name = name; Save(crew); AdminLog(x, "renamed", crew); }
+            else if (CrewById(id) is { } cr) { cr.Name = name.Trim(); Save(cr); AdminLog(x, "renamed", cr); }
             ShowAdminCrew(x, id);
         }));
         m.Add(Lang.T("crews.admin.retag"), p => ChatInput.Ask(p, Lang.T("crews.ask.tag"), (x, tag) =>
@@ -556,12 +564,12 @@ public sealed partial class CrewsModule
             tag = CrewRules.NormalizeTag(tag);
             if (!CrewRules.ValidTag(tag, Cfg.BannedWords, out var why)) Chat.Tell(x, why);
             else if (_crews.Values.Any(o => o.Id != id && o.Tag == tag)) Chat.Tell(x, "crews.err.tag_taken");
-            else { crew.Tag = tag; Save(crew); AdminLog(x, "retagged", crew); }
+            else if (CrewById(id) is { } cr) { cr.Tag = tag; Save(cr); AdminLog(x, "retagged", cr); }
             ShowAdminCrew(x, id);
         }));
         m.Add(Lang.T("crews.admin.set_respect"), p => ChatInput.Ask(p, Lang.T("crews.admin.ask_respect"), (x, text) =>
         {
-            if (int.TryParse(text, out var v)) { crew.Respect = Math.Max(0, v); Save(crew); AdminLog(x, $"set respect {v} for", crew); }
+            if (int.TryParse(text, out var v) && CrewById(id) is { } cr) { cr.Respect = Math.Max(0, v); Save(cr); AdminLog(x, $"set respect {cr.Respect} for", cr); }
             ShowAdminCrew(x, id);
         }));
         m.Add(Lang.T("crews.admin.kick"), p =>
@@ -572,6 +580,7 @@ public sealed partial class CrewsModule
                 var target = mem;
                 km.Add(Hud.Escape($"{target.Name} — {RankName(target.Rank)}"), x =>
                 {
+                    if (!IsLiveMember(crew, target)) { Chat.Tell(x, "crews.err.no_target"); ShowAdminCrew(x, id); return; }
                     RemoveMember(crew, target);
                     AdminLog(x, $"kicked {target.Name} from", crew);
                     if (_crews.ContainsKey(id)) ShowAdminCrew(x, id);
@@ -587,6 +596,7 @@ public sealed partial class CrewsModule
             cm.Add(Lang.T("crews.menu.no"), x => ShowAdminCrew(x, id));
             cm.Add(Lang.T("crews.menu.yes"), x =>
             {
+                if (!IsLive(crew)) { ShowAdminList(x); return; }
                 var online = OnlineMembers(crew).ToList();
                 DeleteCrew(crew);
                 AdminLog(x, "disbanded", crew);

@@ -131,6 +131,8 @@ public sealed partial class CrewsModule : JbModule, ICrewService
     public override void OnMapStart(string mapName)
     {
         _map = (mapName ?? "").ToLowerInvariant();
+        _invites.Clear();
+        _nextPing.Clear();
         LoadTurf();
         var now = Now;
         foreach (var crew in _crews.Values)
@@ -166,7 +168,12 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         }
     }
 
-    public override void OnPlayerDisconnect(JbPlayer player) => _invites.Remove(player.Slot);
+    public override void OnPlayerDisconnect(JbPlayer player)
+    {
+        _invites.Remove(player.Slot);
+        _nextPing.Remove(player.Slot);
+        if (player.Slot is >= 0 and < PlayerSlots) _prisonerCrew[player.Slot] = null;
+    }
 
     public override void OnPlayerSpawn(JbPlayer player) => ApplyTag(player);
 
@@ -181,7 +188,27 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         if (_tick % 192 == 0) // ~3 s on 64 tick
             foreach (var p in Players.Connected()) ApplyTag(p);
         if (_tick % 64 == 0) RollCallTick();
+        if (_tick % 16 == 0) RefreshPrisonerCrews();
     }
+
+    private const int PlayerSlots = 64;
+    private readonly string?[] _prisonerCrew = new string?[PlayerSlots];
+
+    /// <summary>
+    /// Crew id of each prisoner by slot, refreshed 4x per second. Per-viewer visibility checks (crew pings, Lookout) run
+    /// for every viewer and entity on every tick, so they read this cache instead of SteamIDs and dictionaries.
+    /// </summary>
+    private void RefreshPrisonerCrews()
+    {
+        Array.Clear(_prisonerCrew);
+        foreach (var c in Players.Humans())
+            if (c.Slot is >= 0 and < PlayerSlots && c.Team == CsTeam.Terrorist && _memberOf.TryGetValue(Steam(c), out var id))
+                _prisonerCrew[c.Slot] = id;
+    }
+
+    /// <summary>True when the viewer is a prisoner in this crew (cached, safe for CheckTransmit).</summary>
+    private bool IsPrisonerOf(CCSPlayerController viewer, string crewId) =>
+        viewer.Slot is >= 0 and < PlayerSlots && _prisonerCrew[viewer.Slot] == crewId;
 
     // ====================================================================== storage
 
@@ -209,11 +236,24 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         Logger.LogInformation("[Crews] {Count} crews loaded", _crews.Count);
     }
 
-    internal void Save(Crew crew) => Storage.Set(CrewNs, crew.Id, crew);
+    /// <summary>Saves a live crew. A stale reference (crew disbanded while a menu or prompt was open) is never written back.</summary>
+    internal void Save(Crew crew)
+    {
+        if (IsLive(crew)) Storage.Set(CrewNs, crew.Id, crew);
+    }
+
+    internal Crew? CrewById(string id) => _crews.TryGetValue(id, out var crew) ? crew : null;
+
+    private bool IsLive(Crew crew) => _crews.TryGetValue(crew.Id, out var live) && ReferenceEquals(live, crew);
+
+    /// <summary>The crew still exists and the member is still on its roster (menus can outlive both).</summary>
+    private bool IsLiveMember(Crew crew, CrewMember member) => IsLive(crew) && crew.Members.Any(m => ReferenceEquals(m, member));
 
     private void DeleteCrew(Crew crew)
     {
-        foreach (var m in crew.Members) _memberOf.Remove(m.SteamId);
+        if (!IsLive(crew)) return;
+        foreach (var m in crew.Members)
+            if (_memberOf.TryGetValue(m.SteamId, out var id) && id == crew.Id) _memberOf.Remove(m.SteamId);
         _crews.Remove(crew.Id);
         Storage.Delete(CrewNs, crew.Id);
         foreach (var other in _crews.Values.Where(c => c.RivalId == crew.Id).ToList())
@@ -394,7 +434,7 @@ public sealed partial class CrewsModule : JbModule, ICrewService
     /// <summary>When the cells open everyone is still in their cell: the crew with most members in a block holds it.</summary>
     private void OnCellsOpened()
     {
-        if (!Cfg.TurfEnabled || Jb.Days.IsInProgress) return;
+        if (!Cfg.TurfEnabled || Jb.Days.IsInProgress || HumansOnline < Cfg.MinPlayersForRespect) return;
         var changed = false;
         foreach (var block in Blocks.ToList())
         {

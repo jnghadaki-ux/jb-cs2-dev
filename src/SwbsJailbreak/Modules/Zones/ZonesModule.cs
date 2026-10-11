@@ -64,6 +64,7 @@ public sealed partial class ZonesModule : JbModule, IZoneService
     private float _roundStart;
     private int _tick;
     private float _nextAutoSave;
+    private int _lastId; // highest id handed out on this map: new zones never reuse an id (open editors hold ids)
 
     public event Action<Zone, CCSPlayerController>? Entered;
     public event Action<Zone, CCSPlayerController>? Exited;
@@ -147,6 +148,12 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         _inside.Clear();
         _dirty = false;
         _importsSynced = false;
+        _lastId = 0;
+        // Round-scoped state must not carry over from the previous map (warmup has no round_start, and
+        // Server.CurrentTime restarts with each map).
+        _roundStart = Server.CurrentTime;
+        _nextAutoSave = 0;
+        foreach (var t in _typeList) SafeCall(t.OnRoundStart);
         _map = (map ?? "").ToLowerInvariant();
         if (_map.Length == 0) return;
 
@@ -158,18 +165,29 @@ public sealed partial class ZonesModule : JbModule, IZoneService
             doc = new ZoneMapDoc();
         }
 
-        var max = Math.Max(1, Cfg.MaxZones);
+        // Every record is kept (MaxZones only limits creating new zones): a missing or duplicate id gets a new one, so the
+        // next save never erases zones from the file.
+        var renumber = new List<ZoneRecord>();
         foreach (var r in doc.Zones ?? new List<ZoneRecord>())
         {
             if (r == null) continue;
             r.Normalize();
-            if (r.Id < 1 || r.Id > max || _byId.ContainsKey(r.Id))
+            if (r.Id < 1 || _byId.ContainsKey(r.Id))
             {
-                Logger.LogWarning("[Zones] {Map}: skipped zone with invalid or duplicate id {Id}", _map, r.Id);
+                renumber.Add(r);
                 continue;
             }
 
             AddLoaded(new Zone(r));
+        }
+
+        _lastId = _byId.Count == 0 ? 0 : _byId.Keys.Max();
+        foreach (var r in renumber)
+        {
+            Logger.LogWarning("[Zones] {Map}: zone with invalid or duplicate id {Id} renumbered to {New}", _map, r.Id, _lastId + 1);
+            r.Id = ++_lastId;
+            AddLoaded(new Zone(r));
+            _dirty = true;
         }
 
         foreach (var z in _zones) Bind(z);
@@ -288,15 +306,7 @@ public sealed partial class ZonesModule : JbModule, IZoneService
             return null;
         }
 
-        var id = 0;
-        for (var i = 1; i <= max; i++)
-        {
-            if (_byId.ContainsKey(i)) continue;
-            id = i;
-            break;
-        }
-
-        if (id == 0) return null;
+        var id = ++_lastId;
         var r = new ZoneRecord
         {
             Id = id, Origin = Zone.A(origin), Mins = Zone.A(mins), Maxs = Zone.A(maxs), Angles = Zone.A(angles),
@@ -318,7 +328,18 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         copy.Record.Strings = (string[])source.Record.Strings.Clone();
         copy.Record.Label = source.Record.Label;
         if (source.Type != null) SetType(copy, source.Type);
+        else SetUnloadedType(copy, source.TypeKey);
         return copy;
+    }
+
+    /// <summary>Gives a zone a type key that is not loaded: the zone stays inactive until a plugin registers that type.</summary>
+    internal void SetUnloadedType(Zone z, string key)
+    {
+        ForceExit(z);
+        if (z.Type != null) SafeCall(() => z.Type.OnUnassigned(z));
+        z.Type = null;
+        z.Record.Type = key;
+        MarkDirty(z);
     }
 
     internal bool Remove(Zone z)

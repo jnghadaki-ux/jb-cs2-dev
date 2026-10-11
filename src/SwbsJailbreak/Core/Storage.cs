@@ -162,7 +162,10 @@ public static class Storage
         }
         catch (Exception ex)
         {
-            JailbreakPlugin.Instance?.Logger.LogError(ex, "Failed to read map file {Path}", path);
+            // Keep the unreadable file: the caller starts empty and its next save would otherwise overwrite it.
+            JailbreakPlugin.Instance?.Logger.LogError(ex, "Failed to read map file {Path} (a copy is kept as .corrupt-*)", path);
+            try { File.Copy(path, path + ".corrupt-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss"), true); }
+            catch { /* best effort */ }
         }
 
         return new T();

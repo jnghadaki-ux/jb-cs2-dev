@@ -21,6 +21,7 @@ internal sealed class ZoneEditor
     public int SelectedId;
     public ZoneEditMode Mode;
     public float PositionDistance;
+    public bool PositionHold; // after move-to-feet/ping: stay put until attack or attack2
     public bool ShowAll;
     public bool Active;
     public JbMenu? Menu;
@@ -106,9 +107,12 @@ public sealed partial class ZonesModule
     /// Zone menus never use JbMenu.Parent: every screen is rebuilt by its Show* method (with explicit Back / Done items),
     /// so the editor mode always matches the menu on screen.
     /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex ValidMapName = new(@"^[a-z0-9_.\-]{1,64}$");
+
     private JbMenu NewMenu(CCSPlayerController c, string title)
     {
         var ed = Editor(c);
+        ChatInput.Forget(c.Slot);
         var m = new JbMenu(title) { Timeout = -1, OnCancel = p => OnMenuCancelled(p) };
         ed.Menu = m;
         ed.Active = true;
@@ -241,7 +245,7 @@ public sealed partial class ZonesModule
         var m = NewMenu(c, T("zones.menu.edit_title"));
         m.Subtitle = Describe(z);
         var editable = !z.Record.Imported;
-        m.Add(T("zones.menu.edit_position"), ShowPosition, editable);
+        m.Add(T("zones.menu.edit_position"), p => ShowPosition(p), editable);
         m.Add(T("zones.menu.edit_size"), ShowSize, editable);
         m.Add(T("zones.menu.edit_corners"), ShowCorners, editable);
         m.Add(T("zones.menu.edit_angles"), ShowAngles);
@@ -252,7 +256,7 @@ public sealed partial class ZonesModule
         Open(c, m);
     }
 
-    private void ShowPosition(CCSPlayerController c)
+    private void ShowPosition(CCSPlayerController c, bool hold = false)
     {
         var ed = Editor(c);
         var z = Find(ed.SelectedId);
@@ -270,7 +274,7 @@ public sealed partial class ZonesModule
                 MarkDirty(sel);
             }
 
-            ShowPosition(p);
+            ShowPosition(p, hold: true);
         });
         m.Add(T("zones.menu.move_to_ping"), p =>
         {
@@ -282,10 +286,14 @@ public sealed partial class ZonesModule
             }
             else Chat.Tell(p, "zones.no_ping");
 
-            ShowPosition(p);
+            ShowPosition(p, hold: true);
         });
         m.Add(T("zones.menu.done"), p => { LogChange(p, "position", Find(Editor(p).SelectedId)); ShowEdit(p); });
         Open(c, m);
+
+        ed.Mode = ZoneEditMode.Position;
+        ed.PositionHold = hold;
+        if (hold) return; // just placed: no view turn and no follow until the admin presses attack / attack2
 
         // Face the zone and keep the current distance (DisplayMenu_EditPosition).
         var eye = ToV3(c.EyePosition());
@@ -295,7 +303,6 @@ public sealed partial class ZonesModule
         var yaw = MathF.Atan2(dir.Y, dir.X) * 180f / MathF.PI;
         var pitch = -MathF.Atan2(dir.Z, MathF.Sqrt(dir.X * dir.X + dir.Y * dir.Y)) * 180f / MathF.PI;
         c.PawnOrNull()?.Teleport(null, new QAngle(pitch, yaw, 0), null);
-        ed.Mode = ZoneEditMode.Position;
     }
 
     private void ShowSize(CCSPlayerController c)
@@ -694,6 +701,13 @@ public sealed partial class ZonesModule
         ChatInput.Ask(c, T("zones.import_map.ask"), (p, map) =>
         {
             var other = map.Trim().ToLowerInvariant();
+            if (!ValidMapName.IsMatch(other) || other.Contains(".."))
+            {
+                Chat.Tell(p, "zones.import_map.none", other.Replace('{', '(').Replace('}', ')'));
+                ShowMain(p);
+                return;
+            }
+
             if (!Storage.MapDocExists("zones", other))
             {
                 Chat.Tell(p, "zones.import_map.none", other);
@@ -713,7 +727,7 @@ public sealed partial class ZonesModule
                 z.Record.Strings = (string[])r.Strings.Clone();
                 z.Record.Label = r.Label;
                 if (_types.TryGetValue(r.Type, out var t)) SetType(z, t);
-                else z.Record.Type = r.Type;
+                else SetUnloadedType(z, r.Type);
                 added++;
             }
 
@@ -763,9 +777,16 @@ public sealed partial class ZonesModule
         var pawn = c.PawnOrNull();
         if (z == null || pawn == null || z.Record.Imported) return;
         var buttons = c.Buttons;
+        var eye = ToV3(c.EyePosition());
+        if (ed.PositionHold)
+        {
+            if ((buttons & (PlayerButtons.Attack | PlayerButtons.Attack2)) == 0) return;
+            ed.PositionHold = false;
+            ed.PositionDistance = Math.Max(32f, Vector3.Distance(eye, z.Box.Center));
+        }
+
         if ((buttons & PlayerButtons.Attack) != 0) ed.PositionDistance += MoveStep;
         else if ((buttons & PlayerButtons.Attack2) != 0) ed.PositionDistance = Math.Max(32f, ed.PositionDistance - MoveStep);
-        var eye = ToV3(c.EyePosition());
         var fwd = ZoneEdit.Forward(pawn.EyeAngles.X, pawn.EyeAngles.Y);
         var target = eye + fwd * ed.PositionDistance - (z.Box.Mins + z.Box.Maxs) * 0.5f;
         if (Vector3.DistanceSquared(target, z.Box.Origin) < 0.01f) return;
@@ -883,6 +904,7 @@ public sealed partial class ZonesModule
     {
         _triggerNameWatchers.Remove(slot);
         if (_editors.Remove(slot, out var ed)) DeactivateEditor(ed);
+        if (_dirty && !_editors.Values.Any(s => s.Active)) Save();
     }
 
     private void EndAllEditors()

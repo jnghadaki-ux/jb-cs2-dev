@@ -15,7 +15,7 @@ public sealed partial class CrewsModule
     private readonly Dictionary<string, float> _rollCallUntil = new();
     private readonly List<CEntityInstance> _roundEntities = new();
     private readonly List<GlowHandle> _roundGlows = new();
-    private readonly Dictionary<int, float> _nextPing = new();
+    private readonly Dictionary<int, double> _nextPing = new();
     private bool _shakedownUsed;
 
     // ====================================================================== favors
@@ -71,10 +71,11 @@ public sealed partial class CrewsModule
                     AddTimedGlow(m, color, null, 15f);
                 break;
             case "lookout":
+                var lookoutCrew = crew.Id;
                 foreach (var m in OnlineMembers(crew).Where(x => x.IsAliveP() && x.Team == CsTeam.Terrorist))
                 {
                     var owner = m.Slot;
-                    AddTimedGlow(m, color, viewer => viewer.Slot != owner && SameCrew(viewer, m), 8f);
+                    AddTimedGlow(m, color, viewer => viewer.Slot != owner && IsPrisonerOf(viewer, lookoutCrew), 8f);
                 }
 
                 break;
@@ -117,7 +118,7 @@ public sealed partial class CrewsModule
                 continue;
             }
 
-            var members = OnlineMembers(crew).ToList();
+            var members = OnlineMembers(crew).Where(x => x.Team == CsTeam.Terrorist).ToList(); // prisoners only: no guard intel either way
             var lines = new List<string>();
             foreach (var m in members.OrderBy(x => x.PlayerName))
             {
@@ -146,14 +147,14 @@ public sealed partial class CrewsModule
         if (!Cfg.CrewPingMarkers || c.Team != CsTeam.Terrorist || !c.IsAliveP()) return;
         var crew = CrewOf(c);
         if (crew == null) return;
-        var now = Server.CurrentTime;
+        var now = Server.EngineTime;
         if (_nextPing.TryGetValue(c.Slot, out var t) && now < t) return;
         _nextPing[c.Slot] = now + 2f;
         var color = Color.FromArgb(230, CrewColors.Of(crew.Color).Rgb);
         var ring = Fx.Ring(new CssVector(pos.X, pos.Y, pos.Z + 3f), 26f, color, 2.5f, 4f, 16);
         var crewId = crew.Id;
         foreach (var beam in ring)
-            Visibility.OnlyFor(beam, viewer => _memberOf.TryGetValue(Steam(viewer), out var id) && id == crewId);
+            Visibility.OnlyFor(beam, viewer => IsPrisonerOf(viewer, crewId));
     }
 
     // ====================================================================== warden shakedown
