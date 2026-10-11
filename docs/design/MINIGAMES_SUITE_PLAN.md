@@ -81,7 +81,7 @@ Already handled elsewhere:
 * **BlockMaker / Blocks:** excluded by the owner.
 
 ## Order, models, credits
-* Order: **1 → 2 → 3 → 4.** Courses are the base for games, deathrun and the course helpers.
+* Order (owner): **2 → 3 → 4, then 1, then the parts that need Courses** (Course Race, Deathrun, course auto-respawn, course scoreboard tag). Step list: `MINIGAMES_SUITE_DESIGN.md` §11.
 * Model fit (owner rule 10):
   * **Opus:** Phases 1–2 (new systems, per-tick timing, judging).
   * **Sonnet:** Phases 3–4.

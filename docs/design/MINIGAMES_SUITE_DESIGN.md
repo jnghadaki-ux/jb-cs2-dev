@@ -237,24 +237,33 @@ public enum GameReward { None, Freeday, FirstLrPick, Points, CrewRespect }
 
 ## 11. Implementation plan (each step = one milestone: build 0/0, tests, TEST_PLAN rows, docs, push)
 
+Owner order: **Warden Games → Days → Helpers first, then Courses, then everything that needs Courses.**
+Items that depend on Courses (Course Race, Deathrun, course auto-respawn, course scoreboard tag) wait for block B.
+
 | Step | Work | Files | Tests | Acceptance | Model |
 |---|---|---|---|---|---|
 | 0 | API checks (§10) | COMPATIBILITY.md | n/a | Each item marked available or fallback | Sonnet |
-| 1 | Course core logic | `Core/Courses.cs`, `Core/Api.cs` | State machine (start/split/end/fail/cancel), ms from ticks, record ordering, CP-run exclusion, teleport rule | ≥20 unit tests pass | Opus |
-| 2 | Course zone types + run tracking + HUD | `Modules/Games/CoursesModule.cs`, lang | Zone field rules | Course built with `!zm`, timed runs with splits on a test map | Opus |
-| 3 | Checkpoints + records + commands | `CoursesModule.Commands.cs` | Record JSON round-trip, top-N trim | Commands work only in course scope; records persist across map change | Sonnet |
-| 4 | Games framework + menu + rewards + queue | `Core/WardenGames.cs`, `WardenGamesModule.cs` | Reward once per round, queue order, gate rules | The warden can start or end a no-op test game; gates enforced | Opus |
-| 5 | Games: Course Race, Win Zone, Last One Standing | `Games/*.cs` | Tie rules | Correct winner each game | Sonnet |
-| 6 | Games: Simon Says, Red Light, Musical Zones | `Games/*.cs` | Judging rules from inputs (pure functions: button/velocity sample → verdict) | Auto-judging matches the rules table | Opus |
-| 7 | Map Buttons (mark, store, press, auto-select) | `WardenGamesModule`, `maps/game_buttons` | JSON round-trip | Marked buttons fire on a multigame map | Sonnet |
-| 8 | Hide & Seek day | `HideAndSeekDay.cs` | n/a | Hide time, blindness or fallback, can't-attack hiders, win rules | Sonnet |
-| 9 | Deathrun day + activator queue | `DeathrunDay.cs` | Queue order | Activator chosen fairly, finish/death win rules | Sonnet |
-| 10 | Jetpack day, No-scope chance | `JetpackDay.cs`, DaysModule config | Thrust/fuel math | Day playable; chance 0 = never | Sonnet |
-| 11 | Helpers: `!hide`, auto-respawn, AutoBhop zone, MeasureGap, scoreboard tag | `GameHelpersModule.cs` | Distance math | Each helper limited to its scope | Sonnet |
-| 12 | Review pass (≤2 agents) + docs | FEATURE_INVENTORY, CHANGELOG, TEST_PLAN, BUILD_AND_TEST | n/a | Findings fixed; inventory rows "Implemented, unverified" | Opus |
+| **A. Warden Games, Days, Helpers (plan phases 2–4)** ||||||
+| A1 | Games framework + menu + rewards + picker queue | `Core/WardenGames.cs`, `Core/Api.cs` (Jb.Games), `WardenGamesModule.cs` | Reward once per round, queue order, gate rules | The warden can start or end a no-op test game; gates enforced | Opus |
+| A2 | Games: Win Zone (`mgwin`), Last One Standing | `Games/*.cs` | Tie rules | Correct winner each game | Sonnet |
+| A3 | Games: Simon Says, Red Light / Green Light, Musical Zones | `Games/*.cs` | Judging rules as pure functions (button/velocity sample → verdict) | Auto-judging matches the rules table | Opus |
+| A4 | Map Buttons (mark, store, press, auto-select) | `WardenGamesModule`, `maps/game_buttons` | JSON round-trip | Marked buttons fire on a multigame map | Sonnet |
+| A5 | Hide & Seek day | `HideAndSeekDay.cs` | n/a | Hide time, blindness or fallback, can't-attack hiders, win rules | Sonnet |
+| A6 | Jetpack day, No-scope chance | `JetpackDay.cs`, DaysModule config | Thrust/fuel math | Day playable; chance 0 = never | Sonnet |
+| A7 | Helpers that don't need Courses: `!hide`, AutoBhop zone, MeasureGap | `GameHelpersModule.cs` | Distance math | Each helper limited to its scope (`!hide`: games/days or dead players) | Sonnet |
+| **B. Courses (plan phase 1)** ||||||
+| B1 | Course core logic | `Core/Courses.cs`, `Core/Api.cs` (Jb.Courses) | State machine (start/split/end/fail/cancel), ms from ticks, record ordering, CP-run exclusion, teleport rule | ≥20 unit tests pass | Opus |
+| B2 | Course zone types + run tracking + HUD | `Modules/Games/CoursesModule.cs`, lang | Zone field rules | Course built with `!zm`, timed runs with splits on a test map | Opus |
+| B3 | Checkpoints + records + commands | `CoursesModule.Commands.cs` | Record JSON round-trip, top-N trim | Commands work only in course scope; records persist across map change | Sonnet |
+| **C. Everything that needs Courses** ||||||
+| C1 | Course Race game | `Games/CourseRaceGame.cs` | Tie rule (same tick → lower ms, then slot) | First valid finisher wins | Sonnet |
+| C2 | Deathrun day + activator queue | `DeathrunDay.cs` | Queue order | Activator chosen fairly; finish/death win rules | Sonnet |
+| C3 | Course auto-respawn, course scoreboard tag | `CoursesModule`, `GameHelpersModule` | n/a | Only during course games/days; tags restored | Sonnet |
+| **D. Wrap-up** ||||||
+| D1 | Review pass (≤2 agents) + docs | FEATURE_INVENTORY, CHANGELOG, TEST_PLAN, BUILD_AND_TEST | n/a | Findings fixed; inventory rows "Implemented, unverified" | Opus |
 
-* **Rough size:** steps 1–7 ≈ 3,000–3,500 lines; steps 8–11 ≈ 1,200 lines; ~60 new unit tests.
-* **Order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7, then 8–11 in any order, then 12.
+* **Rough size:** block A ≈ 2,500 lines, B ≈ 1,800, C ≈ 600; ~60 new unit tests.
+* **Order:** 0 → A1 → A2 → A3 → A4 → A5 → A6 → A7 → B1 → B2 → B3 → C1 → C2 → C3 → D1. A5–A7 can run in any order after A1. While Courses don't exist, the Games menu hides course games (`CanStart` returns "no course system").
 * **Credits** (code headers and docs):
   * "Based on SMPlugins by hlstriker";
   * SpeedRuns Stats: Hymns For Disco;
