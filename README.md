@@ -11,7 +11,7 @@ particles, glow, sounds, HUD), never text stand-ins.
 | Platform | CS2 + Metamod:Source 2.0 + CounterStrikeSharp **1.0.368 with runtime (.NET 8)** |
 | Target | `net8.0` **only** (CounterStrikeSharp 1.0.370+ is .NET 10 and is not targeted) |
 | Status | Builds with 0 warnings / 0 errors, 178 unit tests pass. **Not yet verified on a live CS2 server**: every gameplay feature is "Implemented, unverified" until the in-game checklist (TEST_PLAN.md) is run |
-| Download | `releases/SwbsJailbreak-0.10.0-net8.zip` (or build it yourself, see below) |
+| Download | **`releases/SwbsJailbreak-0.10.0-server-package.zip`** (plugin + recommended server cfg + INSTALL.txt + docs), or just the plugin: `releases/SwbsJailbreak-0.10.0-net8.zip` |
 
 ## Credits
 * **Created by Gdaki**: the project and all work before it was handed to Claude Code (including the SimpleAdmin mod).
@@ -63,7 +63,9 @@ Full feature-by-feature status with the original `.sp` sources: **FEATURE_INVENT
 
 1. Install **Metamod:Source 2.0** (matching the current CS2 build) and add `Game csgo/addons/metamod` to `gameinfo.gi`.
 2. Install **CounterStrikeSharp 1.0.368 "with runtime"** (.NET 8) into `game/csgo/addons/counterstrikesharp`.
-3. Unzip `releases/SwbsJailbreak-0.10.0-net8.zip` into `game/csgo/` (creates `addons/counterstrikesharp/plugins/SwbsJailbreak/`).
+3. From `releases/SwbsJailbreak-0.10.0-server-package.zip`, copy `addons/` and `cfg/` into `game/csgo/` (creates
+   `addons/counterstrikesharp/plugins/SwbsJailbreak/`), and add `exec swbs_jailbreak` to `cfg/server.cfg`. The zip's
+   INSTALL.txt has the full steps and download links (CounterStrikeSharp `v1.0.368` with runtime).
 4. Admins go in CounterStrikeSharp `configs/admins.json` (flags such as `@css/generic`, `@css/ban`, `@css/config`, `@css/root`).
 5. Start the server; the console prints `SWBS Ultimate Jailbreak v0.10.0 loaded: <n> modules`.
 6. Config: `addons/counterstrikesharp/configs/plugins/SwbsJailbreak/SwbsJailbreak.json` (generated on first start). Data

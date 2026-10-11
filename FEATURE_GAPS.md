@@ -1,7 +1,7 @@
 # Feature gaps, engine limits and open questions
 
-## Not ported yet (18 jailbreak-relevant + 1 optional) — original size in lines
-(CommandList was ported in session 3: `!commands`.)
+## Not ported yet (18 jailbreak-relevant) — original size in lines
+(Ported in session 3: CommandList → `!commands`, HidePlayers → `!hide`.)
 | # | Plugin | What it does (original) | Commands | Lines | CS2 approach |
 |---|---|---|---|---:|---|
 | 1 | AFKManager | moves/kicks players who go AFK (3 cvars) | — | 239 | tick/button check, move to spec then kick; skip warden/LR players |
@@ -22,7 +22,6 @@
 | 16 | FixGravityOnNewRound | resets `sv_gravity 800` each round and fixes player gravity on spawn | — | 70 | partly covered by `Movement`; add the cvar reset |
 | 17 | MapArmour | per-map armour on/off | `sm_armour`, `sm_noarmour` (root) | 169 | per-map JSON flag + Settings loadout |
 | 18 | Parachute | parachutes (also used by the LR API: saved, removed during an LR, restored after) | `sm_giveparachute`, `sm_removeparachute` | 218 | glide while holding USE; hook into LR start/end |
-| 19 | HidePlayers (optional) | players hide other players | `sm_hide` | 285 | CheckTransmit; only a transitive store dependency |
 
 Out of scope for now: Store / donator items / UserPoints economy (`IPointsService` hook exists).
 
@@ -68,7 +67,7 @@ selection, 71 admin commands, last-guard beacons.
   entities do not trigger zones (the original's touch also fired for props; no jailbreak type used that).
 * Blockade cannot be a real solid wall from managed code: players are pushed back (swept test against tunnelling); thrown
   grenades and bullets pass through.
-* Flashlight and Hide Toggle zone types are not registered (no CS2 flashlight effect; HidePlayers not ported).
+* Flashlight and Hide Toggle zone types are not registered (no CS2 flashlight effect; Hide Toggle could reuse the `!hide` CheckTransmit code, not done yet).
 * Crew respect / turf need real players: nothing is earned below `Crews.MinPlayersForRespect` (6) humans online.
 
 ## CS2 engine / API limits (cannot be reproduced 1:1)
