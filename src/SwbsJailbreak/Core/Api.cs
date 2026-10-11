@@ -386,6 +386,9 @@ public sealed class DayDefinition
     public FreezeTeams FreezeTeams { get; set; }
     public bool AllowFreeForAll { get; set; }
     public string Description { get; set; } = "";
+
+    /// <summary>ADDITION: live availability check (e.g. Crew War needs two crews online); null = always available.</summary>
+    public Func<bool>? CanStart { get; init; }
     public int Id { get; internal set; } = -1;
 
     public void AssignId(int id) => Id = id;

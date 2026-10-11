@@ -59,13 +59,18 @@ public static class Lang
         if (args.Length == 0) return text;
         try
         {
-            return string.Format(text, args);
+            // Colour tags like {olive} are not format items: escape them so string.Format only fills {0}, {1}, ...
+            // (without this, every phrase mixing colours and arguments threw and was shown with raw "{0}").
+            return string.Format(ColourTag.Replace(text, "{{$1}}"), args);
         }
         catch (FormatException)
         {
             return text;
         }
     }
+
+    private static readonly System.Text.RegularExpressions.Regex ColourTag =
+        new(@"\{([A-Za-z_][A-Za-z0-9_]*)\}", System.Text.RegularExpressions.RegexOptions.Compiled);
 }
 
 /// <summary>Chat colour tag expansion ({green}, {red}, ...).</summary>

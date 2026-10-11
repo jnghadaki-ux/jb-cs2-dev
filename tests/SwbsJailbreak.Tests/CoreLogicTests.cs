@@ -105,6 +105,20 @@ public class TextTests
     }
 
     [Fact]
+    public void PhrasesMixingColourTagsAndArguments_AreFormatted()
+    {
+        // Regression: string.Format threw on "{olive}" and the raw "{0}" reached players.
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        Directory.CreateDirectory(Path.Combine(dir, "lang", "en"));
+        File.WriteAllText(Path.Combine(dir, "lang", "en", "a.json"),
+            "{ \"x.c\": \"{olive}You have {lightred}{0} {olive}points, {1}.\", \"x.n\": \"{0:0.0}s\" }");
+        Lang.Load(dir, "en");
+        Assert.Equal("{olive}You have {lightred}12 {olive}points, Gdaki.", Lang.T("x.c", 12, "Gdaki"));
+        Assert.Equal("1.5s", Lang.T("x.n", 1.5));
+        Assert.Equal("x.missing {red}[TAG] Crew{default} won", Lang.T("x.missing {0} won", "{red}[TAG] Crew{default}")); // unknown key = key text; args keep their tags
+    }
+
+    [Fact]
     public void HudTime_FormatsMinutesSeconds()
     {
         Assert.Equal("1:05", Hud.Time(65f));

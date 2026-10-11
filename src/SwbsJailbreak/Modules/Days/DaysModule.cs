@@ -287,7 +287,7 @@ public sealed partial class DaysModule : JbModule, IDayService
         {
             var day = d;
             var forcedFfa = (d.Flags & DayFlags.ForceFreeForAll) != 0;
-            var usable = d.Enabled && (!forcedFfa || HasEnoughRebelPointsForFfa);
+            var usable = d.Enabled && (!forcedFfa || HasEnoughRebelPointsForFfa) && (d.CanStart?.Invoke() ?? true);
             m.Add(Hud.Escape(d.Name), x =>
             {
                 if (!StillAllowed(x, admin)) return;
@@ -331,6 +331,12 @@ public sealed partial class DaysModule : JbModule, IDayService
         }
 
         if (!_days.Contains(day)) return false;
+        if (day.CanStart != null && !day.CanStart())
+        {
+            c?.PrintToChat(" " + Lang.T("days.unavailable", day.Name));
+            return false;
+        }
+
         if (!CanDayBeFreeForAll(day))
         {
             if ((day.Flags & DayFlags.ForceFreeForAll) != 0)
