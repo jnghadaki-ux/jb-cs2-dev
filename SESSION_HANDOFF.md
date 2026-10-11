@@ -24,6 +24,8 @@ _Updated: session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-cs2` (p
 * **Zones + Crews review done** (2 bounded agents, 22 findings, all fixed — CHANGELOG 0.10.0 "Review of Zones + Crews";
   TEST_PLAN 27r). Build 0/0, tests 139/139.
 
+* CS:GO/CS:S feature research (report only): `docs/research/JB_FEATURE_RESEARCH.md`. Owner usage: weekly 76 %.
+
 ## Exact next actions (priority order)
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
 2. **Review pass for runtime bugs** (Zones/Crews done) — read-only review of LR (`Modules/LastRequest/*`), Days (`Modules/Days/*`),
