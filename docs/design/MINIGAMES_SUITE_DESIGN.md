@@ -1,6 +1,8 @@
 # Minigames & game-mode suite: full design and implementation plan
 
-Status: **Design only. Nothing is implemented** (owner: "do not add these features in yet").
+Status: **Block A1–A4 (Warden Games) implemented, unverified** (session 3, owner: "finish all warden games"). Everything else is design only.
+As built: rewards are None / Points / Crew respect (Freeday and First LR pick are not wired: the plugin has no next-round freeday or LR queue to hand them to);
+Course Race waits for Courses (block B); map games auto-press is not used, the 45 s auto-select applies to the prisoner picker.
 Scope summary and source inventory: `MINIGAMES_SUITE_PLAN.md`. Sources: hlstriker's SMPlugins and its contributors
 (Hymns For Disco, FrostJacked, Scoutkllr). BlockMaker is excluded. Original command and cvar names below were read from
 the sources.

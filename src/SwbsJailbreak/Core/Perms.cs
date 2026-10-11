@@ -37,6 +37,7 @@ public static class Perms
         ["immunity"] = "@css/generic",       // immune to dead-talk mute etc.
         ["vip"] = "@css/reservation",        // donator / VIP perks (old SMPlugins "Donators")
         ["logs"] = "@css/generic",           // view jail logs at any time
+        ["games.admin"] = "@css/generic",    // warden games: force-end, mark map game buttons (!gamebuttons)
         ["zones"] = "@css/config",           // edit map zones / LR locations
         ["kick"] = "@css/kick",
         ["ban"] = "@css/ban",

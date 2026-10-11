@@ -2,6 +2,9 @@
 
 ## 0.10.0 — .NET 8 only (session 3, 2026-10-10) — not yet verified on a live server
 ### Added
+- **Warden Games** (`!games`, `!gamebuttons`; Games module): Win Zone, Last One Standing, Simon Says, Red Light / Green Light,
+  Musical Zones and map games, auto-judged from real input; picker queue; per-round reward; 23 new unit tests. Based on
+  SMPlugins MultigamesGameSelect / MultigamesQueue / UserPointsForMinigamesWinner (hlstriker).
 - **Zone Manager** remake of SMPlugins ZoneManager + ZoneTypes (`!zm`, 12 types, per-map JSON, LR/CTF use named destinations).
 - **Crews** prisoner gang system + **Crew War** warday (docs/design/CREWS.md); Days API `CanStart`.
 - Core `ChatInput` (typed chat prompts) and `Visibility` (per-player entity visibility).

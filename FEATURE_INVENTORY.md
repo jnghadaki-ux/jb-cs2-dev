@@ -107,6 +107,7 @@ Original UJB content: 25 last requests (Freeday 4, Draw 1, Rebel 8, Weapon Battl
 | Feature | Module | Status | Notes |
 |---|---|---|---|
 | Crews (prisoner gang system) | Crews/CrewsModule | Implemented, unverified | Design: docs/design/CREWS.md. Roster + ranks, respect (no buying), levels, turf on Cell Block zones, favors, crew chat, tags, rivals, warden shakedown, admin tools. |
+| Warden Games (MultigamesGameSelect, MultigamesQueue, UserPointsForMinigamesWinner by hlstriker + judged classics) | Games/WardenGamesModule | Implemented, unverified | `!games` (warden): Win Zone (`mgwin`), Last One Standing, Simon Says, Red Light / Green Light, Musical Zones, Map games (`!gamebuttons` marks map buttons); prisoner picker queue (45 s auto-pick); one reward per round (points / crew respect). Judged from real buttons, velocity, eye pitch, zones. Design: docs/design/MINIGAMES_SUITE_DESIGN.md. |
 | Crew War warday | Crews/CrewWarDay | Implemented, unverified | Crews vs crews, guards are referees; needs 2 crews with 2+ living members (`DayDefinition.CanStart`). |
 | `!commands` | Extras/CommandListModule | Implemented, unverified | SMPlugins CommandList port. |
 | `!open` / `!o` (admin) | Cells | Implemented, unverified | Owner decision: admin-only. |

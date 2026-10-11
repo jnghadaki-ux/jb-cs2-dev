@@ -1,10 +1,10 @@
 # Session handoff
 
-_Updated: session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-cs2` (pushed)._
+_Updated: end of session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-cs2` (pushed)._
 
 ## State
 * **.NET 8 only** now (owner rule): `net8.0` against CounterStrikeSharp.API 1.0.368. All net10 code removed.
-  `dotnet build -c Release` → 0 warnings / 0 errors; `dotnet test -c Release` → 139/139 pass (net8.0);
+  `dotnet build -c Release` → 0 warnings / 0 errors; `dotnet test -c Release` → 162/162 pass (net8.0);
   `./build.sh` → `artifacts/SwbsJailbreak-0.10.0-net8.zip` (CSS API not bundled).
 * Aim on CSS 1.0.368 (no ray trace): `Core/Aim` stores each player's last `player_ping` (engine crosshair point +
   pinged entity). Warden ping → pointer laser + pulse ring; warden menu rings/healing at the recent ping; cell editor
@@ -29,6 +29,11 @@ _Updated: session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-cs2` (p
 * Minigames / game-mode suite plan (SMPlugins HideAndSeek, SpeedRuns, BlockMaker, multigame helpers): `docs/design/MINIGAMES_SUITE_PLAN.md` + full design/implementation steps `docs/design/MINIGAMES_SUITE_DESIGN.md` (design only — owner said do not implement yet).
 
 ## Exact next actions (priority order)
+0. **Minigames suite, continue in order** (docs/design/MINIGAMES_SUITE_DESIGN.md §11): Warden Games A1–A4 are built
+   (`Modules/Games/*`, `Core/WardenGames.cs`, 23 tests). Next: **step 0 API checks** (Fade user message, ReplicateConVar,
+   tick interval; record in COMPATIBILITY.md), then **A5 Hide & Seek day**, **A6 Jetpack day + no-scope chance**, **A7 helpers**
+   (`!hide`, AutoBhop zone, `!measure`/`!gap`) — Sonnet is enough; then **B Courses** (Opus), then **C** (Course Race, Deathrun,
+   course auto-respawn, scoreboard tag), then **D** review. Owner wants to progress tomorrow.
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
 2. **Review pass for runtime bugs** (Zones/Crews done) — read-only review of LR (`Modules/LastRequest/*`), Days (`Modules/Days/*`),
    Jihad, Settings, Teams, Cells editor, Warden ping code. Acceptance: each finding fixed or documented; build 0/0;
