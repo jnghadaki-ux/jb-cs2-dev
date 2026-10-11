@@ -42,6 +42,7 @@ public sealed class GameDaysModule : JbModule
 
     private DayDefinition? _hns, _jetpack;
     private readonly float[] _fuel = new float[Players.MaxSlots];
+    private readonly HashSet<uint> _unscoped = new(); // weapon handles whose scope this round blocked
     private bool _noScopeRound;
     private int _tick;
 
@@ -94,8 +95,11 @@ public sealed class GameDaysModule : JbModule
         if (Active(_hns)) HnsEnd();
     }
 
+    public override void OnRoundEnd(CsTeam winner, int reason) => RestoreScopes();
+
     public override void OnRoundStart()
     {
+        RestoreScopes();
         _noScopeRound = Cfg.NoScopeChance > 0 && Random.Shared.Next(100) < Math.Clamp(Cfg.NoScopeChance, 0, 100);
         if (_noScopeRound) Chat.TellAll("games.noscope.round");
     }
@@ -104,18 +108,20 @@ public sealed class GameDaysModule : JbModule
 
     private void HnsStart()
     {
-        foreach (var g in DayUtil.AliveOn(CsTeam.CounterTerrorist))
-        {
-            DayUtil.Give(g, "weapon_knife", true);
-            // The original faded the seekers' screens black for the hide time (FFADE_STAYOUT).
-            if (g.Controller is { } c) Fx.Fade(c, Color.FromArgb(255, 0, 0, 0), 0f, 0f, Fx.FadeStayOut | Fx.FadePurge);
-        }
+        // The original faded the seekers' screens black for the hide time (FFADE_STAYOUT).
+        foreach (var g in Players.AliveGuards()) Fx.Fade(g, Color.FromArgb(255, 0, 0, 0), 0f, 0f, Fx.FadeStayOut | Fx.FadePurge);
 
-        foreach (var p in DayUtil.AliveOn(CsTeam.Terrorist))
+        // The Days module strips both teams right after OnStart: hand out the loadout on the next frame.
+        Server.NextFrame(() =>
         {
-            DayUtil.Give(p, "weapon_knife_t", true);
-            for (var i = 0; i < Math.Clamp(Cfg.HiderFlashbangs, 0, 2); i++) DayUtil.Give(p, "weapon_flashbang");
-        }
+            if (!Active(_hns)) return;
+            foreach (var g in DayUtil.AliveOn(CsTeam.CounterTerrorist)) DayUtil.Give(g, "weapon_knife", true);
+            foreach (var p in DayUtil.AliveOn(CsTeam.Terrorist))
+            {
+                DayUtil.Give(p, "weapon_knife_t", true);
+                for (var i = 0; i < Math.Clamp(Cfg.HiderFlashbangs, 0, 2); i++) DayUtil.Give(p, "weapon_flashbang");
+            }
+        });
 
         Chat.TellAll("games.hns.start", Math.Clamp(Cfg.HideSeconds, 3, 120));
     }
@@ -188,7 +194,7 @@ public sealed class GameDaysModule : JbModule
 
     // ====================================================================== No-scope rounds
 
-    private static void NoScopeTick()
+    private void NoScopeTick()
     {
         foreach (var c in Players.Alive())
         {
@@ -196,6 +202,22 @@ public sealed class GameDaysModule : JbModule
             if (w == null || w.NextSecondaryAttackTick == int.MaxValue || !ScopedWeapons.Contains(w.DesignerName)) continue;
             w.NextSecondaryAttackTick = int.MaxValue;
             Utilities.SetStateChanged(w, "CBasePlayerWeapon", "m_nNextSecondaryAttackTick");
+            _unscoped.Add(w.EntityHandle.Raw);
         }
+    }
+
+    /// <summary>Weapons kept or picked up after a no-scope round can scope again.</summary>
+    private void RestoreScopes()
+    {
+        _noScopeRound = false;
+        foreach (var raw in _unscoped)
+        {
+            var w = new CHandle<CBasePlayerWeapon>(raw).Value;
+            if (w == null || !w.IsValid || w.NextSecondaryAttackTick != int.MaxValue) continue;
+            w.NextSecondaryAttackTick = Server.TickCount;
+            Utilities.SetStateChanged(w, "CBasePlayerWeapon", "m_nNextSecondaryAttackTick");
+        }
+
+        _unscoped.Clear();
     }
 }

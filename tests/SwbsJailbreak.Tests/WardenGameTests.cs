@@ -9,8 +9,15 @@ public class SimonSaysJudgeTests
     private static InputSample S(bool jump = false, bool duck = false, float speed = 0, float pitch = 0) => new(jump, duck, speed, pitch);
 
     [Fact]
-    public void DuringTheGrace_NothingIsJudged() =>
+    public void DuringTheGrace_WrongReactionsAreNotJudged() =>
         Assert.Equal(Verdict.Pending, GameJudge.Simon(SimonOrder.Jump, false, S(jump: true), 0.1, 0.3, 2.5, false));
+
+    [Fact]
+    public void DuringTheGrace_AQuickCorrectSimonResponseCounts()
+    {
+        Assert.Equal(Verdict.Pass, GameJudge.Simon(SimonOrder.Jump, true, S(jump: true), 0.05, 0.3, 2.5, false));
+        Assert.Equal(Verdict.Pending, GameJudge.Simon(SimonOrder.StandStill, true, S(speed: 200), 0.1, 0.3, 2.5, false)); // still slowing down
+    }
 
     [Fact]
     public void SimonOrder_PerformedInTime_Passes() =>
@@ -97,6 +104,7 @@ public class RedLightAndMusicalTests
     {
         Assert.Equal(new[] { 4 }, GameJudge.LastStanding(new HashSet<int> { 4 }, new List<int>()));
         Assert.Equal(new[] { 2, 6 }, GameJudge.LastStanding(new HashSet<int>(), new List<int> { 2, 6 }));
+        Assert.Empty(GameJudge.LastStanding(new HashSet<int>(), new List<int> { 1, 2, 3 })!); // everyone failed together: no winner
         Assert.Null(GameJudge.LastStanding(new HashSet<int> { 1, 2 }, new List<int> { 3 }));
         Assert.Null(GameJudge.LastStanding(new HashSet<int>(), new List<int>()));
     }

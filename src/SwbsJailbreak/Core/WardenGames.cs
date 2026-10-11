@@ -39,6 +39,9 @@ public static class GameJudge
     /// </summary>
     public static Verdict Simon(SimonOrder order, bool simonSays, InputSample s, double elapsed, double grace, double react, bool done)
     {
+        // A correct Simon response counts even inside the grace (a quick tap must not be missed); the grace only protects
+        // against reacting to the wrong order (and against movement left over from before the order).
+        if (simonSays && order != SimonOrder.StandStill && (done || Performs(order, s))) return Verdict.Pass;
         if (elapsed < grace) return Verdict.Pending;
         if (simonSays)
         {
@@ -75,14 +78,18 @@ public static class GameJudge
     /// <summary>Musical chairs: one zone fewer than the players still in (at least one).</summary>
     public static int MusicalZoneCount(int players, int zonesOnMap) => Math.Clamp(players - 1, 1, Math.Max(1, zonesOnMap));
 
+    /// <summary>Most players who may share a win by going out together (design: "last two out together share it").</summary>
+    public const int MaxSharedWinners = 2;
+
     /// <summary>
-    /// Last one standing: the winners once at most one player remains. If the last players went out together, they share it.
-    /// Null while the game goes on.
+    /// Last one standing: the winners once at most one player remains. If the last two went out together they share it; if
+    /// more went out together (everyone failed the same order) nobody wins (empty list). Null while the game goes on.
     /// </summary>
     public static IReadOnlyList<int>? LastStanding(ICollection<int> remaining, ICollection<int> outThisCheck)
     {
         if (remaining.Count == 1) return remaining.ToList();
-        if (remaining.Count == 0 && outThisCheck.Count > 0) return outThisCheck.ToList();
+        if (remaining.Count == 0 && outThisCheck.Count > 0)
+            return outThisCheck.Count <= MaxSharedWinners ? outThisCheck.ToList() : Array.Empty<int>();
         return null;
     }
 }

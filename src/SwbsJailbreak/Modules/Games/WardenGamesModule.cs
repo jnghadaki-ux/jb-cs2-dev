@@ -99,6 +99,7 @@ public sealed partial class WardenGamesModule : JbModule
     private int _tick;
     private int? _pickerSlot;
     private CounterStrikeSharp.API.Modules.Timers.Timer? _pickTimer;
+    private JbMenu? _controlMenu;
 
     internal IReadOnlyList<WardenGame> Games => _games;
     internal bool Running => _session is { Over: false };
@@ -213,8 +214,10 @@ public sealed partial class WardenGamesModule : JbModule
 
     private void ChooseParticipants(CCSPlayerController c, WardenGame game, Zone area)
     {
-        // A finish line (Red Light) is never where the players start: everyone plays.
+        // A finish line (Red Light) is never where the players start: everyone plays. Last One Standing is played by the
+        // prisoners inside the arena (with "all prisoners" everyone outside would be out at the first check).
         if (game is RedLightGame) { ChooseReward(c, game, area, null, false); return; }
+        if (game is LastStandingGame) { ChooseReward(c, game, area, null, true); return; }
         var m = new JbMenu(Lang.T("games.menu.who_title"));
         m.Add(Lang.T("games.menu.who_all"), p => ChooseReward(p, game, area, null, false));
         m.Add(Lang.T("games.menu.who_area", Hud.Escape(area.Name)), p => ChooseReward(p, game, area, null, true));
@@ -243,14 +246,30 @@ public sealed partial class WardenGamesModule : JbModule
         var m = new JbMenu(Lang.T(s.Game.NameKey));
         m.Subtitle = Hud.Escape(Lang.T("games.menu.players_left", s.Players.Count));
         s.Game.AddWardenItems(s, m);
-        m.Add(Lang.T("games.menu.declare_winner"), ShowDeclareWinner);
+        if (Jb.Warden.IsWarden(c)) m.Add(Lang.T("games.menu.declare_winner"), ShowDeclareWinner);
         m.Add(Lang.T("games.menu.end"), p =>
         {
             Chat.TellAll("games.ended_by", Chat.Name(p));
             EndGame(GameEndReason.WardenEnded);
         });
+        // A menu can outlive the game or the player's warden job: every item checks both when it is pressed.
+        foreach (var item in m.Items)
+        {
+            if (item.OnSelect is not { } action) continue;
+            item.OnSelect = p =>
+            {
+                if (_session != s || s.Over || !CanControl(p)) { Chat.Tell(p, "games.err.stale"); return; }
+                action(p);
+            };
+        }
+
+        _controlMenu = m;
         m.Open(c);
     }
+
+    /// <summary>The current warden, or an admin with the games override.</summary>
+    internal static bool CanControl(CCSPlayerController? c) =>
+        c != null && c.IsValid && (Jb.Warden.IsWarden(c) || Perms.Has(c, AdminOverride));
 
     private void ShowDeclareWinner(CCSPlayerController c)
     {
@@ -262,7 +281,8 @@ public sealed partial class WardenGamesModule : JbModule
             var slot = p.Slot;
             m.Add(Hud.Escape(p.PlayerName), w =>
             {
-                if (_session != s || s.Over || !IsController(w, s)) return;
+                if (_session != s || s.Over || !Jb.Warden.IsWarden(w) || w.Slot == slot) return;
+                if (!s.Players.Contains(slot) || !(GameSession.C(slot)?.IsAliveP() ?? false)) { Chat.Tell(w, "games.err.not_playing"); return; }
                 Logger.LogInformation("[Games] \"{Warden}\" declared {Winner} winner of {Game}", w.PlayerName, p.PlayerName, s.Game.Key);
                 Win(s, new[] { slot });
             });
@@ -272,7 +292,14 @@ public sealed partial class WardenGamesModule : JbModule
         m.Open(c);
     }
 
+    /// <summary>Refreshes the warden's control menu, but only while it is the menu on screen (never replaces another menu).</summary>
     internal void ReopenControl(CCSPlayerController c)
+    {
+        if (Running && _controlMenu != null && MenuService.Current(c) == _controlMenu) ShowControl(c);
+    }
+
+    /// <summary>A control item was pressed: rebuild the menu so enabled items match the new state.</summary>
+    internal void RefreshControl(CCSPlayerController c)
     {
         if (Running) ShowControl(c);
     }
@@ -298,6 +325,7 @@ public sealed partial class WardenGamesModule : JbModule
 
     internal void TryStart(CCSPlayerController starter, WardenGame game, Zone? area, GameButtonRecord? button, bool onlyInArea, GameReward reward)
     {
+        if (!CanControl(starter)) { Chat.Tell(starter, "games.err.warden_only"); return; }
         if (!CanRunGames(starter, out var why)) { Chat.Tell(starter, why); return; }
         if (!game.CanStart(this, out var gameWhy)) { Chat.Tell(starter, gameWhy); return; }
         var warden = Jb.Warden.Warden?.Controller;
@@ -343,7 +371,8 @@ public sealed partial class WardenGamesModule : JbModule
     internal void Win(GameSession s, IReadOnlyCollection<int> slots)
     {
         if (s.Over || _session != s) return;
-        var winners = slots.Select(GameSession.C).Where(c => c != null && c.IsValid).ToList();
+        var winners = slots.Select(GameSession.C)
+            .Where(c => c != null && c.IsValid && c.Team == CsTeam.Terrorist && !(c.Jb() is { } p && Jb.Rebels.IsRebel(p))).ToList();
         var names = string.Join(", ", winners.Select(c => Chat.Name(c)));
         if (winners.Count == 0) { EndGame(GameEndReason.NoPlayers); return; }
         Chat.TellAll("games.won", names, Lang.T(s.Game.NameKey));
@@ -405,9 +434,6 @@ public sealed partial class WardenGamesModule : JbModule
         if (s.Players.Contains(slot)) Eliminate(s, slot, reasonKey);
     }
 
-    private static bool IsController(CCSPlayerController c, GameSession s) =>
-        c.Slot == s.WardenSlot || Jb.Warden.IsWarden(c) || Perms.Has(c, "games.admin");
-
     // ====================================================================== tick
 
     private void OnTick()
@@ -417,6 +443,8 @@ public sealed partial class WardenGamesModule : JbModule
         _tick++;
         if (_tick % 8 == 0 && !CheckState(s)) return;
         SafeCall(() => s.Game.Tick(s));
+        // After the game's own check (the last two going out together may share the win).
+        if (_session == s && !s.Over && s.Players.Count == 0) { EndGame(GameEndReason.NoPlayers); return; }
         if (_tick % 32 == 0 && _session == s && !s.Over) DrawHud(s);
     }
 
@@ -436,7 +464,6 @@ public sealed partial class WardenGamesModule : JbModule
             if (c.Jb() is { } p && Jb.Rebels.IsRebel(p)) Eliminate(s, slot, "games.out.rebel");
         }
 
-        if (s.Players.Count == 0 && !s.Over) { EndGame(GameEndReason.NoPlayers); return false; }
         return !s.Over;
     }
 
@@ -460,6 +487,7 @@ public sealed partial class WardenGamesModule : JbModule
 
     private void HandToPicker(CCSPlayerController warden)
     {
+        if (!CanControl(warden)) { Chat.Tell(warden, "games.err.warden_only"); return; }
         if (!CanRunGames(warden, out var why)) { Chat.Tell(warden, why); return; }
         var eligible = Eligible().Select(c => c.Slot).ToHashSet();
         foreach (var slot in eligible) _queue.Add(slot);
@@ -505,6 +533,7 @@ public sealed partial class WardenGamesModule : JbModule
     private void OnPicked(CCSPlayerController picker, WardenGame game, GameButtonRecord? button)
     {
         if (_pickerSlot != picker.Slot || Running) return;
+        if (!Eligible().Any(x => x.Slot == picker.Slot)) { Chat.Tell(picker, "games.err.not_playing"); return; }
         _pickerSlot = null;
         CancelPickTimer();
         if (Jb.Warden.Warden?.Controller is not { IsValid: true } w) { Chat.Tell(picker, "games.err.no_warden"); return; }

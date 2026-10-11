@@ -60,17 +60,19 @@ public sealed class GameHelpersModule : JbModule
 
     private void OnCheckTransmit(CCheckTransmitInfoList infoList)
     {
+        List<(int Slot, CCSPlayerPawn Pawn, List<CBasePlayerWeapon> Weapons)>? alive = null;
         foreach (var (info, viewer) in infoList)
         {
             if (viewer == null || !viewer.IsValid || !_hide[viewer.Slot] || !HideAllowed(viewer)) continue;
+            alive ??= Players.Alive().Select(c => (c.Slot, Pawn: c.PlayerPawn.Value!, Weapons: c.Weapons().ToList()))
+                .Where(t => t.Pawn != null && t.Pawn.IsValid).ToList();
             // Never hide the player being spectated (the client needs that pawn).
             var target = viewer.ObserverPawn.Value?.ObserverServices?.ObserverTarget.Value?.Index ?? 0;
-            foreach (var other in Players.Alive())
+            foreach (var (slot, pawn, weapons) in alive)
             {
-                if (other.Slot == viewer.Slot) continue;
-                var pawn = other.PlayerPawn.Value;
-                if (pawn == null || !pawn.IsValid || pawn.Index == target) continue;
+                if (slot == viewer.Slot || pawn.Index == target) continue;
                 info.TransmitEntities.Remove(pawn);
+                foreach (var w in weapons) info.TransmitEntities.Remove(w); // no floating guns
             }
         }
     }

@@ -14,10 +14,13 @@ internal static class GameInput
     public static InputSample Sample(CCSPlayerController c)
     {
         var pawn = c.PawnOrNull();
-        var v = pawn?.AbsVelocity;
-        var speed = v == null ? 0f : MathF.Sqrt(v.X * v.X + v.Y * v.Y);
+        if (pawn == null) return new InputSample(false, false, 0f, 0f); // c.Buttons reads the pawn's movement services
+        var v = pawn.AbsVelocity;
+        var speed = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
         var buttons = c.Buttons;
-        return new InputSample((buttons & PlayerButtons.Jump) != 0, (buttons & PlayerButtons.Duck) != 0, speed, pawn?.EyeAngles.X ?? 0f);
+        // A mouse-wheel jump can press and release inside one tick: a take-off (airborne, moving up) counts as a jump too.
+        var jumped = (buttons & PlayerButtons.Jump) != 0 || (!c.OnGround() && v.Z > 50f);
+        return new InputSample(jumped, (buttons & PlayerButtons.Duck) != 0, speed, pawn.EyeAngles.X);
     }
 
     /// <summary>Shared "last one standing" check: call once per tick with the players who went out this tick.</summary>
@@ -117,7 +120,7 @@ internal sealed class SimonSaysGame : WardenGame
         Chat.PrintAll(text);
         var html = Hud.Big(Hud.Bold(Hud.Color(Hud.Escape(text), simon ? "#55FF55" : "#FFAA00")));
         foreach (var c in s.Alive()) Hud.Set(c, "games.order", html, 40, s.Cfg.SimonReactSeconds + 0.5f);
-        s.Module.ReopenControl(warden);
+        s.Module.RefreshControl(warden);
     }
 
     public override void Tick(GameSession s)
@@ -170,7 +173,7 @@ internal sealed class RedLightGame : WardenGame
     public override void Start(GameSession s)
     {
         _red = true;
-        _redSince = Server.CurrentTime;
+        _redSince = Server.CurrentTime + 3f; // opening red: 3 s to stop before the light is judged
         _auto = false;
         _outThisTick.Clear();
         Announce(s);
@@ -180,13 +183,13 @@ internal sealed class RedLightGame : WardenGame
 
     public override void AddWardenItems(GameSession s, JbMenu m)
     {
-        m.Add(Lang.T("games.red_light.green"), p => { Set(s, false); s.Module.ReopenControl(p); }, _red);
-        m.Add(Lang.T("games.red_light.red"), p => { Set(s, true); s.Module.ReopenControl(p); }, !_red);
+        m.Add(Lang.T("games.red_light.green"), p => { Set(s, false); s.Module.RefreshControl(p); }, _red);
+        m.Add(Lang.T("games.red_light.red"), p => { Set(s, true); s.Module.RefreshControl(p); }, !_red);
         m.Add(Lang.T(_auto ? "games.red_light.auto_off" : "games.red_light.auto_on"), p =>
         {
             _auto = !_auto;
             _nextSwitch = Server.CurrentTime + (float)GameJudge.LightPhaseSeconds(Random.Shared.NextDouble());
-            s.Module.ReopenControl(p);
+            s.Module.RefreshControl(p);
         });
     }
 
@@ -277,8 +280,8 @@ internal sealed class MusicalZonesGame : WardenGame
 
     public override void AddWardenItems(GameSession s, JbMenu m)
     {
-        m.Add(Lang.T("games.musical.start"), p => { Music(s, true); s.Module.ReopenControl(p); }, !_music && !_resolving);
-        m.Add(Lang.T("games.musical.stop"), p => { Music(s, false); s.Module.ReopenControl(p); }, _music);
+        m.Add(Lang.T("games.musical.start"), p => { Music(s, true); s.Module.RefreshControl(p); }, !_music && !_resolving);
+        m.Add(Lang.T("games.musical.stop"), p => { Music(s, false); s.Module.RefreshControl(p); }, _music);
     }
 
     private void Music(GameSession s, bool on)
@@ -344,6 +347,7 @@ internal sealed class MusicalZonesGame : WardenGame
                 var keep = GameJudge.MusicalZoneCount(s.Players.Count, Spots(s.Cfg).Count);
                 SetActive(_active.OrderBy(_ => Random.Shared.Next()).Take(keep).ToList());
                 Chat.TellAll("games.musical.next", s.Players.Count, _active.Count);
+                if (Jb.Warden.Warden?.Controller is { IsValid: true } w) s.Module.ReopenControl(w); // "Start the music" is enabled again
             }
 
             return;

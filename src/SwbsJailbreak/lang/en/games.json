@@ -68,7 +68,7 @@
   "games.simon.order.lookdown": "Look down",
   "games.simon.round_over": "{grey}{0} still in.",
   "games.red_light.name": "Red Light, Green Light",
-  "games.red_light.rules": "{olive}Move on green, freeze on red. First into {0} wins.",
+  "games.red_light.rules": "{olive}Move on green, freeze on red. First into {0} wins. It starts on red: stop now!",
   "games.red_light.green": "Green light",
   "games.red_light.red": "Red light",
   "games.red_light.auto_on": "Automatic lights: on",
@@ -116,5 +116,7 @@
   "games.measure.clear": "Clear",
   "games.measure.ping_first": "{red}Ping a point first (within 15 s).",
   "games.measure.a_set": "{green}Point A set. Ping point B.",
-  "games.measure.result": "{olive}Distance {lightred}{0}{olive} u (horizontal {1}, vertical {2})."
+  "games.measure.result": "{olive}Distance {lightred}{0}{olive} u (horizontal {1}, vertical {2}).",
+  "games.err.stale": "{red}That menu is out of date (the game ended or you are no longer the warden).",
+  "games.err.not_playing": "{red}That player is not in the game any more."
 }
