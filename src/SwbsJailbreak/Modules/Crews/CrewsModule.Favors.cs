@@ -163,6 +163,14 @@ public sealed partial class CrewsModule
     public void CmdShakedown(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null || !caller.IsValid) return;
+        OpenShakedown(caller);
+    }
+
+    /// <summary>The warden menu shows the shakedown item only when it can be used.</summary>
+    internal bool ShakedownAvailable => Cfg.ShakedownEnabled && !_shakedownUsed && !Jb.Days.IsInProgress;
+
+    internal void OpenShakedown(CCSPlayerController caller)
+    {
         if (!Cfg.ShakedownEnabled) { Chat.Tell(caller, "crews.shakedown.disabled"); return; }
         var w = Jb.Warden.Warden;
         if (w == null || w.Slot != caller.Slot) { Chat.Tell(caller, "crews.shakedown.warden_only"); return; }

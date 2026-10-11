@@ -164,12 +164,15 @@ public sealed partial class WardenGamesModule : JbModule
 
     // ====================================================================== commands
 
+    // Wardens are ordinary players: the !commands catalogue reads the first capability *literal* as the command's gate, so the
+    // admin override is a field, not a literal, and !games is listed as open (the command still requires warden or admin).
+    private static readonly string AdminOverride = "games.admin";
+
     [ConsoleCommand("css_games", "sm_games - (warden) start, control or end a warden game")]
     public void CmdGames(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null || !caller.IsValid) { info.ReplyToCommand("[Games] in-game only"); return; }
-        var admin = Perms.Has(caller, "games.admin");
-        if (!Jb.Warden.IsWarden(caller) && !admin) { Chat.Tell(caller, "games.err.warden_only"); return; }
+        if (!Jb.Warden.IsWarden(caller) && !Perms.Has(caller, AdminOverride)) { Chat.Tell(caller, "games.err.warden_only"); return; }
         if (Running) ShowControl(caller);
         else ShowGameList(caller);
     }
@@ -542,5 +545,12 @@ public sealed partial class WardenGamesModule : JbModule
     {
         try { a(); }
         catch (Exception ex) { Logger.LogError(ex, "[Games] game callback failed"); }
+    }
+
+    /// <summary>Warden menu entry: the same as !games.</summary>
+    internal void OpenFor(CCSPlayerController c)
+    {
+        if (Running) ShowControl(c);
+        else ShowGameList(c);
     }
 }

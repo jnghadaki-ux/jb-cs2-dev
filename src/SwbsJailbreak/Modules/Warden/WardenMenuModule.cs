@@ -255,6 +255,10 @@ public sealed class WardenMenuModule : JbModule
                 else if (Jb.Cells.HaveOpened) Chat.Print(c, WText.T("wm.cells.already"));
                 else if (!Jb.Cells.ForceOpen(c)) Chat.Print(c, WText.T("wm.cells.failed"));
             }, BuildWardenMenu), Jb.Cells.DoExist && !Jb.Cells.HaveOpened);
+        if (Cfg.ShowGamesItem && Plugin.GetModule<Games.WardenGamesModule>() is { } games)
+            m.Add(Lang.T("wm.item.games"), Guarded(games.OpenFor));
+        if (Cfg.ShowShakedownItem && Jb.Crews is Crews.CrewsModule crews && crews.ShakedownAvailable)
+            m.Add(Lang.T("wm.item.shakedown"), Guarded(crews.OpenShakedown));
 
         return m;
     }

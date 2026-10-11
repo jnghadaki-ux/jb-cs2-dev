@@ -131,4 +131,10 @@ public sealed class WardenMenuConfig
 
     /// <summary>ADDITION (gameplay change, off by default): "Open cell doors" entry calling the Cells module.</summary>
     public bool ShowOpenCellsItem { get; set; } = false;
+
+    /// <summary>Addition: "Warden Games" item (opens !games) when the Games module is loaded.</summary>
+    public bool ShowGamesItem { get; set; } = true;
+
+    /// <summary>Addition: "Crew shakedown" item (opens !shakedown) when Crews and shakedowns are enabled.</summary>
+    public bool ShowShakedownItem { get; set; } = true;
 }

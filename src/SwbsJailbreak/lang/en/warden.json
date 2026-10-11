@@ -41,6 +41,8 @@
   "wm.item.colors": "Set client colors",
   "wm.item.days": "Days menu",
   "wm.item.cells": "Open the cell doors",
+  "wm.item.games": "Warden Games",
+  "wm.item.shakedown": "Crew shakedown",
   "wm.item.remove_all_rings": "Remove all rings",
   "wm.item.manage_ring": "Manage ring: {0}",
   "wm.item.set_pos": "Set position",

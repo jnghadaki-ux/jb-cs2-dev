@@ -35,6 +35,10 @@ public class CommandCatalogTests
     [InlineData("open", "cells.open")]    // admin !open / !o
     [InlineData("o", "cells.open")]
     [InlineData("cdo", "cells")]          // original root-only command is unchanged
+    [InlineData("gamebuttons", "games.admin")]
+    [InlineData("measure", "zones")]
+    [InlineData("gap", "zones")]
+    [InlineData("crewadmin", "crews.admin")]
     public void AdminCommands_AreGatedByTheirCapability(string name, string capability)
     {
         var e = Catalogue().FirstOrDefault(x => x.Name == name || x.Aliases.Contains(name));
@@ -49,6 +53,10 @@ public class CommandCatalogTests
     [InlineData("w")]
     [InlineData("guard")]  // body mentions the "Teams" config section: not a capability
     [InlineData("day")]    // body mentions the "Days" config section: not a capability
+    [InlineData("games")]  // warden command (wardens are ordinary players); the admin override is not the gate
+    [InlineData("hide")]
+    [InlineData("crew")]
+    [InlineData("shakedown")]
     public void PlayerCommands_AreOpenToEveryone(string name)
     {
         var e = Catalogue().FirstOrDefault(x => x.Name == name || x.Aliases.Contains(name));

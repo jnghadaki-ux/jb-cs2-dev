@@ -155,7 +155,7 @@ internal static class CommandCatalog
                 string? s;
                 try { s = module.ResolveString(BitConverter.ToInt32(il, i)); }
                 catch { s = null; }
-                if (s != null && IsCapability(s)) return s;
+                if (s != null && IsCapability(s) && !IsComparedString(module, il, i + 4)) return s;
             }
             else if (depth < 3 && i + 4 <= il.Length && op.OperandType == OperandType.InlineMethod)
             {
@@ -175,6 +175,21 @@ internal static class CommandCatalog
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// A literal that is only compared (a subcommand switch: <c>case "kick":</c> compiles to ldstr + call string.op_Equality)
+    /// is not a permission check, even when it spells a capability name.
+    /// </summary>
+    private static bool IsComparedString(Module module, byte[] il, int next)
+    {
+        if (next + 5 > il.Length || il[next] is not (0x28 or 0x6F)) return false; // call / callvirt
+        try
+        {
+            var m = module.ResolveMethod(BitConverter.ToInt32(il, next + 1));
+            return m?.DeclaringType == typeof(string) && m.Name is "op_Equality" or "op_Inequality" or "Equals" or "StartsWith";
+        }
+        catch { return false; }
     }
 
     private static bool IsCapability(string s) =>
