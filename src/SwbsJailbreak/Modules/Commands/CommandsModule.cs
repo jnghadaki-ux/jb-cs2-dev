@@ -1,0 +1,496 @@
+using System.Drawing;
+using CounterStrikeSharp.API;
+using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
+using CounterStrikeSharp.API.Modules.Utils;
+using SwbsJailbreak.Core;
+using Timer = CounterStrikeSharp.API.Modules.Timers.Timer;
+using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
+
+namespace SwbsJailbreak.Modules.Commands;
+
+/// <summary>Section "Commands" - UltJB_Command_* plugins (CTBan lives in the Teams module).</summary>
+public sealed class CommandsConfig
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>UltJB_Command_CTMessage MESSAGE_DELAY.</summary>
+    public float GuardMessageDelay { get; set; } = 2f;
+    public string GuardMessageSound { get; set; } = "UIPanorama.generic_button_press";
+
+    /// <summary>UltJB_Command_Freekill FREEKILL_USAGE_DELAY.</summary>
+    public float FreekillDelay { get; set; } = 30f;
+    public string FreekillSound { get; set; } = "UIPanorama.round_report_round_lost";
+
+    /// <summary>UltJB_Command_Roll wait between rolls.</summary>
+    public float RollDelay { get; set; } = 1f;
+
+    /// <summary>jailbreak_rules_url / jailbreak_definitions_url. CS2 has no in-game web page viewer: the link is printed.</summary>
+    public string RulesUrl { get; set; } = "";
+    public string DefinitionsUrl { get; set; } = "";
+
+    public int TimerMin { get; set; } = 10;
+    public int TimerMax { get; set; } = 180;
+    public string TimerCompleteSound { get; set; } = "UIPanorama.round_report_round_won";
+
+    /// <summary>UltJB_Command_Xray: seconds between toggles.</summary>
+    public float XrayToggleDelay { get; set; } = 3f;
+}
+
+internal sealed class CommandsState : IRoundScoped
+{
+    public bool DiedThisRound;
+    public string KilledBy = "";
+    public float NextFreekill;
+    public float DeathTime;
+    public Vector? LastPos;
+    public QAngle? LastAngles;
+    public float NextGuardMessage;
+    public float NextRoll;
+
+    public void ResetForRound()
+    {
+        DiedThisRound = false;
+        KilledBy = "";
+        NextFreekill = 0;
+    }
+}
+
+/// <summary>
+/// UltJB_Command_CTMessage (!g), Freekill (!freekill, !whokilled/!wk), OneUp (!1up, !xup), Roll (!roll),
+/// Rules (!jbrules, !definitions/!defs), Speed (!speed), Timer (!timer, !stoptimer) and Xray (!xray).
+/// </summary>
+public sealed class CommandsModule : JbModule
+{
+    private CommandsConfig Cfg => Section<CommandsConfig>("Commands");
+
+    public override string Name => "Commands";
+    public override int Order => 80;
+    public override bool Enabled => Cfg.Enabled;
+
+    private Timer? _countdown;
+    private int _countdownTotal;
+    private int _countdownElapsed;
+    private int _countdownOwnerSlot = -1;
+
+    private readonly HashSet<int> _xrayUsers = new();
+    private readonly Dictionary<int, GlowHandle> _xrayGlows = new();
+    private readonly float[] _xrayLastToggle = new float[Players.MaxSlots];
+    private string? _originalForceTransmit;
+
+    private static CommandsState S(JbPlayer p) => p.Data<CommandsState>();
+
+    public override void OnLoad(bool hotReload)
+    {
+        Plugin.AddCommandListener("say", OnSay);
+        Plugin.AddCommandListener("say_team", OnSay);
+        Plugin.AddTimer(0.3f, TrackPositions, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
+        JbEvents.WardenSelected += _ => RefreshXray();
+        JbEvents.WardenRemoved += _ => RefreshXray();
+        JbEvents.WardenDeath += OnWardenDeath;
+        JbEvents.PlayerModelsApplied += _ => RefreshXray();
+        JbEvents.LastGuardActivated += _ => RefreshXray();
+        JbEvents.DayStarted += (_, _, _) => StopCountdown(Lang.T("cmd.timer.stopped_day"));
+    }
+
+    public override void OnUnload(bool hotReload)
+    {
+        StopCountdown(null);
+        ClearXrayGlows();
+        RestoreForceTransmit();
+    }
+
+    // ------------------------------------------------------------------ lifecycle
+
+    public override void OnRoundEnd(CsTeam winner, int reason) => StopCountdown(null);
+
+    public override void OnPlayerSpawn(JbPlayer player)
+    {
+        S(player).DiedThisRound = false;
+        if (_xrayUsers.Count > 0) RefreshXray();
+    }
+
+    public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
+    {
+        var s = S(victim);
+        s.DiedThisRound = true;
+        s.DeathTime = (float)Server.EngineTime;
+        s.KilledBy = attacker?.Name ?? "world";
+        if (_xrayUsers.Count > 0) RefreshXray();
+    }
+
+    public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
+    {
+        if (_xrayUsers.Count > 0) Server.NextFrame(RefreshXray);
+    }
+
+    public override void OnPlayerDisconnect(JbPlayer player)
+    {
+        if (_xrayUsers.Remove(player.Slot)) UpdateXrayState();
+        if (_xrayGlows.Remove(player.Slot, out var g)) Glow.Remove(g);
+        if (player.Slot == _countdownOwnerSlot) _countdownOwnerSlot = -1;
+    }
+
+    /// <summary>OneUp records non-ducking positions every 0.3 s.</summary>
+    private void TrackPositions()
+    {
+        foreach (var c in Players.Alive())
+        {
+            var pawn = c.PawnOrNull();
+            if (pawn?.AbsOrigin == null) continue;
+            if ((pawn.Flags & (uint)PlayerFlags.FL_DUCKING) != 0) continue;
+            var s = S(c.Jb()!);
+            s.LastPos = VectorUtil.Copy(pawn.AbsOrigin);
+            var a = pawn.EyeAngles;
+            s.LastAngles = new QAngle(a.X, a.Y, a.Z);
+        }
+    }
+
+    // ------------------------------------------------------------------ chat interception (hide "!g ..." / "!freekill ..." like the original)
+
+    private HookResult OnSay(CCSPlayerController? player, CommandInfo info)
+    {
+        if (player == null || !player.IsValid) return HookResult.Continue;
+        var text = info.GetArg(1).Trim();
+        if (text.StartsWith("!g ", StringComparison.OrdinalIgnoreCase))
+        {
+            GuardMessage(player, text[3..].Trim());
+            return HookResult.Handled;
+        }
+
+        if (text.StartsWith("!freekill ", StringComparison.OrdinalIgnoreCase))
+        {
+            Freekill(player, text[10..].Trim());
+            return HookResult.Handled;
+        }
+
+        return HookResult.Continue;
+    }
+
+    // ------------------------------------------------------------------ !g (message the guards)
+
+    [ConsoleCommand("css_g", "sm_g <message> - message the guard team")]
+    public void CmdG(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        GuardMessage(caller, info.ArgString.Trim().Trim('"'));
+    }
+
+    private void GuardMessage(CCSPlayerController caller, string message)
+    {
+        if (!caller.IsAliveP()) { Chat.Tell(caller, "core.only_alive"); return; }
+        if (caller.Team == CsTeam.CounterTerrorist) { Chat.Tell(caller, "cmd.g.use_teamchat"); return; }
+        if (message.Length < 1) { Chat.Tell(caller, "core.usage", "!g <message>"); return; }
+        var s = S(caller.Jb()!);
+        var now = (float)Server.EngineTime;
+        if (s.NextGuardMessage > now) return;
+        s.NextGuardMessage = now + Cfg.GuardMessageDelay;
+        var nameColor = caller.Team == CsTeam.Terrorist ? "{lightred}" : "{purple}";
+        var line = Lang.T("cmd.g.line", nameColor + caller.PlayerName, message);
+        foreach (var c in Players.All())
+        {
+            if (c.Slot != caller.Slot && !c.IsBot && !Perms.Has(c, "chat") && c.Team != CsTeam.CounterTerrorist) continue;
+            Chat.Print(c, line, false);
+            Sound.Play(c, Cfg.GuardMessageSound);
+        }
+    }
+
+    // ------------------------------------------------------------------ freekill
+
+    [ConsoleCommand("css_freekill", "sm_freekill <msg> - let admins know you were freekilled")]
+    public void CmdFreekill(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        Freekill(caller, info.ArgString.Trim().Trim('"'));
+    }
+
+    private void Freekill(CCSPlayerController caller, string message)
+    {
+        var p = caller.Jb();
+        if (p == null) return;
+        var s = S(p);
+        if (message.Length < 1) { Chat.Tell(caller, "core.usage", "!freekill <message explaining the freekill>"); return; }
+        if (!s.DiedThisRound || caller.IsAliveP()) { Chat.Tell(caller, "cmd.freekill.not_died"); return; }
+        var now = (float)Server.EngineTime;
+        if (s.NextFreekill > now) { Chat.Tell(caller, "cmd.freekill.too_soon"); return; }
+        if (Perms.Has(caller, "chat")) { Chat.Tell(caller, "cmd.freekill.admin"); return; }
+        if (caller.Team == CsTeam.CounterTerrorist) { Chat.Tell(caller, "cmd.freekill.guard"); return; }
+        s.NextFreekill = now + Cfg.FreekillDelay;
+        var head = Lang.T("cmd.freekill.line", caller.PlayerName, s.KilledBy);
+        var body = Lang.T("cmd.freekill.message", message);
+        foreach (var c in Players.All())
+        {
+            if (c.Slot != caller.Slot && !Perms.Has(c, "chat") && c.Team != CsTeam.CounterTerrorist && !c.IsBot) continue;
+            Chat.Print(c, head, false);
+            Chat.Print(c, body, false);
+            Sound.Play(c, Cfg.FreekillSound);
+        }
+
+        Jb.Log.LogEvent($"{caller.PlayerName} reported a freekill by {s.KilledBy}: {message}", p, null, LogType.Admin);
+    }
+
+    [ConsoleCommand("css_whokilled", "sm_whokilled <who> - check who killed a player")]
+    [ConsoleCommand("css_wk", "sm_wk <who> - check who killed a player")]
+    public void CmdWhoKilled(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "slay")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!whokilled <target>"); return; }
+        var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true, respectImmunity: false);
+        if (t == null) return;
+        var target = t.Players[0];
+        var s = S(target.Jb()!);
+        if (!s.DiedThisRound || target.IsAliveP()) { Chat.ReplyT(caller, info, "cmd.whokilled.not_died", target.PlayerName); return; }
+        Chat.ReplyT(caller, info, "cmd.whokilled.result", target.PlayerName, s.KilledBy);
+    }
+
+    // ------------------------------------------------------------------ 1up / xup
+
+    [ConsoleCommand("css_1up", "sm_1up <target> - respawn a player where they died")]
+    public void CmdOneUp(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!1up <target>"); return; }
+        var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true);
+        if (t == null) return;
+        if (!OneUp(t.Players[0], caller, "cmd.oneup.done"))
+            Chat.ReplyT(caller, info, "cmd.whokilled.not_died", t.Players[0].PlayerName);
+    }
+
+    [ConsoleCommand("css_xup", "sm_xup <seconds> - respawn prisoners that died in the last X seconds")]
+    public void CmdXUp(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 2 || !int.TryParse(info.GetArg(1), out var seconds) || seconds < 1) { Chat.ReplyT(caller, info, "core.usage", "!xup <seconds>"); return; }
+        var now = (float)Server.EngineTime;
+        var any = false;
+        foreach (var c in Players.Prisoners().Where(c => !c.IsAliveP()).ToList())
+        {
+            var s = S(c.Jb()!);
+            if (!s.DiedThisRound || now - seconds > s.DeathTime) continue;
+            any |= OneUp(c, caller, "cmd.xup.done");
+        }
+
+        if (!any) Chat.ReplyT(caller, info, "cmd.xup.none", seconds);
+    }
+
+    private bool OneUp(CCSPlayerController target, CCSPlayerController? admin, string doneKey)
+    {
+        var p = target.Jb();
+        if (p == null) return false;
+        var s = S(p);
+        if (!s.DiedThisRound || target.IsAliveP() || target.Team is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) return false;
+        target.Respawn();
+        s.DiedThisRound = false;
+        var pos = s.LastPos;
+        var ang = s.LastAngles;
+        var slot = target.Slot;
+        if (pos != null)
+            Server.NextFrame(() => Players.Get(slot).Controller?.TeleportTo(pos, ang));
+        Chat.TellAll(doneKey, target.PlayerName, admin?.PlayerName ?? "Console");
+        Jb.Log.LogEvent($"{admin?.PlayerName ?? "Console"} one-upped {target.PlayerName}", admin.Jb(), p, LogType.Admin);
+        return true;
+    }
+
+    // ------------------------------------------------------------------ roll
+
+    [ConsoleCommand("css_roll", "sm_roll [max] - warden rolls a random number")]
+    public void CmdRoll(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Jb.Warden.IsWarden(caller)) { Chat.Tell(caller, "cmd.roll.not_warden"); return; }
+        var s = S(caller.Jb()!);
+        var now = (float)Server.EngineTime;
+        if (now < s.NextRoll) { Chat.Tell(caller, "cmd.roll.wait"); return; }
+        s.NextRoll = now + Cfg.RollDelay;
+        var max = 100;
+        if (info.ArgCount > 1 && int.TryParse(info.GetArg(1), out var m)) max = Math.Max(1, m);
+        Chat.TellAll("cmd.roll.result", caller.PlayerName, Random.Shared.Next(1, max + 1), max);
+    }
+
+    // ------------------------------------------------------------------ rules / definitions
+
+    [ConsoleCommand("css_jbrules", "sm_jbrules - jailbreak rules link")]
+    public void CmdRules(CCSPlayerController? caller, CommandInfo info) => ShowLink(caller, info, Cfg.RulesUrl, "cmd.rules.title");
+
+    [ConsoleCommand("css_definitions", "sm_definitions - jailbreak definitions link")]
+    [ConsoleCommand("css_defs", "sm_defs - jailbreak definitions link")]
+    public void CmdDefinitions(CCSPlayerController? caller, CommandInfo info) => ShowLink(caller, info, Cfg.DefinitionsUrl, "cmd.definitions.title");
+
+    private static void ShowLink(CCSPlayerController? caller, CommandInfo info, string url, string titleKey)
+    {
+        if (string.IsNullOrWhiteSpace(url)) { Chat.ReplyT(caller, info, "cmd.link.not_set"); return; }
+        Chat.ReplyT(caller, info, "cmd.link.show", Lang.T(titleKey), url);
+        Chat.PrintToConsole(caller, $"{Colors.Strip(Lang.T(titleKey))}: {url}");
+    }
+
+    // ------------------------------------------------------------------ speed
+
+    [ConsoleCommand("css_speed", "sm_speed <target> <0.0 to 10.0> - set a player's speed")]
+    public void CmdSpeed(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 3 || !float.TryParse(info.GetArg(2), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value) || value < 0f || value > 10f)
+        {
+            Chat.ReplyT(caller, info, "core.usage", "!speed <target> <0.0 to 10.0>");
+            return;
+        }
+
+        var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true);
+        if (t == null) return;
+        foreach (var c in t.Players)
+        {
+            if (Math.Abs(value - 1f) < 0.001f) Movement.ClearSpeed(c, "cmd.speed");
+            else Movement.SetSpeed(c, "cmd.speed", value);
+            Chat.TellAll("cmd.speed.set", c.PlayerName, value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), caller?.PlayerName ?? "Console");
+        }
+
+        Jb.Log.LogEvent($"{caller?.PlayerName ?? "Console"} set speed of {t.Description} to {value:0.00}", caller.Jb(), null, LogType.Admin);
+    }
+
+    // ------------------------------------------------------------------ warden countdown timer
+
+    [ConsoleCommand("css_timer", "sm_timer <seconds> - warden countdown timer")]
+    public void CmdTimer(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Jb.Warden.IsWarden(caller)) { Chat.Tell(caller, "cmd.timer.not_warden"); return; }
+        if (Jb.Days.IsInProgress) { Chat.Tell(caller, "cmd.timer.day"); return; }
+        if (info.ArgCount < 2) { Chat.Tell(caller, "cmd.timer.enter_time"); return; }
+        if (!int.TryParse(info.GetArg(1), out var seconds) || seconds <= 0) { Chat.Tell(caller, "cmd.timer.invalid"); return; }
+        seconds = Math.Clamp(seconds, Cfg.TimerMin, Cfg.TimerMax);
+        StopCountdown(null);
+        _countdownTotal = seconds;
+        _countdownElapsed = 0;
+        _countdownOwnerSlot = caller.Slot;
+        ShowCountdown();
+        Chat.TellAll("cmd.timer.started", seconds);
+        _countdown = Round.Timer(1.0f, CountdownTick, repeat: true);
+    }
+
+    [ConsoleCommand("css_stoptimer", "sm_stoptimer - stop the countdown timer")]
+    public void CmdStopTimer(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Jb.Warden.IsWarden(caller)) { Chat.Tell(caller, "cmd.timer.not_warden_stop"); return; }
+        if (_countdown == null) { Chat.Tell(caller, "cmd.timer.none"); return; }
+        StopCountdown(null);
+        Chat.TellAll("cmd.timer.stopped");
+    }
+
+    private void ShowCountdown() =>
+        Hud.SetGlobal("cmd.timer", Lang.T("cmd.timer.hud", _countdownTotal - _countdownElapsed), 90, 2f);
+
+    private void CountdownTick()
+    {
+        _countdownElapsed++;
+        if (Jb.LastRequests.CanLastRequest) { StopCountdown(Lang.T("cmd.timer.stopped_lr")); return; }
+        if (Jb.Days.IsInProgress) { StopCountdown(Lang.T("cmd.timer.stopped_day")); return; }
+        var left = _countdownTotal - _countdownElapsed;
+        if (left % 10 == 0 && left > 0) Chat.TellAll("cmd.timer.left", left);
+        if (left > 0)
+        {
+            ShowCountdown();
+            return;
+        }
+
+        var t = _countdown;
+        _countdown = null;
+        try { t?.Kill(); }
+        catch { /* ignore */ }
+        Sound.PlayAll(Cfg.TimerCompleteSound);
+        Hud.SetGlobal("cmd.timer", Lang.T("cmd.timer.complete"), 90, 3f);
+    }
+
+    private void StopCountdown(string? hudMessage)
+    {
+        if (_countdown == null) return;
+        var t = _countdown;
+        _countdown = null;
+        try { t.Kill(); }
+        catch { /* ignore */ }
+        if (hudMessage != null) Hud.SetGlobal("cmd.timer", hudMessage, 90, 3f);
+        else Hud.ClearGlobal("cmd.timer");
+    }
+
+    private void OnWardenDeath(JbPlayer warden)
+    {
+        if (_countdown != null && warden.Slot == _countdownOwnerSlot) StopCountdown(null);
+    }
+
+    // ------------------------------------------------------------------ x-ray
+
+    [ConsoleCommand("css_xray", "sm_xray - see everyone's outline through walls while dead")]
+    public void CmdXray(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Perms.Has(caller, "ban")) { Chat.Tell(caller, "core.no_access"); return; }
+        var now = (float)Server.EngineTime;
+        if (_xrayLastToggle[caller.Slot] + Cfg.XrayToggleDelay > now) { Chat.Tell(caller, "cmd.xray.wait"); return; }
+        _xrayLastToggle[caller.Slot] = now;
+        if (_xrayUsers.Remove(caller.Slot))
+        {
+            Chat.Tell(caller, "cmd.xray.off");
+            Jb.Log.LogEvent($"{caller.PlayerName} toggled X-ray off", caller.Jb(), null, LogType.Admin);
+        }
+        else
+        {
+            _xrayUsers.Add(caller.Slot);
+            Chat.Tell(caller, "cmd.xray.on");
+            Jb.Log.LogEvent($"{caller.PlayerName} toggled X-ray on", caller.Jb(), null, LogType.Admin);
+        }
+
+        UpdateXrayState();
+    }
+
+    private void UpdateXrayState()
+    {
+        if (_xrayUsers.Count == 0)
+        {
+            ClearXrayGlows();
+            RestoreForceTransmit();
+            return;
+        }
+
+        if (_originalForceTransmit == null)
+        {
+            // Original forced player transmission so outlines of far-away players are networked.
+            _originalForceTransmit = ConVar.Find("sv_force_transmit_players")?.StringValue ?? "";
+            if (_originalForceTransmit.Length > 0) Server.ExecuteCommand("sv_force_transmit_players 1");
+        }
+
+        RefreshXray();
+    }
+
+    private void RestoreForceTransmit()
+    {
+        if (_originalForceTransmit == null) return;
+        if (_originalForceTransmit.Length > 0) Server.ExecuteCommand($"sv_force_transmit_players {_originalForceTransmit}");
+        _originalForceTransmit = null;
+    }
+
+    private void ClearXrayGlows()
+    {
+        foreach (var g in _xrayGlows.Values) Glow.Remove(g);
+        _xrayGlows.Clear();
+    }
+
+    /// <summary>Rebuild outlines for every alive player (team coloured); visible only to dead x-ray users.</summary>
+    private void RefreshXray()
+    {
+        ClearXrayGlows();
+        if (_xrayUsers.Count == 0) return;
+        foreach (var c in Players.Alive())
+        {
+            var color = c.Team switch
+            {
+                CsTeam.Terrorist => Color.FromArgb(255, 255, 0, 0),
+                CsTeam.CounterTerrorist => Color.FromArgb(255, 0, 0, 255),
+                _ => Color.FromArgb(255, 0, 255, 0)
+            };
+            var g = Glow.Attach(c, color, viewer => _xrayUsers.Contains(viewer.Slot) && !viewer.IsAliveP());
+            if (g != null) _xrayGlows[c.Slot] = g;
+        }
+    }
+}

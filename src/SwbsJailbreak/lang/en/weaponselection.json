@@ -1,0 +1,12 @@
+{
+  "weaponselect.title": "Select your weapon",
+  "weaponselect.cat.knife": "Knife/Taser",
+  "weaponselect.cat.pistols": "Pistols",
+  "weaponselect.cat.heavy": "Heavy",
+  "weaponselect.cat.smgs": "SMGs",
+  "weaponselect.cat.rifles": "Rifles",
+  "weaponselect.no_categories": "There are no weapon categories to select.",
+  "weaponselect.no_weapons": "There are no weapons to select.",
+  "weaponselect.random": "Selecting a random weapon.",
+  "weaponselect.random_error": "There was an error selecting a random weapon."
+}

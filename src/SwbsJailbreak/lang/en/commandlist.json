@@ -1,0 +1,6 @@
+{
+  "cmdlist.title": "Command List",
+  "cmdlist.hint": "Chat commands you can use",
+  "cmdlist.none": "{red}There are no commands!",
+  "cmdlist.console": "{olive}The full list ({0} commands) was printed to your console."
+}

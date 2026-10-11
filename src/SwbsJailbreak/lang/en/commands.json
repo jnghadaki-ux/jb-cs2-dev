@@ -1,0 +1,46 @@
+{
+  "cmd.g.use_teamchat": "{red}Please use team chat to talk to your fellow guards.",
+  "cmd.g.line": "{blue}To Guards {default}from {0}{default}: {1}",
+
+  "cmd.freekill.not_died": "{red}You have not died this round.",
+  "cmd.freekill.too_soon": "{red}You cannot use this command again so soon.",
+  "cmd.freekill.admin": "{red}You are an admin, handle your own freekills.",
+  "cmd.freekill.guard": "{red}Guards may not use the freekill command.",
+  "cmd.freekill.line": "{red}[FREEKILL] {olive}{0} {default}freekilled by {olive}{1}{default}?",
+  "cmd.freekill.message": "{red}Message: {yellow}{0}",
+  "cmd.whokilled.not_died": "{0} has not died this round.",
+  "cmd.whokilled.result": "{green}{0}{default} was killed by {green}{1}{default}.",
+
+  "cmd.oneup.done": "{green}{0}{default} has been one upped by {green}{1}{default}.",
+  "cmd.xup.done": "{green}{0}{default} has been X upped by {green}{1}{default}.",
+  "cmd.xup.none": "No prisoners have died in the last {0} seconds.",
+
+  "cmd.roll.not_warden": "{lightred}Error: {olive}You must be the warden to roll.",
+  "cmd.roll.wait": "{lightred}Error: {olive}You must wait a second to roll again.",
+  "cmd.roll.result": "{lightred}{0} {olive}rolled a {lightred}{1} {olive}out of {lightred}{2}{olive}.",
+
+  "cmd.rules.title": "Jailbreak rules",
+  "cmd.definitions.title": "Jailbreak definitions",
+  "cmd.link.show": "{olive}{0}: {lightblue}{1}{default} (also printed to your console - CS2 has no in-game web viewer)",
+  "cmd.link.not_set": "{red}No link has been configured for this.",
+
+  "cmd.speed.set": "{green}{0}{default}'s speed has been set to {green}{1}{default} by {green}{2}{default}.",
+
+  "cmd.timer.not_warden": "{lightred}Error: {olive}You must be the warden to use the timer.",
+  "cmd.timer.not_warden_stop": "{lightred}Error: {olive}You must be the warden to stop the timer.",
+  "cmd.timer.day": "{lightred}Error: {olive}You cannot use the timer if a day is in progress.",
+  "cmd.timer.enter_time": "Please enter a time.",
+  "cmd.timer.invalid": "Please enter a valid number greater than 0.",
+  "cmd.timer.started": "{olive}The timer has started for {lightred}{0} {olive}seconds.",
+  "cmd.timer.stopped": "{lightred}The timer has been stopped.",
+  "cmd.timer.none": "There is no timer running.",
+  "cmd.timer.left": "{lightred}There are {olive}{0} {lightred}seconds left on the countdown.",
+  "cmd.timer.hud": "<font color='#6FC41A'>Countdown Timer:</font> <font color='#DE2626'>{0}</font> <font color='#6FC41A'>seconds.</font>",
+  "cmd.timer.complete": "<font color='#6FC41A'>Countdown Complete!</font>",
+  "cmd.timer.stopped_lr": "<font color='#DE2626'>Countdown Stopped due to LR!</font>",
+  "cmd.timer.stopped_day": "<font color='#DE2626'>Countdown Stopped due to a day starting!</font>",
+
+  "cmd.xray.wait": "Please wait a few seconds before toggling xray again.",
+  "cmd.xray.on": "X-ray enabled (outlines are visible while you are dead or spectating).",
+  "cmd.xray.off": "X-ray disabled."
+}
