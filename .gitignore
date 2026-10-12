@@ -6,3 +6,6 @@ artifacts/
 .idea/
 *.swp
 .claude/worktrees/
+
+# Documentation lives on the "docs" branch (all Markdown files), not here.
+*.md
