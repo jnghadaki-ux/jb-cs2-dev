@@ -16,19 +16,18 @@ particles, glow, sounds, HUD), never text stand-ins.
 ## Credits
 * **Created by Gdaki**: the project and all work before it was handed to Claude Code (including the SimpleAdmin mod).
 * **Enhanced with Claude Code**: the CS2 / CounterStrikeSharp rebuild and later enhancements.
-* **Owner's provenance note** (the owner's statement, not verified by this project): Gdaki states that this mod is also based
-  on a confirmed working CounterStrikeSharp version of the same mod that Gdaki made previously (the owner states it was built on
-  the owner's own PC before being sold, so its source and running evidence are not available here). Checked on 2026-10-12: the
-  only earlier CounterStrikeSharp jailbreak project supplied, `Jailbreak-CS2-CounterStrikeSharp_5` (a multi-plugin
-  `Jailbreak.Core` project, `net8.0`, module author string "Jailbreak Ecosystem"), states in its own README that it has
-  **never been compiled against a real CounterStrikeSharp install**, so it cannot be shown to be a confirmed working version.
-  No code from it is in this plugin (no identical code lines, no references to its namespaces); this plugin is written from
-  the SMPlugins sources, with eGo only as a behavioural reference. This plugin's own status is unchanged: **not yet verified
-  on a live server**. If the confirmed working version is a different one, supply it and its running evidence.
-  Screenshots supplied by the owner on 2026-10-12 show the owner's own SimpleAdmin plugin (ActionMenu, AdminMenu, BeaconManager,
-  EffectManager and other files, in `D:\ULTJBSharp_Dev\SimpleAdmin`) being developed and debugged on the owner's PC. They support the
-  SimpleAdmin credit above; they do not show a working jailbreak mod, and they show several of its effect commands (drug, blind,
-  beacon, freeze) not yet working at that point.
+* **Provenance** (the owner's first-hand confirmation, not independently verified by this project): Gdaki confirms that an
+  earlier CounterStrikeSharp version of this mod, made by Gdaki on the owner's own PC before being sold, worked, and that this
+  mod is also based on it. Its source, build and running evidence are not available here, so this project has not compared or
+  tested it. What was checked on 2026-10-12: the only CounterStrikeSharp jailbreak project supplied,
+  `Jailbreak-CS2-CounterStrikeSharp_5` (a multi-plugin `Jailbreak.Core` project, `net8.0`, module author string "Jailbreak
+  Ecosystem"), says in its own README that it was **never compiled against a real CounterStrikeSharp install**, so it is not
+  that version; no code from it is in this plugin (no identical code lines, no references to its namespaces). This plugin is
+  written from the SMPlugins sources, with eGo only as a behavioural reference, and its own status is unchanged: **not yet
+  verified on a live server**. Screenshots supplied by the owner show the owner's SimpleAdmin plugin (ActionMenu, AdminMenu,
+  BeaconManager, EffectManager and other files, in `D:\ULTJBSharp_Dev\SimpleAdmin`) being developed and debugged on the owner's
+  PC; they support the SimpleAdmin credit above and show several of its effect commands (drug, blind, beacon, freeze) not yet
+  working at that point.
 * **Inspired by**: designed after **HlStriker** (SMPlugins Ultimate Jailbreak) and the **Swbs development/lead admins**.
 * SMPlugins contributors whose plugins are ported: **Hymns For Disco** (MeasureGap, SpeedRuns Stats), **FrostJacked**,
   **Scoutkllr** (design reference for the planned course features).
