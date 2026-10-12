@@ -1,0 +1,9 @@
+SWBS Ultimate Jailbreak for CS2 - plugin source (branch claude/swbs-jailbreak-cs2)
+
+The documentation (README, install / test guides, feature lists, design notes, project rules) is kept on the "docs" branch
+of this repository so that this branch shows code only.
+
+  View:     switch to the "docs" branch on GitHub
+  Restore:  git checkout docs -- .        (puts the .md files next to the code; they are git-ignored on this branch)
+
+Installable package: releases/SwbsJailbreak-0.10.0-server-package.zip (contains INSTALL.txt, the Windows scripts and docs).
