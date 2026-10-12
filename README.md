@@ -331,6 +331,7 @@ build.sh / build.ps1            package script
 | FEATURE_INVENTORY.md | Every original SMPlugins feature: source, status, location |
 | FEATURE_GAPS.md | Missing / limited features and why (engine limits, blocked items, eGo comparison) |
 | BUILD_AND_TEST.md | Versions, build, install, map setup |
+| docs/LOCAL_TEST_SERVER.md | Quick guide: local CS2 test server (SteamCMD, Metamod, CounterStrikeSharp, plugin) incl. the CSS / game-version caveat |
 | TEST_PLAN.md | In-game test checklist |
 | COMPATIBILITY.md | Pinned versions and verified CounterStrikeSharp 1.0.368 API facts |
 | ARCHITECTURE.md, docs/DEVELOPER.md | Design, module conventions, how to add a module |
