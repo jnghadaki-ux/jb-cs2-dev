@@ -25,6 +25,10 @@ particles, glow, sounds, HUD), never text stand-ins.
   No code from it is in this plugin (no identical code lines, no references to its namespaces); this plugin is written from
   the SMPlugins sources, with eGo only as a behavioural reference. This plugin's own status is unchanged: **not yet verified
   on a live server**. If the confirmed working version is a different one, supply it and its running evidence.
+  Screenshots supplied by the owner on 2026-10-12 show the owner's own SimpleAdmin plugin (ActionMenu, AdminMenu, BeaconManager,
+  EffectManager and other files, in `D:\ULTJBSharp_Dev\SimpleAdmin`) being developed and debugged on the owner's PC. They support the
+  SimpleAdmin credit above; they do not show a working jailbreak mod, and they show several of its effect commands (drug, blind,
+  beacon, freeze) not yet working at that point.
 * **Inspired by**: designed after **HlStriker** (SMPlugins Ultimate Jailbreak) and the **Swbs development/lead admins**.
 * SMPlugins contributors whose plugins are ported: **Hymns For Disco** (MeasureGap, SpeedRuns Stats), **FrostJacked**,
   **Scoutkllr** (design reference for the planned course features).
