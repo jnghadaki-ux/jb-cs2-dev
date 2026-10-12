@@ -16,6 +16,10 @@ particles, glow, sounds, HUD), never text stand-ins.
 ## Credits
 * **Created by Gdaki**: the project and all work before it was handed to Claude Code (including the SimpleAdmin mod).
 * **Enhanced with Claude Code**: the CS2 / CounterStrikeSharp rebuild and later enhancements.
+* **Owner's provenance note** (the owner's statement, not verified by this project): Gdaki states that this mod is also based
+  on a confirmed working CounterStrikeSharp version of the same mod that Gdaki made previously. That earlier version was not
+  among the files provided for this build, so it was not used as a source, compared or tested here. This plugin's own status
+  is unchanged: **not yet verified on a live server**.
 * **Inspired by**: designed after **HlStriker** (SMPlugins Ultimate Jailbreak) and the **Swbs development/lead admins**.
 * SMPlugins contributors whose plugins are ported: **Hymns For Disco** (MeasureGap, SpeedRuns Stats), **FrostJacked**,
   **Scoutkllr** (design reference for the planned course features).
