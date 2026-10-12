@@ -17,7 +17,8 @@ particles, glow, sounds, HUD), never text stand-ins.
 * **Created by Gdaki**: the project and all work before it was handed to Claude Code (including the SimpleAdmin mod).
 * **Enhanced with Claude Code**: the CS2 / CounterStrikeSharp rebuild and later enhancements.
 * **Owner's provenance note** (the owner's statement, not verified by this project): Gdaki states that this mod is also based
-  on a confirmed working CounterStrikeSharp version of the same mod that Gdaki made previously. Checked on 2026-10-12: the
+  on a confirmed working CounterStrikeSharp version of the same mod that Gdaki made previously (the owner states it was built on
+  the owner's own PC before being sold, so its source and running evidence are not available here). Checked on 2026-10-12: the
   only earlier CounterStrikeSharp jailbreak project supplied, `Jailbreak-CS2-CounterStrikeSharp_5` (a multi-plugin
   `Jailbreak.Core` project, `net8.0`, module author string "Jailbreak Ecosystem"), states in its own README that it has
   **never been compiled against a real CounterStrikeSharp install**, so it cannot be shown to be a confirmed working version.
