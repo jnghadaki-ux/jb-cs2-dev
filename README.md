@@ -17,9 +17,13 @@ particles, glow, sounds, HUD), never text stand-ins.
 * **Created by Gdaki**: the project and all work before it was handed to Claude Code (including the SimpleAdmin mod).
 * **Enhanced with Claude Code**: the CS2 / CounterStrikeSharp rebuild and later enhancements.
 * **Owner's provenance note** (the owner's statement, not verified by this project): Gdaki states that this mod is also based
-  on a confirmed working CounterStrikeSharp version of the same mod that Gdaki made previously. That earlier version was not
-  among the files provided for this build, so it was not used as a source, compared or tested here. This plugin's own status
-  is unchanged: **not yet verified on a live server**.
+  on a confirmed working CounterStrikeSharp version of the same mod that Gdaki made previously. Checked on 2026-10-12: the
+  only earlier CounterStrikeSharp jailbreak project supplied, `Jailbreak-CS2-CounterStrikeSharp_5` (a multi-plugin
+  `Jailbreak.Core` project, `net8.0`, module author string "Jailbreak Ecosystem"), states in its own README that it has
+  **never been compiled against a real CounterStrikeSharp install**, so it cannot be shown to be a confirmed working version.
+  No code from it is in this plugin (no identical code lines, no references to its namespaces); this plugin is written from
+  the SMPlugins sources, with eGo only as a behavioural reference. This plugin's own status is unchanged: **not yet verified
+  on a live server**. If the confirmed working version is a different one, supply it and its running evidence.
 * **Inspired by**: designed after **HlStriker** (SMPlugins Ultimate Jailbreak) and the **Swbs development/lead admins**.
 * SMPlugins contributors whose plugins are ported: **Hymns For Disco** (MeasureGap, SpeedRuns Stats), **FrostJacked**,
   **Scoutkllr** (design reference for the planned course features).
