@@ -45,7 +45,7 @@ real CS2/CSS mechanisms, never fabricate APIs/hit results/rendering, no text/ASC
 9. Be economical with tokens: read the original files you need once, targeted; do not produce separate spec
    documents beyond docs/modules/<Area>.md.
 10. When done: `git add -A && git commit -m "<Area>: <summary>"` in your worktree (end the message with the two
-    trailer lines `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` and
+    trailer lines `Co-Authored-By: Claude <noreply@anthropic.com>` and
     `Claude-Session: https://claude.ai/code/session_01XrjeEHcKxRnBgbrXcCZZP9`). Do not push.
 
 ## Final answer (keep it short)

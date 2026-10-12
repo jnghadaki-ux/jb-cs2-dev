@@ -15,9 +15,9 @@ _Updated: end of session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-
 
 ## Owner decisions (session 3, latest)
 * `!open` is admin-only (done). Auto warden when nobody queues (done). Warden bonus only with 1–2 guards (done, stacking by step).
-* Extra days: later. **Remake the SMPlugins Zone Manager** (plan: docs/design/ZONE_MANAGER_PLAN.md) — recommended model: Opus.
+* Extra days: later. **Remake the SMPlugins Zone Manager** (plan: docs/design/ZONE_MANAGER_PLAN.md).
 * Gang system: new "Crews" design proposed (docs/design/CREWS.md).
-* **Zone Manager and Crews were built in this session** (owner switched to Opus here instead of separate sessions):
+* **Zone Manager and Crews were built in this session** (built in one session):
   `Modules/Zones/*` (remake of SMPlugins ZoneManager + ZoneTypes, guide in docs/design/ZONE_MANAGER_PLAN.md) and
   `Modules/Crews/*` + Crew War day (docs/design/CREWS.md). Also fixed: phrases mixing colour tags and arguments printed raw `{0}`.
 
@@ -34,8 +34,8 @@ _Updated: end of session 3 (2026-10-11), v0.10.0, branch `claude/swbs-jailbreak-
 0. **Minigames suite, continue in order** (docs/design/MINIGAMES_SUITE_DESIGN.md §11): step 0 and block A are built
    (Warden Games `Modules/Games/WardenGames*`, `GameDays.cs` Hide & Seek / Jetpack / no-scope chance, `GameHelpers.cs`
    `!hide` / Auto Bhop zone / `!measure`; pure logic in `Core/WardenGames.cs`; 30 tests). Next: **B Courses** (B1 course core
-   logic + tests, B2 zone types + run tracking + HUD, B3 checkpoints + records) — **Opus** (new system, per-tick timing); then
-   **C** (Course Race, Deathrun, course auto-respawn, scoreboard tag — Sonnet), then **D** review (≤2 agents).
+   logic + tests, B2 zone types + run tracking + HUD, B3 checkpoints + records) (new system, per-tick timing: heavy work); then
+   **C** (Course Race, Deathrun, course auto-respawn, scoreboard tag: light work), then **D** review (≤2 agents).
 1. **If the owner sent server results** (TEST_PLAN.md §4 / console log): fix those failures first.
 2. **Review pass for runtime bugs** (Zones/Crews, Games, LR/Days done) — remaining: Jihad, Settings, Teams, Cells editor,
    Warden ping code, Admin. Acceptance: each finding fixed or documented; build 0/0;

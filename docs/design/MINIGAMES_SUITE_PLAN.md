@@ -80,10 +80,8 @@ Already handled elsewhere:
 * **EntityPatches** (12, hlstriker): CS:GO map-entity fixes. Revisit one only if a CS2 jail map shows the same bug (e.g. FixTriggerPush, OpenAreaportals).
 * **BlockMaker / Blocks:** excluded by the owner.
 
-## Order, models, credits
+## Order and credits
 * Order (owner): **2 → 3 → 4, then 1, then the parts that need Courses** (Course Race, Deathrun, course auto-respawn, course scoreboard tag). Step list: `MINIGAMES_SUITE_DESIGN.md` §11.
-* Model fit (owner rule 10):
-  * **Opus:** Phases 1–2 (new systems, per-tick timing, judging).
-  * **Sonnet:** Phases 3–4.
+* Weight: Phases 1–2 are new systems (per-tick timing, judging): heavy work. Phases 3–4 are lighter.
 * Credits in code and docs: "based on SMPlugins by hlstriker", and Hymns For Disco / FrostJacked / Scoutkllr where their plugin is the source.
 * Each phase = one milestone: build 0/0, unit tests for pure logic (timing, splits, judging rules), TEST_PLAN rows, push.
