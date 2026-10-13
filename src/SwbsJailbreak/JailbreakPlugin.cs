@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.10.2"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.10.3"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -379,7 +379,7 @@ public sealed class JailbreakPlugin : BasePlugin
 
     private void OnReloadCommand(CCSPlayerController? player, CommandInfo info)
     {
-        if (player != null && !AdminManager.PlayerHasPermissions(player, "@css/config"))
+        if (!Perms.HasFlag(player, "@css/config"))
         {
             Chat.Reply(player, info, Lang.T("core.no_access"));
             return;

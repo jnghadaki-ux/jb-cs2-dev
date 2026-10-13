@@ -27,6 +27,13 @@ public sealed class GeneralConfig
     [JsonPropertyName("DataFlushSeconds")] public int DataFlushSeconds { get; set; } = 30;
 
     [JsonPropertyName("Debug")] public bool Debug { get; set; } = false;
+
+    /// <summary>
+    /// TEST SERVERS ONLY. CSS admin checks need a Steam-verified SteamID, which never arrives on a server started with
+    /// -insecure or without a GSLT (+sv_setsteamaccount). True matches admins.json against the unverified SteamID instead,
+    /// which a spoofed client could fake: keep false on any public server.
+    /// </summary>
+    [JsonPropertyName("TrustUnverifiedSteamIds")] public bool TrustUnverifiedSteamIds { get; set; } = false;
 }
 
 /// <summary>

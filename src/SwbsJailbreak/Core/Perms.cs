@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Entities;
 
 namespace SwbsJailbreak.Core;
 
@@ -52,18 +53,61 @@ public static class Perms
     public static bool Has(CCSPlayerController? player, string capabilityOrFlag)
     {
         if (player == null) return true; // server console
-        if (!player.IsValid || player.IsBot) return false;
         var flag = Resolve(capabilityOrFlag);
-        if (string.IsNullOrEmpty(flag)) return true;
+        if (string.IsNullOrEmpty(flag)) return player.IsValid && !player.IsBot;
+        return HasFlag(player, flag);
+    }
+
+    /// <summary>
+    /// The SteamID used for admin lookups. CSS's own checks use only the Steam-verified ID, which stays empty when Steam
+    /// never validates the player (a server started with -insecure or without a GSLT), so admins.json never matches.
+    /// General.TrustUnverifiedSteamIds (test servers only, default off) falls back to the unverified ID.
+    /// </summary>
+    public static SteamID? AdminId(CCSPlayerController? player)
+    {
+        if (player == null || !player.IsValid || player.IsBot || player.IsHLTV) return null;
         try
         {
-            if (flag.StartsWith('#')) return AdminManager.PlayerInGroup(player, flag);
-            return AdminManager.PlayerHasPermissions(player, flag) || AdminManager.PlayerHasPermissions(player, "@css/root");
+            var verified = player.AuthorizedSteamID;
+            if (verified != null) return verified;
+            var trust = JailbreakPlugin.Instance?.Config.General.TrustUnverifiedSteamIds ?? false;
+            return trust && player.SteamID != 0 ? new SteamID(player.SteamID) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>True when the player's admin identity comes from the unverified fallback.</summary>
+    public static bool IsUnverified(CCSPlayerController player)
+    {
+        try { return player.AuthorizedSteamID == null; }
+        catch { return true; }
+    }
+
+    /// <summary>Raw CSS flag ("@css/ban") or group ("#css/admin") check; @css/root passes every flag. Console: true.</summary>
+    public static bool HasFlag(CCSPlayerController? player, string flag)
+    {
+        if (player == null) return true;
+        var id = AdminId(player);
+        if (id == null) return false;
+        try
+        {
+            if (flag.StartsWith('#')) return AdminManager.PlayerInGroup(id, flag);
+            return AdminManager.PlayerHasPermissions(id, flag) || AdminManager.PlayerHasPermissions(id, "@css/root");
         }
         catch
         {
             return false;
         }
+    }
+
+    public static AdminData? AdminDataOf(CCSPlayerController player)
+    {
+        var id = AdminId(player);
+        try { return id == null ? null : AdminManager.GetPlayerAdminData(id); }
+        catch { return null; }
     }
 
     public static bool Has(JbPlayer? player, string capabilityOrFlag) => player?.Controller is { } c && Has(c, capabilityOrFlag);
@@ -85,7 +129,8 @@ public static class Perms
         if (admin == target) return true;
         try
         {
-            return AdminManager.CanPlayerTarget(admin, target);
+            var targetId = AdminId(target);
+            return targetId == null || AdminManager.CanPlayerTarget(AdminId(admin), targetId);
         }
         catch
         {

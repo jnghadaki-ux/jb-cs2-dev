@@ -112,8 +112,9 @@ public sealed partial class AdminModule
 
         foreach (var c in list)
         {
-            var data = AdminManager.GetPlayerAdminData(c);
+            var data = Perms.AdminDataOf(c);
             var flags = data == null ? "-" : string.Join(",", data.GetAllFlags());
+            if (!c.IsBot && Perms.IsUnverified(c)) flags += " (Steam ID not verified" + (data == null ? ": needs GSLT, or TrustUnverifiedSteamIds" : "") + ")";
             Chat.PrintToConsole(caller, $"#{c.UserId,-4} {c.PlayerName,-32} {c.SteamID,-18} {c.Team,-16} {flags}");
         }
 
