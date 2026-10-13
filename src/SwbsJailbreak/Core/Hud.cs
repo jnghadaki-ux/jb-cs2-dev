@@ -132,9 +132,9 @@ public static class Hud
         var last = LastSent[slot] ?? "";
         if (html.Length == 0)
         {
-            if (last.Length == 0) return;
+            // Nothing is sent: the last message expires by itself within its 1 s duration. Sending " " to clear it drew
+            // an empty white panel on current CS2 builds.
             LastSent[slot] = "";
-            player.PrintToCenterHtml(" ", 1);
             return;
         }
 
@@ -143,6 +143,36 @@ public static class Hud
         LastSentAt[slot] = now;
         player.PrintToCenterHtml(html, 1);
     }
+
+    // ---------------- flashing fix ----------------
+
+    private static CCSGameRulesProxy? _rulesProxy;
+
+    /// <summary>
+    /// CS2 re-fades the centre HTML panel about once a second, so menus and HUD text flash. Holding
+    /// CCSGameRules.GameRestart true while no restart is pending keeps the panel steady (workaround found by Poggu, as
+    /// used by CS2FlashingHtmlHudFix and eGo). A real restart (mp_restartgame) still clears it until it has run.
+    /// Call every tick; General.FixHudFlashing turns it off.
+    /// </summary>
+    internal static void KeepPanelSteady()
+    {
+        if (!(JailbreakPlugin.Instance?.Config.General.FixHudFlashing ?? true)) return;
+        try
+        {
+            if (_rulesProxy == null || !_rulesProxy.IsValid)
+                _rulesProxy = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
+            var rules = _rulesProxy?.GameRules;
+            if (rules == null) return;
+            var steady = rules.RestartRoundTime < Server.CurrentTime;
+            if (rules.GameRestart != steady) rules.GameRestart = steady;
+        }
+        catch
+        {
+            _rulesProxy = null;
+        }
+    }
+
+    internal static void ForgetGameRules() => _rulesProxy = null;
 
     // ---------------- small HTML helpers ----------------
 

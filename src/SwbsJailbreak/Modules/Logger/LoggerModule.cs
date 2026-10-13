@@ -493,9 +493,14 @@ public sealed class LoggerModule : JbModule, ILogService
     [ConsoleCommand("css_logs", "sm_log <player> <num> - List the actions relating to <player> (last <num> lines).")]
     [ConsoleCommand("sm_log", "sm_log <player> <num> - List the actions relating to <player> (last <num> lines).")]
     [ConsoleCommand("sm_logs", "sm_log <player> <num> - List the actions relating to <player> (last <num> lines).")]
-    [RequiresPermissions("@css/ban")]
     public void OnLogsCommand(CCSPlayerController? player, CommandInfo info)
     {
+        if (!Perms.HasFlag(player, "@css/ban"))
+        {
+            Chat.Reply(player, info, Lang.T("core.no_access"));
+            return;
+        }
+
         var lines = 0;
         JbPlayer? target = null;
 
@@ -576,10 +581,10 @@ internal static class OverrideAccess
             {
                 var perms = AdminManager.GetPermissionOverrides(overrideName);
                 if (perms.Length == 0) return true;
-                return perms.Any(f => f.StartsWith('#') ? AdminManager.PlayerInGroup(player, f) : AdminManager.PlayerHasPermissions(player, f));
+                return perms.Any(f => Perms.HasFlag(player, f));
             }
 
-            return AdminManager.PlayerHasPermissions(player, defaultFlag) || AdminManager.PlayerHasPermissions(player, "@css/root");
+            return Perms.HasFlag(player, defaultFlag);
         }
         catch
         {

@@ -639,10 +639,10 @@ internal static class OverrideAccess
             {
                 var perms = AdminManager.GetPermissionOverrides(overrideName);
                 if (perms.Length == 0) return true;
-                return perms.Any(f => f.StartsWith('#') ? AdminManager.PlayerInGroup(player, f) : AdminManager.PlayerHasPermissions(player, f));
+                return perms.Any(f => Perms.HasFlag(player, f));
             }
 
-            return AdminManager.PlayerHasPermissions(player, defaultFlag) || AdminManager.PlayerHasPermissions(player, "@css/root");
+            return Perms.HasFlag(player, defaultFlag);
         }
         catch
         {

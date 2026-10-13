@@ -714,9 +714,14 @@ public sealed partial class WardenModule : JbModule, IWardenService
     }
 
     [ConsoleCommand("css_rw", "css_rw - Removes the current warden.")]
-    [RequiresPermissions("@css/kick")]
     public void OnRemoveWardenCommand(CCSPlayerController? player, CommandInfo info)
     {
+        if (!Perms.HasFlag(player, "@css/kick"))
+        {
+            Chat.Reply(player, info, Lang.T("core.no_access"));
+            return;
+        }
+
         var w = Warden;
         if (w == null)
         {
@@ -739,9 +744,14 @@ public sealed partial class WardenModule : JbModule, IWardenService
     [ConsoleCommand("css_sw", "Sets the current warden.")]
     [ConsoleCommand("css_setw", "Sets the current warden.")]
     [ConsoleCommand("css_setwarden", "Sets the current warden.")]
-    [RequiresPermissions("@css/root")]
     public void OnSetWardenCommand(CCSPlayerController? player, CommandInfo info)
     {
+        if (!Perms.HasFlag(player, "@css/root"))
+        {
+            Chat.Reply(player, info, Lang.T("core.no_access"));
+            return;
+        }
+
         if (info.ArgCount < 2)
         {
             Chat.Reply(player, info, WText.T("warden.set.usage"));
