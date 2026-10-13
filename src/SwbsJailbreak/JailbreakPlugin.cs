@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.10.3"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.10.4"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -203,6 +203,7 @@ public sealed class JailbreakPlugin : BasePlugin
     {
         Round.Machine.ResetForMap();
         Round.KillRoundTimers();
+        Hud.ForgetGameRules();
         Hud.ResetAll();
         Aim.Reset();
         ChatInput.Reset();
@@ -245,6 +246,7 @@ public sealed class JailbreakPlugin : BasePlugin
     {
         _tick++;
         Movement.Tick();
+        Hud.KeepPanelSteady();
         if (_tick % 4 != 0) return; // 16 Hz HUD upkeep
         MenuService.Tick();
         foreach (var c in Players.Humans())

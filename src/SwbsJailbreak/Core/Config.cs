@@ -28,6 +28,9 @@ public sealed class GeneralConfig
 
     [JsonPropertyName("Debug")] public bool Debug { get; set; } = false;
 
+    /// <summary>Stop the centre HUD / menus flashing every second (holds CCSGameRules.GameRestart while no restart is pending).</summary>
+    [JsonPropertyName("FixHudFlashing")] public bool FixHudFlashing { get; set; } = true;
+
     /// <summary>
     /// TEST SERVERS ONLY. CSS admin checks need a Steam-verified SteamID, which never arrives on a server started with
     /// -insecure or without a GSLT (+sv_setsteamaccount). True matches admins.json against the unverified SteamID instead,
