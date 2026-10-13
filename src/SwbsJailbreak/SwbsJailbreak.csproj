@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <!--
-      .NET 8 only (owner decision, DECISIONS.md D-NET8): compiled against CounterStrikeSharp.API 1.0.368, the last CSS
-      release built for .NET 8. Do not add other target frameworks.
+      .NET 10: compiled against CounterStrikeSharp.API 1.0.376. CSS 1.0.369+ ships a .NET 10 runtime (hostfxr 10.x), so a
+      current server needs a net10 plugin build. (1.0.368 was the last .NET 8 release.)
     -->
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <!-- Provided by the CounterStrikeSharp runtime on the server, so never copied to output -->
-    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.368">
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376">
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

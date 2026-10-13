@@ -77,6 +77,7 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         Jb.Zones = this;
         RegisterBuiltInTypes();
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        if (!hotReload) return; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         var map = Server.MapName;
         if (!string.IsNullOrEmpty(map)) LoadMap(map);
         _roundStart = Server.CurrentTime;

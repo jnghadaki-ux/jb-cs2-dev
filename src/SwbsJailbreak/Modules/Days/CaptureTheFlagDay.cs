@@ -86,8 +86,12 @@ public sealed class CaptureTheFlagDay : JbModule
         Jb.Days.Register(_day);
         _day.FreezeTime = 10; // SIDE_SELECTION_TIME
         _day.FreezeTeams = FreezeTeams.Guards | FreezeTeams.Prisoners;
-        _map = Server.MapName;
-        LoadPoints();
+        if (hotReload) // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
+        {
+            _map = Server.MapName;
+            LoadPoints();
+        }
+
         JbEvents.DaySpawnPost += OnDaySpawn;
         Plugin.AddCommandListener("drop", OnDrop, HookMode.Pre);
         Plugin.RegisterEventHandler<EventPlayerDeath>(OnDeathPre, HookMode.Pre);

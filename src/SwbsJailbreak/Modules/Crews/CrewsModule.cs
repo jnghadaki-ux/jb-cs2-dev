@@ -107,7 +107,7 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         Jb.Crews = this;
         LoadAll();
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
-        _map = (Server.MapName ?? "").ToLowerInvariant();
+        _map = hotReload ? (Server.MapName ?? "").ToLowerInvariant() : ""; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         LoadTurf();
     }
 

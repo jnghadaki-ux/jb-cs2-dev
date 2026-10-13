@@ -104,7 +104,7 @@ public sealed class MuteModule : JbModule, IMuteService
         Jb.Mute = this;
         Plugin.RegisterListener<Listeners.OnClientVoice>(OnClientVoice);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
-        _stoppedSpeakingTime = Server.CurrentTime;
+        if (hotReload) _stoppedSpeakingTime = Server.CurrentTime; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         if (hotReload)
         {
             // Round state is unknown after a hot reload: treat the round as started if there are guards.

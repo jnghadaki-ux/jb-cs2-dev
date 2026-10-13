@@ -56,8 +56,11 @@ public sealed class LoggerModule : JbModule, ILogService
     public override void OnLoad(bool hotReload)
     {
         Jb.Log = this;
-        _roundStart = Server.CurrentTime;
-        _roundStartTick = Server.TickCount;
+        if (hotReload) // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
+        {
+            _roundStart = Server.CurrentTime;
+            _roundStartTick = Server.TickCount;
+        }
 
         Plugin.RegisterListener<Listeners.OnEntityParentChanged>(OnEntityParentChanged);
         Plugin.RegisterListener<Listeners.OnEntityTakeDamagePre>(OnEntityTakeDamagePre);

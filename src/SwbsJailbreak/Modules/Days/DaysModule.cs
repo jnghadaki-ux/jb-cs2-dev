@@ -81,7 +81,7 @@ public sealed partial class DaysModule : JbModule, IDayService
         Plugin.RegisterEventHandler<EventCsPreRestart>((_, _) => { EndDay(); return HookResult.Continue; });
         Plugin.RegisterEventHandler<EventCsMatchEndRestart>((_, _) => { EndDay(); return HookResult.Continue; });
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
-        _map = Server.MapName;
+        if (hotReload) _map = Server.MapName; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
     }
 
     public override void OnAllModulesLoaded(bool hotReload)

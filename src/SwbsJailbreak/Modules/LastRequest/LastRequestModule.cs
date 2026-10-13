@@ -100,7 +100,7 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
         Plugin.AddCommandListener("buy", OnBuy, HookMode.Pre);
         Plugin.AddCommandListener("autobuy", OnBuy, HookMode.Pre);
         Plugin.AddCommandListener("rebuy", OnBuy, HookMode.Pre);
-        LoadPoints(Server.MapName);
+        if (hotReload) LoadPoints(Server.MapName); // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         if (hotReload) _roundStarted = Round.Phase is RoundPhase.Active or RoundPhase.FreezeTime;
     }
 
