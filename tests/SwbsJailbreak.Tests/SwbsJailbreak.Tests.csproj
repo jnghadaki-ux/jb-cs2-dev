@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -10,7 +10,7 @@
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <!-- Engine-free pieces of the plugin are tested; the CSS API assembly is only needed for type loading. -->
-    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.368" />
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SwbsJailbreak\SwbsJailbreak.csproj" />
