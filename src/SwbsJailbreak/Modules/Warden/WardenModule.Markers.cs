@@ -54,7 +54,7 @@ public sealed partial class WardenModule
         Color.FromArgb(255, 255, 0, 170)  // splat_pink
     };
 
-    private bool MenuEatsUse(CCSPlayerController c) => Config.General.MenuWasd && MenuService.HasMenu(c);
+    private bool MenuEatsUse(CCSPlayerController c) => MenuService.UsesKeys && MenuService.HasMenu(c);
 
     // ================================================================= input
 

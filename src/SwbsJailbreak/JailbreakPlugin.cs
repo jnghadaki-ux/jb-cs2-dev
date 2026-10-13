@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.10.4"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.10.5"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -45,6 +45,7 @@ public sealed class JailbreakPlugin : BasePlugin
         Instance = this;
         Config.Load(Path.Combine(ConfigDirectory, "SwbsJailbreak.json"), Logger);
         _ = Config.General;
+        MigrateConfig();
         Lang.Load(ModuleDirectory, Config.General.Language);
         Storage.Init(Path.Combine(ConfigDirectory, "data"));
         Hud.ResetAll();
@@ -151,6 +152,21 @@ public sealed class JailbreakPlugin : BasePlugin
 
         Logger.LogInformation("{Name} v{Version} loaded: {Count} modules, {Phrases} phrases. Created by Gdaki, enhanced with Claude Code - inspired by HlStriker, SWBS development/lead admins.",
             ModuleName, ModuleVersion, _modules.Count, Lang.Count);
+    }
+
+    /// <summary>One-time changes to existing config files (General.ConfigRevision). New installs start at the latest.</summary>
+    private void MigrateConfig()
+    {
+        const string oldModel = "characters/models/ctm_heavy/ctm_heavy.vmdl";
+        if (Config.General.ConfigRevision < 1)
+        {
+            // 0.10.5: warden / last guard model swaps broke player models on current CS2 builds; turned off unless the
+            // owner picked a different model.
+            Config.Update<Modules.Warden.WardenConfig>("Warden", w => { if (w.WardenModel == oldModel) w.WardenModel = ""; });
+            Config.Update<Modules.LastGuard.LastGuardConfig>("LastGuard", l => { if (l.LastGuardModel == oldModel) l.LastGuardModel = ""; });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 1);
+            Logger.LogInformation("Config migrated to revision 1: warden / last guard model swaps turned off (PlayerModels.ApplyModels is off by default)");
+        }
     }
 
     public override void Unload(bool hotReload)

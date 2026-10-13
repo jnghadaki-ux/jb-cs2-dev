@@ -35,7 +35,7 @@ public sealed class LastGuardConfig
     public int DamageAmount { get; set; } = 10;
 
     /// <summary>Last guard model (original ctm_heavy.mdl). Empty = do not change the model.</summary>
-    public string LastGuardModel { get; set; } = "characters/models/ctm_heavy/ctm_heavy.vmdl";
+    public string LastGuardModel { get; set; } = "";
 
     public int BeaconSegments { get; set; } = 16;
     public float BeaconWidth { get; set; } = 5.5f;

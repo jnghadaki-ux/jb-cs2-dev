@@ -132,9 +132,9 @@ public static class Hud
         var last = LastSent[slot] ?? "";
         if (html.Length == 0)
         {
-            if (last.Length == 0) return;
+            // Nothing is sent: the last message expires by itself within its 1 s duration. Sending " " to clear it drew
+            // an empty white panel on current CS2 builds.
             LastSent[slot] = "";
-            player.PrintToCenterHtml(" ", 1);
             return;
         }
 

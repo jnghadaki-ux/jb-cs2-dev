@@ -73,6 +73,9 @@ internal sealed class JbMenuInstance : IMenuInstance
         LastInput = Server.CurrentTime;
     }
 
+    /// <summary>Last menu text printed to chat (MenuStyle Chat/Both), to avoid re-printing an unchanged menu.</summary>
+    internal string? LastEcho;
+
     public CCSPlayerController Player { get; }
     public JbMenu JbMenu { get; }
     public int PageIndex { get; set; }
@@ -150,8 +153,20 @@ public static class MenuService
         Active[player.Slot] = inst;
         MenuManager.GetActiveMenus()[player.Handle] = inst;
         Render(inst, true);
-        if (JailbreakPlugin.Instance?.Config.General.MenuChatEcho == true) EchoToChat(inst);
     }
+
+    private static MenuStyle Style
+    {
+        get
+        {
+            var g = JailbreakPlugin.Instance?.Config.General;
+            if (g == null) return MenuStyle.Center;
+            return g.MenuChatEcho && g.MenuStyle == MenuStyle.Center ? MenuStyle.Both : g.MenuStyle;
+        }
+    }
+
+    /// <summary>W/S/E/R navigation only applies when the menu is drawn in the centre HUD.</summary>
+    public static bool UsesKeys => Style != MenuStyle.Chat && (JailbreakPlugin.Instance?.Config.General.MenuWasd ?? true);
 
     public static void Close(CCSPlayerController? player, bool cancelled = true)
     {
@@ -240,8 +255,7 @@ public static class MenuService
     {
         var inst = Active[player.Slot];
         if (inst == null || inst.Closed) return;
-        var cfg = JailbreakPlugin.Instance?.Config.General;
-        if (cfg is { MenuWasd: false }) return;
+        if (!UsesKeys) return;
         var menu = inst.JbMenu;
         var count = menu.Items.Count;
         if ((pressed & PlayerButtons.Forward) != 0 && count > 0)
@@ -300,13 +314,15 @@ public static class MenuService
     internal static void Render(JbMenuInstance inst, bool force)
     {
         if (inst.Closed || !inst.Player.IsValid) return;
-        Hud.Send(inst.Player, BuildHtml(inst), force);
+        var style = Style;
+        if (style != MenuStyle.Chat) Hud.Send(inst.Player, BuildHtml(inst), force);
+        if (style != MenuStyle.Center && force) EchoToChat(inst);
     }
 
     private static string BuildHtml(JbMenuInstance inst)
     {
         var menu = inst.JbMenu;
-        var wasd = JailbreakPlugin.Instance?.Config.General.MenuWasd ?? true;
+        var wasd = UsesKeys;
         var sb = new System.Text.StringBuilder();
         sb.Append("<font color='#FFD700'><b>").Append(menu.Title).Append("</b></font>");
         if (inst.PageCount > 1) sb.Append($" <font color='#AAAAAA' class='fontSize-s'>({inst.PageIndex + 1}/{inst.PageCount})</font>");
@@ -341,15 +357,35 @@ public static class MenuService
     private static void EchoToChat(JbMenuInstance inst)
     {
         var menu = inst.JbMenu;
-        Chat.Print(inst.Player, $"{{gold}}{Colors.Strip(StripHtml(menu.Title))}", false);
+        var lines = new List<string>();
+        var title = Plain(menu.Title);
+        if (inst.PageCount > 1) title += $" ({inst.PageIndex + 1}/{inst.PageCount})";
+        lines.Add("{gold}" + title);
+        if (!string.IsNullOrEmpty(menu.Subtitle)) lines.Add("{grey}" + Plain(menu.Subtitle!));
         var start = inst.PageIndex * JbMenuInstance.ItemsPerPage;
         var end = Math.Min(start + JbMenuInstance.ItemsPerPage, menu.Items.Count);
         for (var i = start; i < end; i++)
         {
             var it = menu.Items[i];
-            Chat.Print(inst.Player, $"{(it.Enabled ? "{green}" : "{grey}")}!{i - start + 1}{{default}} {StripHtml(it.Text)}", false);
+            var selectable = it.Enabled && it.OnSelect != null;
+            lines.Add(selectable ? $"{{green}}!{i - start + 1}{{default}} {Plain(it.Text)}" : $"{{grey}}   {Plain(it.Text)}");
         }
+
+        var footer = new List<string>();
+        if (inst.PageIndex > 0 || menu.Parent != null) footer.Add("!7 Back");
+        if (inst.PageIndex + 1 < inst.PageCount) footer.Add("!8 Next");
+        if (menu.ExitButton) footer.Add("!9 Exit");
+        if (footer.Count > 0) lines.Add("{grey}" + string.Join("   ", footer));
+
+        // Cursor moves (W/S in "Both") re-render without changing the chat text: print only when it changed.
+        var text = string.Join("\n", lines);
+        if (text == inst.LastEcho) return;
+        inst.LastEcho = text;
+        foreach (var line in lines) Chat.Print(inst.Player, line, false);
     }
+
+    /// <summary>Menu text without HTML tags/entities or chat colour tags.</summary>
+    private static string Plain(string s) => Colors.Strip(System.Net.WebUtility.HtmlDecode(StripHtml(s)));
 
     private static string StripHtml(string s) => System.Text.RegularExpressions.Regex.Replace(s, "<.*?>", "");
 

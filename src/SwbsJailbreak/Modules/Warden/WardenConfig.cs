@@ -34,7 +34,7 @@ public sealed class WardenConfig
     public float BonusSpeedPerStep { get; set; } = 0f;
 
     /// <summary>Warden model (original ctm_heavy.mdl). Empty = do not change the model. Must be a CS2 .vmdl.</summary>
-    public string WardenModel { get; set; } = "characters/models/ctm_heavy/ctm_heavy.vmdl";
+    public string WardenModel { get; set; } = "";
 
     /// <summary>ADDITION (not in the original): optional render tint on the warden, "R,G,B". Empty = off.</summary>
     public string WardenColor { get; set; } = "";

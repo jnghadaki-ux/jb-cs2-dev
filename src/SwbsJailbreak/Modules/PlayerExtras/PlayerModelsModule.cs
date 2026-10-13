@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,13 @@ namespace SwbsJailbreak.Modules.PlayerExtras;
 public sealed class PlayerModelsConfig
 {
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Replace player models (GuardModel / PrisonerModels). Off by default, like other CS2 jailbreaks: a model that is
+    /// missing or not a full player agent on the current CS2 build leaves players as small boxes and the first-person
+    /// gun oversized. Turn on only with models you have checked in game.
+    /// </summary>
+    public bool ApplyModels { get; set; } = false;
 
     /// <summary>All guards look the same (original: stock ctm_swat). Empty = keep the player's own agent.</summary>
     public string GuardModel { get; set; } = "characters/models/ctm_sas/ctm_sas.vmdl";
@@ -53,6 +61,7 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
 
     private void OnPrecache(ResourceManifest manifest)
     {
+        if (!Cfg.ApplyModels) return;
         foreach (var path in Cfg.PrisonerModels.Append(Cfg.GuardModel))
             if (!string.IsNullOrWhiteSpace(path)) manifest.AddResource(path);
     }
@@ -66,21 +75,31 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
             var help = Jb.Settings.GetHelpNumber(player) - 1;
             if (help == 0 && Cfg.Help1BonusHealth > 0) c.SetHp(c.GetHp() + Cfg.Help1BonusHealth);
             else if (help == 1 && Cfg.Help2BonusHealth > 0) c.SetHp(c.GetHp() + Cfg.Help2BonusHealth);
-            ApplyPrisonerModel(player);
-        }
-        else if (c.Team == CsTeam.CounterTerrorist)
-        {
-            ApplyGuardModel(player);
         }
 
-        // Deviation from the original: always raised (it skipped donator models, leaving Xray glows stale).
-        JbEvents.RaisePlayerModelsApplied(player);
+        if (!Cfg.ApplyModels)
+        {
+            JbEvents.RaisePlayerModelsApplied(player);
+            return;
+        }
+
+        // Next frame: a model set during the spawn itself can be overwritten by the agent the game assigns.
+        Server.NextFrame(() =>
+        {
+            var ctrl = player.Controller;
+            if (ctrl == null || !ctrl.IsAliveP()) return;
+            if (ctrl.Team == CsTeam.Terrorist) ApplyPrisonerModel(player);
+            else if (ctrl.Team == CsTeam.CounterTerrorist) ApplyGuardModel(player);
+            // Deviation from the original: always raised (it skipped donator models, leaving Xray glows stale).
+            JbEvents.RaisePlayerModelsApplied(player);
+        });
     }
 
-    public bool ApplyGuardModel(JbPlayer player) => SetModel(player, Cfg.GuardModel);
+    public bool ApplyGuardModel(JbPlayer player) => Cfg.ApplyModels && SetModel(player, Cfg.GuardModel);
 
     public bool ApplyPrisonerModel(JbPlayer player)
     {
+        if (!Cfg.ApplyModels) return false;
         var list = Cfg.PrisonerModels.Where(m => !string.IsNullOrWhiteSpace(m)).ToList();
         if (list.Count == 0) return false;
         var help = Jb.Settings.GetHelpNumber(player) - 1;
