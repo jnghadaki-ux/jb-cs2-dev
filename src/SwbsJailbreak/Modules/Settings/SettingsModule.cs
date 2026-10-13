@@ -156,7 +156,8 @@ public sealed class SettingsModule : JbModule, ISettingsService
         Plugin.RegisterEventHandler<EventPlayerDeath>(OnDeathPre, HookMode.Pre);
         Plugin.RegisterEventHandler<EventItemPickup>(OnItemPickup);
         JbEvents.CellsOpened += OnCellsOpened;
-        HookTerminateRound();
+        // TerminateRound is hooked only while a day sets the next round-end reason (SetNextRoundEndReason), like the
+        // CanAcquire hook in Weapons: no native detour stays on the hot path, and none is installed while the server boots.
 
         if (hotReload)
         {
@@ -177,7 +178,7 @@ public sealed class SettingsModule : JbModule, ISettingsService
     public override void OnMapStart(string mapName)
     {
         _cellWeapons.Clear();
-        _useNextReason = false;
+        ReleaseNextRoundEndReason();
         foreach (var p in AllSlots()) S(p).ResetForRound();
         Server.NextFrame(() =>
         {
@@ -209,7 +210,7 @@ public sealed class SettingsModule : JbModule, ISettingsService
 
     private HookResult OnRoundStartPre(EventRoundStart ev, GameEventInfo info)
     {
-        _useNextReason = false;
+        ReleaseNextRoundEndReason();
         return HookResult.Continue;
     }
 
@@ -512,8 +513,27 @@ public sealed class SettingsModule : JbModule, ISettingsService
 
     public void SetNextRoundEndReason(bool useReason, RoundEndReason reason = RoundEndReason.RoundDraw)
     {
-        _useNextReason = useReason;
         _nextReason = reason;
+        if (!useReason)
+        {
+            ReleaseNextRoundEndReason();
+            return;
+        }
+
+        _useNextReason = true;
+        if (!_terminateHooked) HookTerminateRound();
+    }
+
+    /// <summary>Stops overriding the round-end reason; the detour is removed next frame, never from inside the hooked call
+    /// (round_end handlers run within TerminateRound).</summary>
+    private void ReleaseNextRoundEndReason()
+    {
+        _useNextReason = false;
+        if (!_terminateHooked) return;
+        Server.NextFrame(() =>
+        {
+            if (!_useNextReason) UnhookTerminateRound();
+        });
     }
 
     private void HookTerminateRound()
