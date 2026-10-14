@@ -84,8 +84,8 @@ def soundevents(entries: dict) -> str:
 COMPILE_BAT = r"""@echo off
 setlocal EnableExtensions
 title SWBS workshop pack - compile
-rem Finds CS2 (any Steam library), copies the pack into content\csgo_addons\swbs_jailbreak, compiles it with CS2's
-rem resourcecompiler and checks the result. Optional: drag your "Counter-Strike Global Offensive" folder onto this file.
+rem Finds CS2 (any Steam library) and its resource compiler, copies the pack into content\csgo_addons\swbs_jailbreak,
+rem compiles it and checks the result. Optional: drag your "Counter-Strike Global Offensive" folder onto this file.
 set "PACK=%~dp0"
 set "SRC=%PACK%swbs_jailbreak"
 set "LOG=%PACK%compile_log.txt"
@@ -94,29 +94,30 @@ echo  SWBS workshop pack - compile
 echo ============================================
 echo.
 if not exist "%SRC%\soundevents\swbs_jailbreak.vsndevts" goto :not_extracted
+if not exist "%PACK%find_cs2.ps1" goto :not_extracted
 
-set "CS2=%~1"
-if not "%CS2%"=="" goto :have_cs2
-echo Looking for Counter-Strike 2 in your Steam libraries...
-for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PACK%find_cs2.ps1"`) do set "CS2=%%P"
+echo Looking for Counter-Strike 2 and the Workshop Tools compiler (can take a few seconds)...
+set "CS2="
+set "RC="
+for /f "usebackq tokens=1,* delims==" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PACK%find_cs2.ps1" "%~1"`) do set "%%A=%%B"
 if "%CS2%"=="" goto :no_cs2
-if "%CS2:~0,8%"=="NOTOOLS#" goto :no_tools_found
-
-:have_cs2
-set "RC=%CS2%\game\bin\win64\resourcecompiler.exe"
-if not exist "%RC%" goto :no_tools
 set "DEST=%CS2%\content\csgo_addons\swbs_jailbreak"
 set "OUT=%CS2%\game\csgo_addons\swbs_jailbreak"
-echo CS2 folder: %CS2%
+echo   CS2 folder: %CS2%
+if not "%RC%"=="" echo   Compiler:   %RC%
+if "%RC%"=="" echo   Compiler:   not found in this CS2 folder
 echo.
+
 echo [1/3] Copying the pack into
 echo       %DEST%
 robocopy "%SRC%" "%DEST%" /E /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :copy_failed
 
-echo [2/3] Compiling (takes a few seconds, the log goes to compile_log.txt)...
+if "%RC%"=="" goto :no_compiler
+echo [2/3] Compiling (the compiler output goes to compile_log.txt)...
 "%RC%" -r -i "%DEST%\*" > "%LOG%" 2>&1
 
+:check
 echo [3/3] Checking the result...
 if not exist "%OUT%\soundevents\swbs_jailbreak.vsndevts_c" goto :compile_failed
 set /a N=0
@@ -129,8 +130,19 @@ echo Next: start the CS2 Workshop Tools, pick the swbs_jailbreak addon and uploa
 echo Workshop Manager (README.txt step 4).
 goto :end
 
+:no_compiler
+if exist "%OUT%\soundevents\swbs_jailbreak.vsndevts_c" goto :check
+echo.
+echo The files are copied. This CS2 folder has no resourcecompiler.exe, so compile inside the Workshop Tools:
+echo   1. Steam - Counter-Strike 2 - Play - "Launch Counter-Strike 2 Workshop Tools".
+echo   2. In the launcher pick swbs_jailbreak and click Launch Tools.
+echo   3. In the Asset Browser type swbs in the search box, select everything it lists,
+echo      right click - Recompile (or Full Recompile).
+echo   4. Run compile_pack.bat again: it says SUCCESS once the compiled files are there.
+goto :end
+
 :not_extracted
-echo PROBLEM: the swbs_jailbreak folder is not next to this file.
+echo PROBLEM: the swbs_jailbreak folder or find_cs2.ps1 is not next to this file.
 echo Extract the WHOLE zip first (right click the zip - Extract All), then run compile_pack.bat
 echo from the extracted folder. Running it from inside the zip does not work.
 goto :end
@@ -141,27 +153,19 @@ echo Drag your "Counter-Strike Global Offensive" folder onto compile_pack.bat, o
 echo   compile_pack.bat "D:\SteamLibrary\steamapps\common\Counter-Strike Global Offensive"
 goto :end
 
-:no_tools_found
-set "CS2=%CS2:~8%"
-:no_tools
-echo PROBLEM: CS2 was found but the Workshop Tools are not installed:
-echo   %CS2%\game\bin\win64\resourcecompiler.exe is missing.
-echo Steam - right click Counter-Strike 2 - Properties - DLC - tick "Counter-Strike 2 Workshop Tools",
-echo wait for the download, then run this again.
-goto :end
-
 :copy_failed
 echo PROBLEM: could not copy the files into %DEST%
 echo Close the Workshop Tools / CS2 and try again, or copy the folder contents by hand (README step 3).
 goto :end
 
 :compile_failed
-echo PROBLEM: compiling did not produce the sound events. The compiler said:
-echo --------------------------------------------
-type "%LOG%"
-echo --------------------------------------------
+echo PROBLEM: compiling did not produce the sound events.
+if exist "%LOG%" echo The compiler said:
+if exist "%LOG%" echo --------------------------------------------
+if exist "%LOG%" type "%LOG%"
+if exist "%LOG%" echo --------------------------------------------
 echo Send compile_log.txt (next to this file) if you need help. You can also compile in the Workshop Tools:
-echo Asset Browser - swbs_jailbreak addon - select the files - right click - Recompile.
+echo Asset Browser - search swbs - select everything - right click - Recompile, then run this again.
 goto :end
 
 :end
@@ -170,8 +174,10 @@ echo Press any key to close this window.
 pause >nul
 """
 
-FIND_CS2_PS1 = r"""# Prints the Counter-Strike 2 install folder that has the Workshop Tools (resourcecompiler.exe), searching every
-# Steam library. Prints "NOTOOLS#<folder>" when CS2 is installed without the tools. Used by compile_pack.bat.
+FIND_CS2_PS1 = r"""# Used by compile_pack.bat. Prints "CS2=<Counter-Strike Global Offensive folder>" and, when the Workshop Tools'
+# resource compiler is found anywhere under its game folder, "RC=<full path of resourcecompiler.exe>".
+# Searches the folder given as the first argument (if any) and every Steam library.
+param([string]$Hint = '')
 $ErrorActionPreference = 'SilentlyContinue'
 $libs = @()
 foreach ($key in 'HKCU:\Software\Valve\Steam', 'HKLM:\SOFTWARE\WOW6432Node\Valve\Steam', 'HKLM:\SOFTWARE\Valve\Steam') {
@@ -186,10 +192,22 @@ foreach ($s in @($libs)) {
         foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) { $libs += $m.Groups[1].Value.Replace('\\', '\') }
     }
 }
-$games = $libs | ForEach-Object { Join-Path ($_ -replace '/', '\') 'steamapps\common\Counter-Strike Global Offensive' } | Select-Object -Unique
-foreach ($g in $games) { if (Test-Path (Join-Path $g 'game\bin\win64\resourcecompiler.exe')) { Write-Output $g; exit 0 } }
-foreach ($g in $games) { if (Test-Path (Join-Path $g 'game\bin\win64\cs2.exe')) { Write-Output ('NOTOOLS#' + $g); exit 0 } }
-exit 1
+$games = @()
+if ($Hint) { $games += $Hint.Trim('"').TrimEnd('\') }
+$games += $libs | ForEach-Object { Join-Path ($_ -replace '/', '\') 'steamapps\common\Counter-Strike Global Offensive' }
+$cs2 = $null
+$rc = $null
+foreach ($g in ($games | Select-Object -Unique)) {
+    $game = Join-Path $g 'game'
+    if (-not (Test-Path $game)) { continue }
+    if (-not $cs2) { $cs2 = $g }
+    $known = Join-Path $game 'bin\win64\resourcecompiler.exe'
+    if (Test-Path $known) { $cs2 = $g; $rc = $known; break }
+    $found = Get-ChildItem -Path $game -Filter 'resourcecompiler*.exe' -Recurse -Depth 4 -File | Select-Object -First 1
+    if ($found) { $cs2 = $g; $rc = $found.FullName; break }
+}
+if ($cs2) { Write-Output ('CS2=' + $cs2) }
+if ($rc) { Write-Output ('RC=' + $rc) }
 """
 
 README = r"""SWBS Jailbreak workshop pack
