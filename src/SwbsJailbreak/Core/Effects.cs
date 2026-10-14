@@ -109,9 +109,12 @@ public static class Fx
     }
 
     /// <summary>An expanding ring at a point (BeaconPulse without a player, e.g. where someone died).</summary>
-    public static void PulseAt(Vector center, Color color, float startRadius = 10f, float endRadius = 375f, float duration = 0.5f, float width = 3f)
+    public static void PulseAt(Vector center, Color color, float startRadius = 10f, float endRadius = 375f, float duration = 0.5f, float width = 3f,
+        Func<CCSPlayerController, bool>? visibleTo = null, int segments = 16)
     {
-        var ring = Ring(center, startRadius, color, width, duration + 0.1f, 16);
+        var ring = Ring(center, startRadius, color, width, duration + 0.1f, segments);
+        if (visibleTo != null)
+            foreach (var b in ring) Visibility.OnlyFor(b, visibleTo);
         const int steps = 5;
         var plugin = JailbreakPlugin.Instance;
         if (plugin != null)

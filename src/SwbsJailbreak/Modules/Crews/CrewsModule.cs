@@ -115,8 +115,8 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         Jb.Crews = this;
         LoadAll();
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
-        Plugin.AddCommandListener("say", (c, i) => OnChat(c, i, false), HookMode.Pre);
-        Plugin.AddCommandListener("say_team", (c, i) => OnChat(c, i, true), HookMode.Pre);
+        // The crew tag is printed by the chat format module, together with store titles and chat colours.
+        ChatDecor.AddPrefix(Name, ChatPrefix);
         _map = hotReload ? (Server.MapName ?? "").ToLowerInvariant() : ""; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         LoadTurf();
     }
@@ -130,6 +130,7 @@ public sealed partial class CrewsModule : JbModule, ICrewService
 
     public override void OnUnload(bool hotReload)
     {
+        ChatDecor.Remove(Name);
         JbEvents.CellsOpened -= OnCellsOpened;
         JbEvents.LastRequestEnded -= OnLastRequestEnded;
         Aim.Pinged -= OnPing;
@@ -322,36 +323,12 @@ public sealed partial class CrewsModule : JbModule, ICrewService
     /// handles are left alone: commands (! and /), admin chat (@), pending chat prompts and gagged players (the gag
     /// listener blocks those, and every listener runs, so re-printing them here would bypass the gag).
     /// </summary>
-    private HookResult OnChat(CCSPlayerController? player, CommandInfo info, bool team)
+    /// <summary>"[TAG] " in the crew colour before the name (prisoners, and guards with GuardTags).</summary>
+    private string? ChatPrefix(CCSPlayerController player)
     {
-        if (!Cfg.ChatTags || player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+        if (!Cfg.ChatTags || player.IsBot) return null;
         var crew = CrewOf(player);
-        if (crew == null) return HookResult.Continue;
-        var text = info.GetArg(1).Trim();
-        if (text.Length == 0 || text[0] is '!' or '/' or '@') return HookResult.Continue;
-        if (ChatInput.IsWaiting(player) || player.Jb() is { AdminChatGagged: true }) return HookResult.Continue;
-        if (Extras.ChatSpamModule.Blocks(player, text)) return HookResult.Continue; // the spam listener blocks it
-
-        // Player text must not carry colour tags of its own.
-        text = Colors.Strip(text).Replace("{", "(").Replace("}", ")");
-        var head = $"{CrewColors.Of(crew.Color).Chat}[{crew.Tag}]{{default}} ";
-        if (!player.IsAliveP() && player.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist) head = Lang.T("crews.chattag.dead") + head;
-        if (team) head = Lang.T(player.Team switch
-        {
-            CsTeam.Terrorist => "crews.chattag.team_t",
-            CsTeam.CounterTerrorist => "crews.chattag.team_ct",
-            _ => "crews.chattag.team_spec"
-        }) + head;
-        var line = $"{head}{Chat.Name(player)}{{default}}: {text}";
-
-        foreach (var c in Players.Humans())
-        {
-            if (team && c.Team != player.Team) continue;
-            Chat.Print(c, line, false);
-        }
-
-        Server.PrintToConsole(Colors.Strip($"{(team ? "(team) " : "")}[{crew.Tag}] {player.PlayerName}: {text}"));
-        return HookResult.Handled;
+        return crew == null ? null : $"{CrewColors.Of(crew.Color).Chat}[{crew.Tag}]{{default}} ";
     }
 
     public string? ScoreboardTag(JbPlayer player)

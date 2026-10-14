@@ -68,6 +68,7 @@ public sealed class MindGameLastRequests : JbModule
         if (Cfg.MathRaceEnabled) Register("Math Race", MindKind.MathRace, "Answer the sum in chat first; first to 2 points wins.");
         if (Cfg.TypeRaceEnabled) Register("Type Race", MindKind.TypeRace, "Type the word in chat first; first to 2 points wins.");
         if (Cfg.SimonSaysEnabled) Register("Simon Says", MindKind.SimonSays, "Do what the screen says in time; first to fail loses.");
+        ChatDecor.AddTaker(Name, (c, text) => c.Jb() is { } x && (Running(x, MindKind.MathRace) ?? Running(x, MindKind.TypeRace)) is { } o && S(o).Open);
         Plugin.AddCommandListener("say", OnSay, HookMode.Pre);
         Plugin.AddCommandListener("say_team", OnSay, HookMode.Pre);
         Plugin.RegisterEventHandler<EventPlayerJump>(OnJump);
