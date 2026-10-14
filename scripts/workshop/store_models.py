@@ -25,6 +25,9 @@ import player_model
 HERE = Path(__file__).resolve().parent
 OUT_ROOT = "characters/models/swbs/store"
 
+# Textures above this size are scaled down: smaller downloads, and a player model needs no more.
+MAX_TEXTURE = 2048
+
 # name -> settings. model: compiled model path inside a --source folder; skip_meshes: glTF mesh names to leave out;
 # recolor: {material name: recolour function name}; credit: shown in the README.
 STORE_MODELS = {
@@ -116,6 +119,17 @@ def _find_source(sources, rel: str):
     return None
 
 
+def _limit_size(png: Path) -> None:
+    from PIL import Image
+
+    with Image.open(png) as im:
+        if max(im.size) <= MAX_TEXTURE:
+            return
+        scale = MAX_TEXTURE / max(im.size)
+        small = im.resize((max(1, round(im.width * scale)), max(1, round(im.height * scale))), Image.LANCZOS)
+    small.save(png)
+
+
 def _material(tool, root: Path, vmat_rel: str, out_dir: str, addon: Path, recolor, tmp: Path) -> str:
     """Decompiles a .vmat_c into <out_dir>/<name>.vmat with its textures as PNGs; returns the new .vmat path."""
     name = Path(vmat_rel).stem
@@ -136,6 +150,7 @@ def _material(tool, root: Path, vmat_rel: str, out_dir: str, addon: Path, recolo
             RECOLORS[recolor](png, dst)
         else:
             shutil.copyfile(png, dst)
+        _limit_size(dst)
         return f'"{key}"\t"{out_dir}/{new_name}"'
 
     text = re.sub(r'"(Texture\w+)"\s+"([^"\[][^"]*)"', texture, text)
