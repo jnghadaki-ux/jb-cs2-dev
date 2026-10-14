@@ -9,6 +9,8 @@ public sealed class RankWeights
     public double PrisonerKilled { get; set; } = 1;
     public double LastRequestDuelWon { get; set; } = 3;
     public double Death { get; set; } = 0;
+    public double ContrabandFound { get; set; } = 1;
+    public double SnitchCorrect { get; set; } = 1;
 
     /// <summary>Warden ratings a player needs before they appear on the "rating" board.</summary>
     public int RatingMinCount { get; set; } = 5;
@@ -24,7 +26,9 @@ public enum RankCategory
     LastRequests,
     Survived,
     Rounds,
-    Rating
+    Rating,
+    Contraband,
+    Snitch
 }
 
 public sealed record RankEntry(string SteamId, string Name, double Value, int Position);
@@ -42,7 +46,9 @@ public static class Leaderboard
         ["lr"] = RankCategory.LastRequests, ["lrs"] = RankCategory.LastRequests, ["duels"] = RankCategory.LastRequests,
         ["survived"] = RankCategory.Survived, ["survival"] = RankCategory.Survived,
         ["rounds"] = RankCategory.Rounds, ["played"] = RankCategory.Rounds,
-        ["rating"] = RankCategory.Rating, ["ratings"] = RankCategory.Rating, ["rated"] = RankCategory.Rating
+        ["rating"] = RankCategory.Rating, ["ratings"] = RankCategory.Rating, ["rated"] = RankCategory.Rating,
+        ["contraband"] = RankCategory.Contraband, ["searches"] = RankCategory.Contraband, ["search"] = RankCategory.Contraband,
+        ["snitch"] = RankCategory.Snitch, ["snitches"] = RankCategory.Snitch, ["tips"] = RankCategory.Snitch
     };
 
     /// <summary>Average warden rating (1-5), 0 when unrated.</summary>
@@ -57,6 +63,8 @@ public static class Leaderboard
         + s.GuardsKilled * w.GuardKilled
         + s.PrisonersKilled * w.PrisonerKilled
         + s.LastRequestDuelsWon * w.LastRequestDuelWon
+        + s.ContrabandFound * w.ContrabandFound
+        + s.SnitchCorrect * w.SnitchCorrect
         - s.Deaths * w.Death;
 
     public static double Value(PlayerStats s, RankCategory category, RankWeights w) => category switch
@@ -68,6 +76,8 @@ public static class Leaderboard
         RankCategory.Survived => s.RoundsSurvived,
         RankCategory.Rounds => Rounds(s),
         RankCategory.Rating => s.WardenRatingCount >= Math.Max(1, w.RatingMinCount) ? AverageRating(s) : 0,
+        RankCategory.Contraband => s.ContrabandFound,
+        RankCategory.Snitch => s.SnitchCorrect,
         _ => Math.Round(Score(s, w), 1)
     };
 

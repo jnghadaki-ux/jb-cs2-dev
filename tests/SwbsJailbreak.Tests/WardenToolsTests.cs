@@ -30,6 +30,8 @@ public class WardenToolsTests
     [InlineData("css_kiss")]
     [InlineData("css_bet")]
     [InlineData("css_blindfold")]
+    [InlineData("css_search")]
+    [InlineData("css_snitch")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

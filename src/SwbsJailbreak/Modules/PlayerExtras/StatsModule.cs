@@ -45,6 +45,13 @@ public sealed class PlayerStats
     /// <summary>Warden ratings received from prisoners (1-5 each).</summary>
     public int WardenRatingSum { get; set; }
     public int WardenRatingCount { get; set; }
+
+    /// <summary>Contraband (!search / !snitch).</summary>
+    public int SearchesMade { get; set; }
+    public int ContrabandFound { get; set; }
+    public int TimesCaught { get; set; }
+    public int SnitchTips { get; set; }
+    public int SnitchCorrect { get; set; }
 }
 
 /// <summary>
@@ -53,7 +60,7 @@ public sealed class PlayerStats
 /// </summary>
 public sealed class StatsModule : JbModule
 {
-    private const string Ns = "stats";
+    internal const string Ns = "stats";
 
     private StatsConfig Cfg => Section<StatsConfig>("Stats");
 
@@ -101,9 +108,10 @@ public sealed class StatsModule : JbModule
 
     private bool Counting => Players.Humans().Count(c => c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist) >= Math.Max(1, Cfg.MinPlayers);
 
-    private static bool Tracked(JbPlayer? p) => p is { Connected: true, IsBot: false } && p.SteamId64 != 0;
+    internal static bool Tracked(JbPlayer? p) => p is { Connected: true, IsBot: false } && p.SteamId64 != 0;
 
-    private static void Update(JbPlayer p, Action<PlayerStats> change)
+    /// <summary>Change one player's stored stats (other modules use this too, e.g. contraband).</summary>
+    internal static void Update(JbPlayer p, Action<PlayerStats> change)
     {
         var key = p.SteamId64.ToString();
         var s = Storage.Get<PlayerStats>(Ns, key) ?? new PlayerStats();
@@ -326,6 +334,8 @@ public sealed class StatsModule : JbModule
         Chat.ReplyT(caller, info, "stats.warden", s.WardenRounds);
         Chat.ReplyT(caller, info, "stats.kills", s.GuardsKilled, s.PrisonersKilled, s.Deaths);
         Chat.ReplyT(caller, info, "stats.lr", s.LastRequestsPlayed, s.LastRequestDuelsWon);
+        if (s.SearchesMade > 0 || s.TimesCaught > 0 || s.SnitchTips > 0)
+            Chat.ReplyT(caller, info, "stats.contraband", s.ContrabandFound, s.SearchesMade, s.TimesCaught, s.SnitchCorrect, s.SnitchTips);
         if (s.WardenRatingCount > 0)
             Chat.ReplyT(caller, info, "stats.rating", Leaderboard.AverageRating(s).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), s.WardenRatingCount);
         Chat.ReplyT(caller, info, "stats.playtime", minutes / 60, minutes % 60);

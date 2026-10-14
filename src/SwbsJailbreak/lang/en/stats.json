@@ -13,7 +13,7 @@
   "rank.unranked": "{olive}{0} needs {green}{1}{olive} more rounds to be ranked.",
   "rank.not_on_board": "{olive}{0} is not on this leaderboard yet.",
   "rank.empty": "{olive}Nobody is on the {0} leaderboard yet (players need {1} rounds).",
-  "rank.categories": "{olive}Use {green}!rank{olive} or {green}!rank <warden|guards|prisoners|lr|survived|rounds|rating>{olive}, or {green}!rank <player>{olive}.",
+  "rank.categories": "{olive}Use {green}!rank{olive} or {green}!rank <warden|guards|prisoners|lr|survived|rounds|rating|contraband|snitch>{olive}, or {green}!rank <player>{olive}.",
   "rank.cat.score": "Overall score",
   "rank.cat.warden": "Rounds as warden",
   "rank.cat.guardkills": "Guards killed",
@@ -35,5 +35,8 @@
   "rate.option3": "★★★ Okay",
   "rate.option2": "★★ Poor",
   "rate.option1": "★ Bad",
-  "rate.only_prisoners": "{red}Only prisoners can rate the warden."
+  "rate.only_prisoners": "{red}Only prisoners can rate the warden.",
+  "stats.contraband": "{olive}Contraband found: {default}{0}{grey}/{1} searches{olive}, caught: {default}{2}{olive}, correct tips: {default}{3}{grey}/{4}",
+  "rank.cat.contraband": "Contraband found",
+  "rank.cat.snitch": "Correct snitch tips"
 }
