@@ -617,10 +617,17 @@ public sealed partial class WardenModule : JbModule, IWardenService
             d.HasOriginalClanTag = current.Length > 0;
         }
 
-        var tag = IsWardenP(p) ? Cfg.WardenClanTag : "";
+        // Guards show no tag (original), or their crew tag when Crews.GuardTags is on; the warden shows WardenClanTag.
+        var tag = IsWardenP(p) ? Cfg.WardenClanTag : Jb.Crews.ScoreboardTag(p) ?? "";
         c.SetClanTag(tag);
         d.AppliedClanTag = tag;
         d.HasGuardClanTag = true;
+    }
+
+    /// <summary>Re-apply a guard's scoreboard tag (e.g. after they joined or left a crew).</summary>
+    internal void RefreshGuardClanTag(JbPlayer p)
+    {
+        if (p.IsGuard) GiveGuardClanTag(p);
     }
 
     private void RemoveGuardClanTag(JbPlayer p)

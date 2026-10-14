@@ -131,5 +131,9 @@
   "crews.war.fight": "{lightred}Fight!",
   "crews.war.lone_wolf": "{lightred}{0} {olive}survived the Crew War alone!",
   "crews.war.start": "{lightred}CREW WAR! {olive}{0} crews fight each other; guards are referees. Crewmates cannot hurt each other.",
-  "crews.war.won": "{0} {olive}won the Crew War with {1} survivor(s)!"
+  "crews.war.won": "{0} {olive}won the Crew War with {1} survivor(s)!",
+  "crews.chattag.dead": "{grey}*DEAD* ",
+  "crews.chattag.team_t": "{gold}(Prisoners) ",
+  "crews.chattag.team_ct": "{lightblue}(Guards) ",
+  "crews.chattag.team_spec": "{grey}(Spectators) "
 }

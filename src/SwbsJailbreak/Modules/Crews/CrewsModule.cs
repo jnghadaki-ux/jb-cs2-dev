@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Numerics;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
 using SwbsJailbreak.Core;
@@ -40,6 +41,13 @@ public sealed class CrewsConfig
 
     // ---- identity ----
     public bool ScoreboardTags { get; set; } = true;
+
+    /// <summary>Keep the crew tag on the scoreboard while playing guard (the warden still shows the warden tag).</summary>
+    public bool GuardTags { get; set; } = true;
+
+    /// <summary>Put the coloured [TAG] in front of crew members' names in public and team chat.</summary>
+    public bool ChatTags { get; set; } = true;
+
     public bool LogCrewChat { get; set; } = true;
 
     // ---- turf ----
@@ -107,6 +115,8 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         Jb.Crews = this;
         LoadAll();
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        Plugin.AddCommandListener("say", (c, i) => OnChat(c, i, false), HookMode.Pre);
+        Plugin.AddCommandListener("say_team", (c, i) => OnChat(c, i, true), HookMode.Pre);
         _map = hotReload ? (Server.MapName ?? "").ToLowerInvariant() : ""; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         LoadTurf();
     }
@@ -305,12 +315,66 @@ public sealed partial class CrewsModule : JbModule, ICrewService
 
     // ====================================================================== scoreboard tag (prisoners only)
 
+    // ====================================================================== chat tag
+
+    /// <summary>
+    /// Re-prints a crew member's chat line with their coloured [TAG] and blocks the original. Lines another listener
+    /// handles are left alone: commands (! and /), admin chat (@), pending chat prompts and gagged players (the gag
+    /// listener blocks those, and every listener runs, so re-printing them here would bypass the gag).
+    /// </summary>
+    private HookResult OnChat(CCSPlayerController? player, CommandInfo info, bool team)
+    {
+        if (!Cfg.ChatTags || player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+        var crew = CrewOf(player);
+        if (crew == null) return HookResult.Continue;
+        var text = info.GetArg(1).Trim();
+        if (text.Length == 0 || text[0] is '!' or '/' or '@') return HookResult.Continue;
+        if (ChatInput.IsWaiting(player) || player.Jb() is { AdminChatGagged: true }) return HookResult.Continue;
+
+        // Player text must not carry colour tags of its own.
+        text = Colors.Strip(text).Replace("{", "(").Replace("}", ")");
+        var head = $"{CrewColors.Of(crew.Color).Chat}[{crew.Tag}]{{default}} ";
+        if (!player.IsAliveP() && player.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist) head = Lang.T("crews.chattag.dead") + head;
+        if (team) head = Lang.T(player.Team switch
+        {
+            CsTeam.Terrorist => "crews.chattag.team_t",
+            CsTeam.CounterTerrorist => "crews.chattag.team_ct",
+            _ => "crews.chattag.team_spec"
+        }) + head;
+        var line = $"{head}{Chat.Name(player)}{{default}}: {text}";
+
+        foreach (var c in Players.Humans())
+        {
+            if (team && c.Team != player.Team) continue;
+            Chat.Print(c, line, false);
+        }
+
+        Server.PrintToConsole(Colors.Strip($"{(team ? "(team) " : "")}[{crew.Tag}] {player.PlayerName}: {text}"));
+        return HookResult.Handled;
+    }
+
+    public string? ScoreboardTag(JbPlayer player)
+    {
+        if (!Cfg.ScoreboardTags || player.IsBot) return null;
+        var team = player.Team;
+        if (team != CsTeam.Terrorist && !(team == CsTeam.CounterTerrorist && Cfg.GuardTags)) return null;
+        return CrewOf(player.SteamId64)?.Tag;
+    }
+
     private void ApplyTag(JbPlayer p)
     {
         var c = p.Controller;
         if (c == null || !c.IsValid || c.IsBot) return;
+        if (c.Team == CsTeam.CounterTerrorist && Section<Warden.WardenConfig>("Warden").GuardClanTags)
+        {
+            // The warden module owns guard tags and asks ScoreboardTag(); hand it back and let it refresh.
+            RestoreTag(p);
+            Plugin.GetModule<Warden.WardenModule>()?.RefreshGuardClanTag(p);
+            return;
+        }
+
         var crew = Cfg.ScoreboardTags ? CrewOf(p) : null;
-        var desired = crew != null && c.Team == CsTeam.Terrorist ? crew.Tag : "";
+        var desired = crew != null && (c.Team == CsTeam.Terrorist || (c.Team == CsTeam.CounterTerrorist && Cfg.GuardTags)) ? crew.Tag : "";
         var s = p.Data<CrewTagState>();
         var current = c.Clan ?? "";
         if (desired.Length == 0)

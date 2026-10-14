@@ -206,6 +206,10 @@ public interface ICrewService
     Crew? CrewOf(ulong steamId64);
 
     bool SameCrew(CCSPlayerController a, CCSPlayerController b);
+
+    /// <summary>Crew tag to show on the scoreboard for this player on their current team, or null (crew tags off,
+    /// no crew, or not shown on that team).</summary>
+    string? ScoreboardTag(JbPlayer player);
 }
 
 public sealed class NullCrewService : ICrewService
@@ -214,4 +218,5 @@ public sealed class NullCrewService : ICrewService
     public bool Available => false;
     public Crew? CrewOf(ulong steamId64) => null;
     public bool SameCrew(CCSPlayerController a, CCSPlayerController b) => false;
+    public string? ScoreboardTag(JbPlayer player) => null;
 }
