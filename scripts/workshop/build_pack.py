@@ -6,7 +6,7 @@ Output (a zip and the folder it was made from):
   swbs_jailbreak/                     -> copy into  ...\\Counter-Strike Global Offensive\\content\\csgo_addons\\swbs_jailbreak\\
       sounds/swbs/...                    the original sounds, converted to 44.1 kHz 16-bit mono WAV (CS2's compiler input)
       soundevents/swbs_jailbreak.vsndevts   one sound event per sound (names used by the plugin's WorkshopPack module)
-  compile_pack.bat                    compiles the addon with CS2's resourcecompiler (or use the Asset Browser)
+  compile_pack.bat + find_cs2.ps1     finds CS2, copies the addon in, compiles and checks it (or use the Asset Browser)
   preview.png                         512x512 Workshop preview image
   README.txt                          step by step: compile, upload, MultiAddonManager, plugin config
   source1_models_to_convert/          the CS:GO models/materials (cannot be used as-is in CS2: see CONVERT_MODELS.txt)
@@ -82,28 +82,114 @@ def soundevents(entries: dict) -> str:
 
 
 COMPILE_BAT = r"""@echo off
-rem Compiles the swbs_jailbreak addon with CS2's resource compiler.
-rem Usage: compile_pack.bat ["path to Counter-Strike Global Offensive"]
-setlocal
-set "CS2=%~1"
-if "%CS2%"=="" set "CS2=C:\Program Files (x86)\Steam\steamapps\common\Counter-Strike Global Offensive"
-set "RC=%CS2%\game\bin\win64\resourcecompiler.exe"
-set "ADDON=%CS2%\content\csgo_addons\swbs_jailbreak"
-if not exist "%RC%" (
-  echo resourcecompiler.exe not found at "%RC%".
-  echo Install "Counter-Strike 2 Workshop Tools" ^(Steam - CS2 - Properties - DLC^) or pass your CS2 folder as the first argument.
-  pause
-  exit /b 1
-)
-if not exist "%ADDON%\soundevents\swbs_jailbreak.vsndevts" (
-  echo Copy the swbs_jailbreak folder from the pack into "%CS2%\content\csgo_addons\" first.
-  pause
-  exit /b 1
-)
-"%RC%" -r -i "%ADDON%\*"
+setlocal EnableExtensions
+title SWBS workshop pack - compile
+rem Finds CS2 (any Steam library), copies the pack into content\csgo_addons\swbs_jailbreak, compiles it with CS2's
+rem resourcecompiler and checks the result. Optional: drag your "Counter-Strike Global Offensive" folder onto this file.
+set "PACK=%~dp0"
+set "SRC=%PACK%swbs_jailbreak"
+set "LOG=%PACK%compile_log.txt"
+echo ============================================
+echo  SWBS workshop pack - compile
+echo ============================================
 echo.
-echo Done. Compiled files are in "%CS2%\game\csgo_addons\swbs_jailbreak". Next: upload with the Workshop Manager (README step 4).
-pause
+if not exist "%SRC%\soundevents\swbs_jailbreak.vsndevts" goto :not_extracted
+
+set "CS2=%~1"
+if not "%CS2%"=="" goto :have_cs2
+echo Looking for Counter-Strike 2 in your Steam libraries...
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PACK%find_cs2.ps1"`) do set "CS2=%%P"
+if "%CS2%"=="" goto :no_cs2
+if "%CS2:~0,8%"=="NOTOOLS#" goto :no_tools_found
+
+:have_cs2
+set "RC=%CS2%\game\bin\win64\resourcecompiler.exe"
+if not exist "%RC%" goto :no_tools
+set "DEST=%CS2%\content\csgo_addons\swbs_jailbreak"
+set "OUT=%CS2%\game\csgo_addons\swbs_jailbreak"
+echo CS2 folder: %CS2%
+echo.
+echo [1/3] Copying the pack into
+echo       %DEST%
+robocopy "%SRC%" "%DEST%" /E /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 goto :copy_failed
+
+echo [2/3] Compiling (takes a few seconds, the log goes to compile_log.txt)...
+"%RC%" -r -i "%DEST%\*" > "%LOG%" 2>&1
+
+echo [3/3] Checking the result...
+if not exist "%OUT%\soundevents\swbs_jailbreak.vsndevts_c" goto :compile_failed
+set /a N=0
+for /r "%OUT%\sounds" %%F in (*.vsnd_c) do set /a N+=1
+echo.
+echo SUCCESS: the sound events and %N% sounds are compiled in
+echo   %OUT%
+echo.
+echo Next: start the CS2 Workshop Tools, pick the swbs_jailbreak addon and upload it with the
+echo Workshop Manager (README.txt step 4).
+goto :end
+
+:not_extracted
+echo PROBLEM: the swbs_jailbreak folder is not next to this file.
+echo Extract the WHOLE zip first (right click the zip - Extract All), then run compile_pack.bat
+echo from the extracted folder. Running it from inside the zip does not work.
+goto :end
+
+:no_cs2
+echo PROBLEM: Counter-Strike 2 was not found in your Steam libraries.
+echo Drag your "Counter-Strike Global Offensive" folder onto compile_pack.bat, or run in a command prompt:
+echo   compile_pack.bat "D:\SteamLibrary\steamapps\common\Counter-Strike Global Offensive"
+goto :end
+
+:no_tools_found
+set "CS2=%CS2:~8%"
+:no_tools
+echo PROBLEM: CS2 was found but the Workshop Tools are not installed:
+echo   %CS2%\game\bin\win64\resourcecompiler.exe is missing.
+echo Steam - right click Counter-Strike 2 - Properties - DLC - tick "Counter-Strike 2 Workshop Tools",
+echo wait for the download, then run this again.
+goto :end
+
+:copy_failed
+echo PROBLEM: could not copy the files into %DEST%
+echo Close the Workshop Tools / CS2 and try again, or copy the folder contents by hand (README step 3).
+goto :end
+
+:compile_failed
+echo PROBLEM: compiling did not produce the sound events. The compiler said:
+echo --------------------------------------------
+type "%LOG%"
+echo --------------------------------------------
+echo Send compile_log.txt (next to this file) if you need help. You can also compile in the Workshop Tools:
+echo Asset Browser - swbs_jailbreak addon - select the files - right click - Recompile.
+goto :end
+
+:end
+echo.
+echo Press any key to close this window.
+pause >nul
+"""
+
+FIND_CS2_PS1 = r"""# Prints the Counter-Strike 2 install folder that has the Workshop Tools (resourcecompiler.exe), searching every
+# Steam library. Prints "NOTOOLS#<folder>" when CS2 is installed without the tools. Used by compile_pack.bat.
+$ErrorActionPreference = 'SilentlyContinue'
+$libs = @()
+foreach ($key in 'HKCU:\Software\Valve\Steam', 'HKLM:\SOFTWARE\WOW6432Node\Valve\Steam', 'HKLM:\SOFTWARE\Valve\Steam') {
+    $item = Get-ItemProperty $key
+    if ($item.SteamPath) { $libs += $item.SteamPath }
+    if ($item.InstallPath) { $libs += $item.InstallPath }
+}
+$libs += 'C:\Program Files (x86)\Steam'
+foreach ($s in @($libs)) {
+    $vdf = Join-Path ($s -replace '/', '\') 'steamapps\libraryfolders.vdf'
+    if (Test-Path $vdf) {
+        foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) { $libs += $m.Groups[1].Value.Replace('\\', '\') }
+    }
+}
+$games = $libs | ForEach-Object { Join-Path ($_ -replace '/', '\') 'steamapps\common\Counter-Strike Global Offensive' } | Select-Object -Unique
+foreach ($g in $games) { if (Test-Path (Join-Path $g 'game\bin\win64\resourcecompiler.exe')) { Write-Output $g; exit 0 } }
+foreach ($g in $games) { if (Test-Path (Join-Path $g 'game\bin\win64\cs2.exe')) { Write-Output ('NOTOOLS#' + $g); exit 0 } }
+exit 1
 """
 
 README = r"""SWBS Jailbreak workshop pack
@@ -144,11 +230,12 @@ Steps (Windows)
    This makes  ...\Counter-Strike Global Offensive\content\csgo_addons\swbs_jailbreak\
    and         ...\Counter-Strike Global Offensive\game\csgo_addons\swbs_jailbreak\
 
-3. Copy everything inside this pack's  swbs_jailbreak  folder (sounds, soundevents) into
-   ...\Counter-Strike Global Offensive\content\csgo_addons\swbs_jailbreak\
-   Then compile it, either way:
-   a) double click compile_pack.bat (pass your CS2 folder as an argument if it is not in the default Steam library), or
-   b) open the Workshop Tools with the swbs_jailbreak addon, Asset Browser, select the addon's files, right click > Recompile.
+3. Extract the whole zip, then double click compile_pack.bat. It finds CS2 in any Steam library, copies the pack into
+   content\csgo_addons\swbs_jailbreak, compiles it and tells you SUCCESS (with the number of sounds) or what is wrong.
+   If it cannot find CS2, drag your "Counter-Strike Global Offensive" folder onto compile_pack.bat.
+   (By hand instead: copy the contents of this pack's swbs_jailbreak folder into
+   ...\Counter-Strike Global Offensive\content\csgo_addons\swbs_jailbreak\ and in the Workshop Tools Asset Browser
+   select the addon's files > right click > Recompile.)
    The compiled .vsnd_c / .vsndevts_c files appear under ...\game\csgo_addons\swbs_jailbreak\
 
    Quick check before uploading: in the Workshop Tools, open the Asset Browser, find swbs_jailbreak.vsndevts,
@@ -258,7 +345,8 @@ def main() -> int:
                 shutil.copy2(f, dst)
     (staged / "CONVERT_MODELS.txt").write_text(CONVERT_MODELS.replace("\n", "\r\n"), encoding="utf-8")
 
-    (pack / "compile_pack.bat").write_text(COMPILE_BAT.replace("\n", "\r\n"), encoding="utf-8")
+    (pack / "compile_pack.bat").write_text(COMPILE_BAT.replace("\n", "\r\n"), encoding="ascii")
+    (pack / "find_cs2.ps1").write_text(FIND_CS2_PS1.replace("\n", "\r\n"), encoding="utf-8")
     (pack / "README.txt").write_text(README.replace("\n", "\r\n"), encoding="utf-8")
     preview(pack / "preview.png")
 
