@@ -6,6 +6,6 @@ of this repository so that this branch shows code only.
   View:     switch to the "docs" branch on GitHub
   Restore:  git checkout docs -- .        (puts the .md files next to the code; they are git-ignored on this branch)
 
-Installable package: releases/SwbsJailbreak-0.16.1-server-package.zip (net10.0 build for CounterStrikeSharp 1.0.376+; contains INSTALL.txt, the Windows scripts and docs).
+Installable package: releases/SwbsJailbreak-0.17.0-server-package.zip (net10.0 build for CounterStrikeSharp 1.0.376+; contains INSTALL.txt, the Windows scripts and docs).
 
 Workshop pack (sounds addon): releases/SwbsJailbreak-workshop-pack.zip - built by scripts/workshop/build_pack.py <smplugins fork> <out dir>; steps in its README.txt.

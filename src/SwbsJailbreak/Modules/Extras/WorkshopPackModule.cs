@@ -24,6 +24,21 @@ public sealed class WorkshopPackConfig
 
     /// <summary>Set by the plugin after it pointed the sound settings at the pack once; set false to do it again.</summary>
     public bool SoundsApplied { get; set; } = false;
+
+    /// <summary>
+    /// Use the pack's models (converted from the original SWBS props) instead of beams: Capture the Flag flag and
+    /// capture point, Race LR and Speedrun finish line, RPG / Rocketeer rockets. Turn off if compile_pack.bat reported
+    /// fewer than 5 models (missing models would show as the engine's error model).
+    /// </summary>
+    public bool UseModels { get; set; } = true;
+
+    public string FlagModel { get; set; } = "models/swbs/flag.vmdl";
+    public string CapturePointModel { get; set; } = "models/swbs/capture_point.vmdl";
+    public string FinishLineModel { get; set; } = "models/swbs/finish_line.vmdl";
+    public string MissileModel { get; set; } = "models/swbs/missile.vmdl";
+
+    /// <summary>Converted too, not used yet (CS2 cannot replace the knife's first-person model).</summary>
+    public string RocketLauncherModel { get; set; } = "models/swbs/rocket_launcher.vmdl";
 }
 
 /// <summary>
@@ -63,12 +78,34 @@ public sealed class WorkshopPackModule : JbModule
         };
     }
 
+    private static WorkshopPackModule? _instance;
+
+    /// <summary>The pack model to use for a prop, or null (pack off, models off or no path): callers draw beams instead.</summary>
+    internal static string? Model(Func<WorkshopPackConfig, string> pick)
+    {
+        var cfg = _instance?.Cfg;
+        if (cfg is not { Enabled: true, UseModels: true }) return null;
+        var path = pick(cfg).Trim();
+        return path.Length == 0 ? null : path;
+    }
+
+    private IEnumerable<string> Models() =>
+        new[] { Cfg.FlagModel, Cfg.CapturePointModel, Cfg.FinishLineModel, Cfg.MissileModel, Cfg.RocketLauncherModel }
+            .Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim());
+
+    public override void OnUnload(bool hotReload)
+    {
+        if (ReferenceEquals(_instance, this)) _instance = null;
+    }
+
     public override void OnLoad(bool hotReload)
     {
+        _instance = this;
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
         {
             if (!Cfg.Enabled) return;
             if (!string.IsNullOrWhiteSpace(Cfg.SoundEventsFile)) manifest.AddResource(Cfg.SoundEventsFile.Trim());
+            if (Cfg.UseModels) foreach (var m in Models()) manifest.AddResource(m);
             foreach (var r in Cfg.ExtraResources.Where(r => !string.IsNullOrWhiteSpace(r))) manifest.AddResource(r.Trim());
         });
         if (Cfg.Enabled && !Cfg.SoundsApplied) Apply();

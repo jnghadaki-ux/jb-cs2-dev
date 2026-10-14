@@ -49,6 +49,7 @@ internal sealed class ContestState
     public Vector? RaceEnd;
     public bool RaceStarted;
     public readonly List<CBeam> FinishLine = new();
+    public CBaseModelEntity? FinishProp; // workshop pack finish line model
     public JbMenu? PlacementMenu;
 
     // gun toss
@@ -128,6 +129,8 @@ public sealed class ContestLastRequests : JbModule
         s.RaceStarted = false;
         foreach (var b in s.FinishLine) Fx.SafeRemove(b);
         s.FinishLine.Clear();
+        Fx.SafeRemove(s.FinishProp);
+        s.FinishProp = null;
         s.PlacementMenu = null;
     }
 
@@ -727,6 +730,19 @@ public sealed class ContestLastRequests : JbModule
     /// <summary>Finish line: two poles and a checkered top bar made of beam entities, 40 units wide.</summary>
     private static void DrawFinishLine(ContestState s, Vector at, float yaw)
     {
+        if (Extras.WorkshopPackModule.Model(c => c.FinishLineModel) is { } model)
+        {
+            // The original SWBS finish line model (banner across the running direction) and the green ground line.
+            s.FinishProp = Fx.Prop(model, at, new QAngle(0, yaw, 0));
+            var r = (yaw + 90f) * MathF.PI / 180f;
+            var ground = Fx.Beam(new Vector(at.X + MathF.Cos(r) * 33f, at.Y + MathF.Sin(r) * 33f, at.Z + 1f),
+                new Vector(at.X - MathF.Cos(r) * 33f, at.Y - MathF.Sin(r) * 33f, at.Z + 1f), Color.Lime, 2f);
+            if (ground != null) s.FinishLine.Add(ground);
+            if (s.FinishProp != null) return;
+            foreach (var b in s.FinishLine) Fx.SafeRemove(b);
+            s.FinishLine.Clear();
+        }
+
         var rad = (yaw + 90f) * MathF.PI / 180f;
         var dx = MathF.Cos(rad) * 20f;
         var dy = MathF.Sin(rad) * 20f;

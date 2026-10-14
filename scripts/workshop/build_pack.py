@@ -20,6 +20,9 @@ import sys
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import props  # noqa: E402  (CS:GO props -> CS2 models)
+
 ADDON = "swbs_jailbreak"
 EVENTS_FILE = "soundevents/swbs_jailbreak.vsndevts"
 
@@ -41,16 +44,13 @@ SOUNDS = {
     "swbs.teleport": (0.9, ["Plugins/Blocks/files/sound/swoobles/blocks/teleport/teleport.mp3"], "misc"),
 }
 
-# Source 1 (CS:GO) assets staged for manual conversion: model folders and the material folders they use.
+# Source 1 (CS:GO) assets that still need a person (re-rigging onto the CS2 player skeleton): the player models.
+# The props are converted automatically by props.py.
 SOURCE1_MODELS = [
-    "Mods/UltimateJailbreak/files/models/swoobles/ultimate_jailbreak",
-    "Mods/UltimateJailbreak/files/models/swoobles/rocket_jumping",
-    "Mods/UltimateJailbreak/files/models/weapons/rocket_launcher",
     "Mods/UltimateJailbreak/files/models/player/custom_player/swoobles",
 ]
 SOURCE1_MATERIALS = [
-    "Mods/UltimateJailbreak/files/materials",
-    "Plugins/CustomWeapons/files/materials",
+    "Mods/UltimateJailbreak/files/materials/swoobles/player",
 ]
 
 KV3_HEADER = "<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->"
@@ -136,9 +136,12 @@ echo [3/3] Checking the result...
 if not exist "%OUT%\soundevents\swbs_jailbreak.vsndevts_c" goto :compile_failed
 set /a N=0
 for /r "%OUT%\sounds" %%F in (*.vsnd_c) do set /a N+=1
+set /a M=0
+if exist "%OUT%\models" for /r "%OUT%\models" %%F in (*.vmdl_c) do set /a M+=1
 echo.
-echo SUCCESS: the sound events and %N% sounds are compiled in
+echo SUCCESS: the sound events, %N% sounds and %M% of 5 models are compiled in
 echo   %OUT%
+if %M% LSS 5 echo NOTE: not every model compiled. Send compile_log.txt; until then set "UseModels": false in WorkshopPack.
 echo.
 echo Next: start the CS2 Workshop Tools, pick the swbs_jailbreak addon and upload it with the
 echo Workshop Manager (README.txt step 4).
@@ -257,9 +260,21 @@ Sounds from the original SWBS jailbreak (SMPlugins fork), one sound event each:
 
 You do not type these anywhere: turning WorkshopPack.Enabled on (step 6) sets all of them once.
 
+Models (the original SWBS props, converted to CS2: SMD mesh + PNG textures + .vmat + .vmdl):
+
+  models/swbs/flag.vmdl            Capture the Flag flag (tinted in the team colour)
+  models/swbs/capture_point.vmdl   Capture the Flag capture point
+  models/swbs/finish_line.vmdl     Race LR and Speedrun finish line
+  models/swbs/missile.vmdl         RPG day / Rocketeer rockets
+  models/swbs/rocket_launcher.vmdl converted for later (CS2 cannot swap the knife's first-person model)
+
+With WorkshopPack.Enabled and WorkshopPack.UseModels (default true) the plugin uses them instead of the beam versions.
+compile_pack.bat reports how many of the 5 models compiled; if it is fewer, send compile_log.txt and set
+"UseModels": false meanwhile (a missing model would show as the engine's error model).
+
 Not included: the SpeedRuns announcer lines (clips from other games, which get Workshop items taken down), the map vote
-and Blocks sounds (plugins you do not run). The CS:GO models are in source1_models_to_convert (see CONVERT_MODELS.txt):
-CS2 cannot load CS:GO models, they must be rebuilt in ModelDoc first.
+and Blocks sounds (plugins you do not run). The guard and prisoner player models are in source1_models_to_convert
+(see CONVERT_MODELS.txt): they need re-rigging onto the CS2 player skeleton by hand.
 
 The SMPlugins fork has no license file. Keep the Workshop item Unlisted and replace anything you are unsure about over time.
 
@@ -303,27 +318,17 @@ Updating the pack later: change files in content\csgo_addons\swbs_jailbreak, com
 Update. MultiAddonManager makes players download the new version.
 """
 
-CONVERT_MODELS = r"""CS:GO models from the SMPlugins fork (Source 1 .mdl/.vvd/.vtx/.phy with .vmt/.vtf materials)
-==========================================================================================
-CS2 cannot load these files. Each must be rebuilt as a CS2 model before it can go in the pack:
+CONVERT_MODELS = r"""CS:GO player models from the SMPlugins fork (guard + 3 prisoners)
+====================================================================
+The props (flag, capture point, finish line, missile, rocket launcher) are already converted and inside the addon.
+These player models are not: CS2 player models use a different skeleton, so each one has to be re-rigged by hand:
 
-  1. Crowbar (steamcommunity.com/groups/CrowbarTool): Decompile the .mdl -> .qc + .smd files.
-  2. VTFEdit: open each .vtf under materials\ and export it as .tga.
-  3. Copy the .smd and .tga files into content\csgo_addons\swbs_jailbreak\models\swbs\... and materials\swbs\...
-  4. Material Editor (Workshop Tools): one material per texture.
-  5. ModelDoc: New model > add the .smd mesh, assign the materials, add physics where it needs collision, compile.
-
-What each one is for in the plugin:
-  swoobles/ultimate_jailbreak/flag            Capture the Flag flag (currently beams)
-  swoobles/ultimate_jailbreak/capture_point   Capture the Flag capture point
-  swoobles/ultimate_jailbreak/finish_line     Race LR / Speedrun finish line
-  weapons/rocket_launcher + swoobles/rocket_jumping/missile   RPG launcher and rocket (currently beam trails)
-  player/custom_player/swoobles/guard + prisoners/*   guard and prisoner player models (PlayerModels.GuardModel,
-      PlayerModels.PrisonerModels) - these must also be re-rigged onto the CS2 player skeleton (export a CS2 agent with
-      Source 2 Viewer, move the mesh onto it in Blender, build on the CS2 base player model in ModelDoc). Without that,
-      players turn into boxes. Test on an empty server before setting PlayerModels.ApplyModels to true.
-
-Add every compiled model path to WorkshopPack.ExtraResources so it is precached, then set the plugin setting.
+  1. Blender + the SourceIO add-on: File > Import > Source Engine > MDL (keep this folder structure for the textures).
+  2. Export a CS2 agent with Source 2 Viewer as the target skeleton, move the mesh onto it and redo the weight painting.
+  3. ModelDoc: build the model on the CS2 base player model (hitboxes, animations), assign materials, compile.
+  4. Set PlayerModels.GuardModel / PlayerModels.PrisonerModels to the new .vmdl paths and add them to
+     WorkshopPack.ExtraResources. Test on an empty server before PlayerModels.ApplyModels = true; a wrong rig turns
+     players into boxes.
 """
 
 
@@ -374,6 +379,9 @@ def main() -> int:
     ev.parent.mkdir(parents=True, exist_ok=True)
     ev.write_text(soundevents(events), encoding="utf-8")
 
+    print("models:")
+    models = props.convert_all(fork, addon)
+
     staged = pack / "source1_models_to_convert"
     for rel in SOURCE1_MODELS + SOURCE1_MATERIALS:
         src = fork / rel
@@ -399,7 +407,7 @@ def main() -> int:
         for f in sorted(pack.rglob("*")):
             if f.is_file():
                 z.write(f, f.relative_to(out))
-    print(f"pack: {zip_path} ({len(events)} sound events)")
+    print(f"pack: {zip_path} ({len(events)} sound events, {len(models)} models)")
     return 0
 
 
