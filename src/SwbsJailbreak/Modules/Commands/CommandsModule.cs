@@ -34,9 +34,6 @@ public sealed class CommandsConfig
     public int TimerMin { get; set; } = 10;
     public int TimerMax { get; set; } = 180;
     public string TimerCompleteSound { get; set; } = "UIPanorama.round_report_round_won";
-
-    /// <summary>UltJB_Command_Xray: seconds between toggles.</summary>
-    public float XrayToggleDelay { get; set; } = 3f;
 }
 
 internal sealed class CommandsState : IRoundScoped
@@ -60,7 +57,7 @@ internal sealed class CommandsState : IRoundScoped
 
 /// <summary>
 /// UltJB_Command_CTMessage (!g), Freekill (!freekill, !whokilled/!wk), OneUp (!1up, !xup), Roll (!roll),
-/// Rules (!jbrules, !definitions/!defs), Speed (!speed), Timer (!timer, !stoptimer) and Xray (!xray).
+/// Rules (!jbrules, !definitions/!defs), Speed (!speed), Timer (!timer, !stoptimer).
 /// </summary>
 public sealed class CommandsModule : JbModule
 {
@@ -75,10 +72,6 @@ public sealed class CommandsModule : JbModule
     private int _countdownElapsed;
     private int _countdownOwnerSlot = -1;
 
-    private readonly HashSet<int> _xrayUsers = new();
-    private readonly Dictionary<int, GlowHandle> _xrayGlows = new();
-    private readonly float[] _xrayLastToggle = new float[Players.MaxSlots];
-    private string? _originalForceTransmit;
 
     private static CommandsState S(JbPlayer p) => p.Data<CommandsState>();
 
@@ -87,19 +80,13 @@ public sealed class CommandsModule : JbModule
         Plugin.AddCommandListener("say", OnSay);
         Plugin.AddCommandListener("say_team", OnSay);
         Plugin.AddTimer(0.3f, TrackPositions, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
-        JbEvents.WardenSelected += _ => RefreshXray();
-        JbEvents.WardenRemoved += _ => RefreshXray();
         JbEvents.WardenDeath += OnWardenDeath;
-        JbEvents.PlayerModelsApplied += _ => RefreshXray();
-        JbEvents.LastGuardActivated += _ => RefreshXray();
         JbEvents.DayStarted += (_, _, _) => StopCountdown(Lang.T("cmd.timer.stopped_day"));
     }
 
     public override void OnUnload(bool hotReload)
     {
         StopCountdown(null);
-        ClearXrayGlows();
-        RestoreForceTransmit();
     }
 
     // ------------------------------------------------------------------ lifecycle
@@ -109,7 +96,6 @@ public sealed class CommandsModule : JbModule
     public override void OnPlayerSpawn(JbPlayer player)
     {
         S(player).DiedThisRound = false;
-        if (_xrayUsers.Count > 0) RefreshXray();
     }
 
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
@@ -118,18 +104,10 @@ public sealed class CommandsModule : JbModule
         s.DiedThisRound = true;
         s.DeathTime = (float)Server.EngineTime;
         s.KilledBy = attacker?.Name ?? "world";
-        if (_xrayUsers.Count > 0) RefreshXray();
-    }
-
-    public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
-    {
-        if (_xrayUsers.Count > 0) Server.NextFrame(RefreshXray);
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)
     {
-        if (_xrayUsers.Remove(player.Slot)) UpdateXrayState();
-        if (_xrayGlows.Remove(player.Slot, out var g)) Glow.Remove(g);
         if (player.Slot == _countdownOwnerSlot) _countdownOwnerSlot = -1;
     }
 
@@ -417,80 +395,5 @@ public sealed class CommandsModule : JbModule
     private void OnWardenDeath(JbPlayer warden)
     {
         if (_countdown != null && warden.Slot == _countdownOwnerSlot) StopCountdown(null);
-    }
-
-    // ------------------------------------------------------------------ x-ray
-
-    [ConsoleCommand("css_xray", "sm_xray - see everyone's outline through walls while dead")]
-    public void CmdXray(CCSPlayerController? caller, CommandInfo info)
-    {
-        if (caller == null) return;
-        if (!Perms.Has(caller, "ban")) { Chat.Tell(caller, "core.no_access"); return; }
-        var now = (float)Server.EngineTime;
-        if (_xrayLastToggle[caller.Slot] + Cfg.XrayToggleDelay > now) { Chat.Tell(caller, "cmd.xray.wait"); return; }
-        _xrayLastToggle[caller.Slot] = now;
-        if (_xrayUsers.Remove(caller.Slot))
-        {
-            Chat.Tell(caller, "cmd.xray.off");
-            Jb.Log.LogEvent($"{caller.PlayerName} toggled X-ray off", caller.Jb(), null, LogType.Admin);
-        }
-        else
-        {
-            _xrayUsers.Add(caller.Slot);
-            Chat.Tell(caller, "cmd.xray.on");
-            Jb.Log.LogEvent($"{caller.PlayerName} toggled X-ray on", caller.Jb(), null, LogType.Admin);
-        }
-
-        UpdateXrayState();
-    }
-
-    private void UpdateXrayState()
-    {
-        if (_xrayUsers.Count == 0)
-        {
-            ClearXrayGlows();
-            RestoreForceTransmit();
-            return;
-        }
-
-        if (_originalForceTransmit == null)
-        {
-            // Original forced player transmission so outlines of far-away players are networked.
-            _originalForceTransmit = ConVar.Find("sv_force_transmit_players")?.StringValue ?? "";
-            if (_originalForceTransmit.Length > 0) Server.ExecuteCommand("sv_force_transmit_players 1");
-        }
-
-        RefreshXray();
-    }
-
-    private void RestoreForceTransmit()
-    {
-        if (_originalForceTransmit == null) return;
-        if (_originalForceTransmit.Length > 0) Server.ExecuteCommand($"sv_force_transmit_players {_originalForceTransmit}");
-        _originalForceTransmit = null;
-    }
-
-    private void ClearXrayGlows()
-    {
-        foreach (var g in _xrayGlows.Values) Glow.Remove(g);
-        _xrayGlows.Clear();
-    }
-
-    /// <summary>Rebuild outlines for every alive player (team coloured); visible only to dead x-ray users.</summary>
-    private void RefreshXray()
-    {
-        ClearXrayGlows();
-        if (_xrayUsers.Count == 0) return;
-        foreach (var c in Players.Alive())
-        {
-            var color = c.Team switch
-            {
-                CsTeam.Terrorist => Color.FromArgb(255, 255, 0, 0),
-                CsTeam.CounterTerrorist => Color.FromArgb(255, 0, 0, 255),
-                _ => Color.FromArgb(255, 0, 255, 0)
-            };
-            var g = Glow.Attach(c, color, viewer => _xrayUsers.Contains(viewer.Slot) && !viewer.IsAliveP());
-            if (g != null) _xrayGlows[c.Slot] = g;
-        }
     }
 }
