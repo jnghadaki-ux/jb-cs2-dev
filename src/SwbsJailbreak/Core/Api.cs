@@ -63,6 +63,9 @@ public static class JbEvents
     public static event Action<JbPlayer, LrFlags>? LastRequestStarted;
     public static event Action<JbPlayer, JbPlayer?>? LastRequestEnded;
 
+    /// <summary>ADDITION: an LR with an opponent was decided by a death: (winner, loser, prisoner of the LR, the LR).</summary>
+    public static event Action<JbPlayer, JbPlayer, JbPlayer, LastRequestDefinition>? LastRequestDecided;
+
     // ---- days ----
     public static event Action<JbPlayer?, DayType, bool>? DayStarted;
     public static event Action<JbPlayer?>? WardayStarted;
@@ -109,6 +112,16 @@ public static class JbEvents
         foreach (var d in LastRequestStarted.GetInvocationList())
         {
             try { ((Action<JbPlayer, LrFlags>)d)(p, flags); }
+            catch (Exception ex) { LogError(ex); }
+        }
+    }
+
+    public static void RaiseLastRequestDecided(JbPlayer winner, JbPlayer loser, JbPlayer prisoner, LastRequestDefinition lr)
+    {
+        if (LastRequestDecided == null) return;
+        foreach (var d in LastRequestDecided.GetInvocationList())
+        {
+            try { ((Action<JbPlayer, JbPlayer, JbPlayer, LastRequestDefinition>)d)(winner, loser, prisoner, lr); }
             catch (Exception ex) { LogError(ex); }
         }
     }
@@ -183,6 +196,7 @@ public static class JbEvents
         LastRequestInitialized = null;
         LastRequestStarted = null;
         LastRequestEnded = null;
+        LastRequestDecided = null;
         DayStarted = null;
         WardayStarted = null;
         WardayFreezeEnded = DayEnded = null;

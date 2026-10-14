@@ -565,6 +565,14 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
         }
 
         var m = new JbMenu(Lang.T("lr.menu.categories")) { Timeout = -1, OnCancel = OnLrMenuCancelled };
+        // ADDITION: the prisoner's last picks first (★), when they can be picked right now.
+        foreach (var name in RecentLastRequests.Of(p))
+        {
+            var lr = Usable.FirstOrDefault(l => string.Equals(l.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (lr == null || DisabledReason(p, lr) != null) continue;
+            AddLrItem(m, lr, Lang.T("lr.menu.recent", Hud.Escape(lr.Name), Hud.Escape(lr.Category)), DisplayCategoryMenu);
+        }
+
         foreach (var cat in cats)
         {
             var category = cat;
@@ -579,50 +587,56 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
         ShowLrMenu(p, m);
     }
 
+    /// <summary>Why this LR is greyed out for the prisoner right now (phrase key), or null when it can be picked.</summary>
+    private string? DisabledReason(JbPlayer p, LastRequestDefinition lr)
+    {
+        var prisonersAlive = AliveOn(CsTeam.Terrorist);
+        if ((lr.Flags & LrFlags.Freeday) != 0 && MapTimeLeft() is { } left && left <= Cfg.DisableFreedayLrTime) return "lr.menu.map_end";
+        if ((lr.Flags & LrFlags.LastPrisonerOnlyCanUse) != 0 && prisonersAlive > 1) return "lr.menu.last_t";
+        if (lr.Unavailable?.Invoke(p) is { } why) return why;
+        if ((lr.Flags & LrFlags.Rebel) != 0 && _numRebelingTogether == 1)
+        {
+            if (prisonersAlive > 1) return "lr.menu.last_t";
+            if (AliveOn(CsTeam.CounterTerrorist) < GuardsNeededForRebeling(_numRebelingTogether)) return "lr.menu.need_ct";
+        }
+
+        return null;
+    }
+
+    /// <summary>A menu entry that starts the LR, re-checking it when picked (things change while a menu is open).</summary>
+    private void AddLrItem(JbMenu m, LastRequestDefinition def, string text, Action<JbPlayer> reopen)
+    {
+        m.Add(text, x =>
+        {
+            var pl = x.Jb();
+            if (pl == null) return;
+            if (!S(pl).Initialized || S(pl).Started) return;
+            if (DisabledReason(pl, def) is { } now)
+            {
+                if (pl.Controller is { } pc) Plain(pc, "lr.menu.no_longer", def.Name, Colors.Strip(Lang.T(now)));
+                reopen(pl);
+                return;
+            }
+
+            Kill(ref S(pl).SelectTimer);
+            if (StartLastRequest(pl, def)) RecentLastRequests.Record(pl, def.Name);
+        });
+    }
+
     private void DisplayLrMenu(JbPlayer p, string category, JbMenu parent)
     {
         var m = new JbMenu(Lang.T("lr.menu.lrs", category)) { Timeout = -1, Parent = parent, OnCancel = OnLrMenuCancelled };
-        var prisonersAlive = AliveOn(CsTeam.Terrorist);
-        var guardsAlive = AliveOn(CsTeam.CounterTerrorist);
-        var guardsNeeded = GuardsNeededForRebeling(_numRebelingTogether);
-        var mapEndingSoon = MapTimeLeft() is { } left && left <= Cfg.DisableFreedayLrTime;
         var any = false;
         foreach (var lr in Usable.Where(l => l.Category == category))
         {
             any = true;
-            var def = lr;
-            string? disabled = null;
-            if ((lr.Flags & LrFlags.Freeday) != 0 && mapEndingSoon) disabled = "lr.menu.map_end";
-            else if ((lr.Flags & LrFlags.LastPrisonerOnlyCanUse) != 0 && prisonersAlive > 1) disabled = "lr.menu.last_t";
-            else if (lr.Unavailable?.Invoke(p) is { } why) disabled = why;
-            else if ((lr.Flags & LrFlags.Rebel) != 0 && _numRebelingTogether == 1)
-            {
-                if (prisonersAlive > 1) disabled = "lr.menu.last_t";
-                else if (guardsAlive < guardsNeeded) disabled = "lr.menu.need_ct";
-            }
-
-            if (disabled != null)
+            if (DisabledReason(p, lr) is { } disabled)
             {
                 m.Add(Hud.Escape(lr.Name) + " " + Lang.T(disabled), null, false);
                 continue;
             }
 
-            m.Add(Hud.Escape(lr.Name), x =>
-            {
-                var pl = x.Jb();
-                if (pl == null) return;
-                if (!S(pl).Initialized || S(pl).Started) return;
-                if (def.Unavailable?.Invoke(pl) is { } now)
-                {
-                    // Changed while the menu was open: show the menu again with the current state.
-                    if (pl.Controller is { } pc) Plain(pc, "lr.menu.no_longer", def.Name, Colors.Strip(Lang.T(now)));
-                    DisplayLrMenu(pl, category, parent);
-                    return;
-                }
-
-                Kill(ref S(pl).SelectTimer);
-                StartLastRequest(pl, def);
-            });
+            AddLrItem(m, lr, Hud.Escape(lr.Name), pl => DisplayLrMenu(pl, category, parent));
         }
 
         if (!any)
@@ -917,6 +931,8 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
         s.Lr = lr;
         s.DiedSinceStarted = false;
         s.RoundEndedSinceStarted = false;
+        s.SlayTick = s.SlayTime = 0;
+        s.SlayFlags = SlayTimerFlags.None;
 
         foreach (var other in Players.Humans().Where(o => o.Slot != c.Slot))
             Chat.Tell(other, "lr.started_all", p.Name, lr.Category, lr.Name);
@@ -1311,8 +1327,13 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
             s.SlayFinished = null;
             try { cb?.Invoke(pr, opponent, result); }
             catch (Exception ex) { Logger.LogError(ex, "Slay timer callback threw"); }
-            if ((s.SlayFlags & SlayTimerFlags.Prisoner) != 0 && pr.Controller is { } pc && pc.IsAliveP()) pc.CommitSuicide(false, true);
-            if ((s.SlayFlags & SlayTimerFlags.Guard) != 0 && opponent.Controller is { } oc && oc.IsAliveP()) oc.CommitSuicide(false, true);
+            _slayingBoth = s.SlayFlags == SlayTimerFlags.Both;
+            try
+            {
+                if ((s.SlayFlags & SlayTimerFlags.Prisoner) != 0 && pr.Controller is { } pc && pc.IsAliveP()) pc.CommitSuicide(false, true);
+                if ((s.SlayFlags & SlayTimerFlags.Guard) != 0 && opponent.Controller is { } oc && oc.IsAliveP()) oc.CommitSuicide(false, true);
+            }
+            finally { _slayingBoth = false; }
             return;
         }
 
@@ -1355,11 +1376,30 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
 
     // ================================================================== deaths, teams, spawns, disconnects
 
+    /// <summary>Set while the slay timer kills both players: such an LR has no winner.</summary>
+    private bool _slayingBoth;
+
+    /// <summary>A death that decides an LR with an opponent: the surviving opponent wins (whoever dealt the blow).</summary>
+    private void RaiseDecided(JbPlayer victim, CsTeam team)
+    {
+        if (_slayingBoth) return;
+        var prisoner = team == CsTeam.Terrorist ? victim : team == CsTeam.CounterTerrorist ? GuardsPrisoner(victim) : null;
+        if (prisoner == null) return;
+        var ps = S(prisoner);
+        if (!ps.Started || ps.Lr == null || (ps.Lr.Flags & LrFlags.Freeday) != 0) return;
+        // The slay timer ran out on both (in case the deaths arrive after the timer callback returned).
+        if (ps.SlayFlags == SlayTimerFlags.Both && ps.SlayTimer == null && ps.SlayTime > 0 && ps.SlayTick >= ps.SlayTime) return;
+        var winner = team == CsTeam.Terrorist ? PrisonersOpponent(prisoner) : prisoner;
+        if (winner?.Controller is not { IsValid: true } wc || !wc.IsAliveP() || winner.Slot == victim.Slot) return;
+        JbEvents.RaiseLastRequestDecided(winner, victim, prisoner, ps.Lr);
+    }
+
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
     {
         var c = victim.Controller;
         if (c == null) return;
         var s = S(victim);
+        RaiseDecided(victim, c.Team);
         switch (c.Team)
         {
             case CsTeam.Terrorist:

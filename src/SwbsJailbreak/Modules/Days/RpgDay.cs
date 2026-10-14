@@ -65,37 +65,87 @@ public sealed class RpgDay : JbModule
 
     public override void OnLoad(bool hotReload)
     {
-        if (Jb.Days is not DaysModule || !Cfg.Enabled) return;
+        _instance = this;
+        var dayOn = Jb.Days is DaysModule && Cfg.Enabled;
+        var lrOn = Jb.LastRequests is LastRequest.LastRequestModule && Section<LastRequest.LrExtraConfig>("LastRequestsExtra").RocketeerEnabled;
+        if (!dayOn && !lrOn) return;
 
-        _day = new DayDefinition
+        if (dayOn)
         {
-            Name = "RPG", Type = DayType.Warday, AllowFreeForAll = true,
-            Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
-            OnStart = _ => _rockets.Clear(),
-            OnFreezeEnd = () =>
+            _day = new DayDefinition
             {
-                _inProgress = true;
-                foreach (var p in DayUtil.AliveAll())
+                Name = "RPG", Type = DayType.Warday, AllowFreeForAll = true,
+                Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
+                OnStart = _ => _rockets.Clear(),
+                OnFreezeEnd = () =>
                 {
-                    if ((Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0) DayUtil.Give(p, "weapon_knife");
-                    else Prepare(p);
+                    _inProgress = true;
+                    foreach (var p in DayUtil.AliveAll())
+                    {
+                        if ((Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0) DayUtil.Give(p, "weapon_knife");
+                        else Prepare(p);
+                    }
+                },
+                OnEnd = _ =>
+                {
+                    if (!_inProgress) return;
+                    _inProgress = false;
+                    _rockets.Clear();
+                    foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
                 }
-            },
-            OnEnd = _ =>
+            };
+            Jb.Days.Register(_day);
+            JbEvents.DaySpawnPost += OnDaySpawn;
+        }
+
+        if (lrOn)
+        {
+            // Rocketeer (Rebel, last prisoner only): the RPG launcher against every guard.
+            var hp = Section<LastRequest.LrExtraConfig>("LastRequestsExtra").RocketeerHealth;
+            Jb.LastRequests.Register(new LastRequestDefinition
             {
-                if (!_inProgress) return;
-                _inProgress = false;
-                _rockets.Clear();
-                foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
-            }
-        };
-        Jb.Days.Register(_day);
-        JbEvents.DaySpawnPost += OnDaySpawn;
+                Name = "Rocketeer", Category = "Rebel",
+                Description = "The RPG rocket launcher (knife slot) against every guard: rocket jumps, airshots kill.",
+                Flags = LrFlags.Rebel | LrFlags.LastPrisonerOnlyCanUse | LrFlags.TempInvincible | LrFlags.NoRadar | LrFlags.RandomTeleportLocation,
+                OnStart = p =>
+                {
+                    Jb.LastRequests.SetHealth(p, Math.Max(1, hp));
+                    Jb.LastRequests.StripWeapons(p, true);
+                    _armed.Add(p.Slot);
+                    Prepare(p);
+                },
+                OnEnd = (p, _) =>
+                {
+                    _armed.Remove(p.Slot);
+                    if (_armed.Count == 0 && !(Active && _inProgress)) _rockets.Clear();
+                    Hud.Clear(p.Controller, "days.rpg");
+                    LastRequest.SimpleLastRequests.RestoreIfAlive(p);
+                }
+            });
+        }
+
         DamageService.Register(Name, 90, OnDamage);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
     }
 
-    public override void OnUnload(bool hotReload) => DamageService.Unregister(OnDamage);
+    public override void OnUnload(bool hotReload)
+    {
+        DamageService.Unregister(OnDamage);
+        JbEvents.DaySpawnPost -= OnDaySpawn;
+        _armed.Clear();
+        if (ReferenceEquals(_instance, this)) _instance = null;
+    }
+
+    public override void OnPlayerDisconnect(JbPlayer player) => _armed.Remove(player.Slot);
+
+    private static RpgDay? _instance;
+
+    /// <summary>Players holding the launcher outside the day (Rocketeer LR).</summary>
+    private readonly HashSet<int> _armed = new();
+
+    private bool DayRunning => Active && _inProgress;
+
+    private bool Launches(JbPlayer p) => DayRunning || _armed.Contains(p.Slot);
 
     private void OnDaySpawn(JbPlayer p)
     {
@@ -115,18 +165,22 @@ public sealed class RpgDay : JbModule
         s.NextAttack = (float)Server.EngineTime + 0.5f; // ATTACK_DELAY_DEPLOY
     }
 
-    private HookResult OnDamage(DamageContext ctx) =>
-        Active && _inProgress && ctx.IsFall ? HookResult.Handled : HookResult.Continue;
+    private HookResult OnDamage(DamageContext ctx)
+    {
+        if (!ctx.IsFall) return HookResult.Continue;
+        if (DayRunning) return HookResult.Handled;
+        return _armed.Contains(ctx.Victim.Slot) ? HookResult.Handled : HookResult.Continue;
+    }
 
     private void OnTick()
     {
-        if (!Active || !_inProgress) return;
+        if (!DayRunning && _armed.Count == 0 && _rockets.Count == 0) return;
         var now = (float)Server.EngineTime;
         foreach (var p in Players.Connected())
         {
             var c = p.Controller!;
             var s = S(p);
-            if (!c.IsAliveP() || s.Launcher == 0) continue;
+            if (!c.IsAliveP() || s.Launcher == 0 || !Launches(p)) continue;
             var active = c.ActiveWeapon();
             if (active == null || active.EntityHandle.Raw != s.Launcher) continue;
             // The knife itself never attacks.

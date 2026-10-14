@@ -16,5 +16,12 @@
   "bet.winner_entry": "{0} +{1} ({2})",
   "bet.winners": "{olive}Bet winners: {green}{0}",
   "bet.no_winners": "{olive}Nobody bet on the last-request prisoner this round.",
-  "bet.refunded_all": "{olive}Nobody got a last request this round: all bets were refunded."
+  "bet.refunded_all": "{olive}Nobody got a last request this round: all bets were refunded.",
+  "bet.duel_how": "{olive}Last requests are running: bet on a duel with {green}!bet <player in the duel> <points>{olive} (within {0} s of the LR starting).",
+  "bet.not_in_duel": "{red}{0} is not in a running LR duel.",
+  "bet.duel_closed": "{red}Betting on this duel closed {0} seconds after it started.",
+  "bet.duel_already": "{red}You already bet on this duel.",
+  "bet.duel_placed": "{lightblue}{0}{olive} bet {green}{1}{olive} points that {lightred}{2}{olive} wins their duel (x{3}, pays {green}{4}{olive}).",
+  "bet.duel_winners": "{lightred}{0}{olive} won the duel. Bet winners: {green}{1}",
+  "bet.duel_no_winners": "{lightred}{0}{olive} won the duel. Nobody bet on them."
 }

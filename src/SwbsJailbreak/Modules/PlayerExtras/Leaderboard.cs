@@ -12,6 +12,9 @@ public sealed class RankWeights
     public double ContrabandFound { get; set; } = 1;
     public double SnitchCorrect { get; set; } = 1;
 
+    /// <summary>LR duels (won + lost) a player needs before they appear on the "duelist" (win rate) board.</summary>
+    public int DuelistMinDuels { get; set; } = 10;
+
     /// <summary>Warden ratings a player needs before they appear on the "rating" board.</summary>
     public int RatingMinCount { get; set; } = 5;
 }
@@ -28,7 +31,8 @@ public enum RankCategory
     Rounds,
     Rating,
     Contraband,
-    Snitch
+    Snitch,
+    DuelWinRate
 }
 
 public sealed record RankEntry(string SteamId, string Name, double Value, int Position);
@@ -48,8 +52,16 @@ public static class Leaderboard
         ["rounds"] = RankCategory.Rounds, ["played"] = RankCategory.Rounds,
         ["rating"] = RankCategory.Rating, ["ratings"] = RankCategory.Rating, ["rated"] = RankCategory.Rating,
         ["contraband"] = RankCategory.Contraband, ["searches"] = RankCategory.Contraband, ["search"] = RankCategory.Contraband,
-        ["snitch"] = RankCategory.Snitch, ["snitches"] = RankCategory.Snitch, ["tips"] = RankCategory.Snitch
+        ["snitch"] = RankCategory.Snitch, ["snitches"] = RankCategory.Snitch, ["tips"] = RankCategory.Snitch,
+        ["duelist"] = RankCategory.DuelWinRate, ["duelists"] = RankCategory.DuelWinRate, ["winrate"] = RankCategory.DuelWinRate
     };
+
+    /// <summary>LR duel win rate in percent (one decimal), 0 with no duels.</summary>
+    public static double DuelWinRate(PlayerStats s)
+    {
+        var total = s.LastRequestDuelsWon + s.LastRequestDuelsLost;
+        return total <= 0 ? 0 : Math.Round(100.0 * s.LastRequestDuelsWon / total, 1);
+    }
 
     /// <summary>Average warden rating (1-5), 0 when unrated.</summary>
     public static double AverageRating(PlayerStats s) =>
@@ -78,6 +90,7 @@ public static class Leaderboard
         RankCategory.Rating => s.WardenRatingCount >= Math.Max(1, w.RatingMinCount) ? AverageRating(s) : 0,
         RankCategory.Contraband => s.ContrabandFound,
         RankCategory.Snitch => s.SnitchCorrect,
+        RankCategory.DuelWinRate => s.LastRequestDuelsWon + s.LastRequestDuelsLost >= Math.Max(1, w.DuelistMinDuels) ? DuelWinRate(s) : 0,
         _ => Math.Round(Score(s, w), 1)
     };
 

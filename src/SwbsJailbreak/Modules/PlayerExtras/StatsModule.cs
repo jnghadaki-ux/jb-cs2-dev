@@ -41,6 +41,10 @@ public sealed class PlayerStats
     public int Deaths { get; set; }
     public int LastRequestsPlayed { get; set; }
     public int LastRequestDuelsWon { get; set; }
+    public int LastRequestDuelsLost { get; set; }
+
+    /// <summary>Per LR name: [wins, losses] (LRs with an opponent decided by a death).</summary>
+    public Dictionary<string, int[]> LrRecord { get; set; } = new();
 
     /// <summary>Warden ratings received from prisoners (1-5 each).</summary>
     public int WardenRatingSum { get; set; }
@@ -86,6 +90,7 @@ public sealed class StatsModule : JbModule
         JbEvents.WardenSelected += OnWardenSelected;
         JbEvents.WardenRemoved += OnWardenRemoved;
         JbEvents.LastRequestStarted += OnLastRequestStarted;
+        JbEvents.LastRequestDecided += OnLastRequestDecided;
     }
 
     public override void OnUnload(bool hotReload)
@@ -93,6 +98,7 @@ public sealed class StatsModule : JbModule
         JbEvents.WardenSelected -= OnWardenSelected;
         JbEvents.WardenRemoved -= OnWardenRemoved;
         JbEvents.LastRequestStarted -= OnLastRequestStarted;
+        JbEvents.LastRequestDecided -= OnLastRequestDecided;
     }
 
     public override void OnMapStart(string mapName)
@@ -152,16 +158,39 @@ public sealed class StatsModule : JbModule
         if (Tracked(victim)) Update(victim, s => s.Deaths++);
         if (attacker == null || ReferenceEquals(attacker, victim) || !Tracked(attacker)) return;
 
-        var duelWon = Jb.LastRequests.IsInLastRequest(victim) && ReferenceEquals(Jb.LastRequests.GetOpponent(victim), attacker);
+        // LR duels are counted from JbEvents.LastRequestDecided (the survivor wins, also for slays and contests).
         var killedGuard = victim.IsGuard && attacker.Team == CsTeam.Terrorist;
         var killedPrisoner = victim.Team == CsTeam.Terrorist && attacker.IsGuard;
-        if (!duelWon && !killedGuard && !killedPrisoner) return;
+        if (!killedGuard && !killedPrisoner) return;
         Update(attacker, s =>
         {
             if (killedGuard) s.GuardsKilled++;
             if (killedPrisoner) s.PrisonersKilled++;
-            if (duelWon) s.LastRequestDuelsWon++;
         });
+    }
+
+    private void OnLastRequestDecided(JbPlayer winner, JbPlayer loser, JbPlayer prisoner, LastRequestDefinition lr)
+    {
+        if (!Counting) return;
+        if (Tracked(winner)) Update(winner, s => RecordDuel(s, lr.Name, true));
+        if (Tracked(loser)) Update(loser, s => RecordDuel(s, lr.Name, false));
+    }
+
+    /// <summary>Engine-free (unit-tested): count one decided LR duel.</summary>
+    internal static void RecordDuel(PlayerStats s, string lrName, bool won)
+    {
+        s.LrRecord ??= new Dictionary<string, int[]>();
+        if (!s.LrRecord.TryGetValue(lrName, out var r) || r is not { Length: 2 }) s.LrRecord[lrName] = r = new int[2];
+        if (won)
+        {
+            s.LastRequestDuelsWon++;
+            r[0]++;
+        }
+        else
+        {
+            s.LastRequestDuelsLost++;
+            r[1]++;
+        }
     }
 
     private void OnWardenSelected(JbPlayer warden)
@@ -333,11 +362,45 @@ public sealed class StatsModule : JbModule
         Chat.ReplyT(caller, info, "stats.rounds", rounds, s.RoundsPrisoner, s.RoundsGuard, survival);
         Chat.ReplyT(caller, info, "stats.warden", s.WardenRounds);
         Chat.ReplyT(caller, info, "stats.kills", s.GuardsKilled, s.PrisonersKilled, s.Deaths);
-        Chat.ReplyT(caller, info, "stats.lr", s.LastRequestsPlayed, s.LastRequestDuelsWon);
+        Chat.ReplyT(caller, info, "stats.lr", s.LastRequestsPlayed, s.LastRequestDuelsWon, s.LastRequestDuelsLost,
+            Leaderboard.DuelWinRate(s).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture));
         if (s.SearchesMade > 0 || s.TimesCaught > 0 || s.SnitchTips > 0)
             Chat.ReplyT(caller, info, "stats.contraband", s.ContrabandFound, s.SearchesMade, s.TimesCaught, s.SnitchCorrect, s.SnitchTips);
         if (s.WardenRatingCount > 0)
             Chat.ReplyT(caller, info, "stats.rating", Leaderboard.AverageRating(s).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), s.WardenRatingCount);
         Chat.ReplyT(caller, info, "stats.playtime", minutes / 60, minutes % 60);
     }
+
+    // ================================================================= !lrstats
+
+    [ConsoleCommand("css_lrstats", "sm_lrstats [player] - last request duel wins and losses per LR")]
+    public void CmdLrStats(CCSPlayerController? caller, CommandInfo info)
+    {
+        var target = caller;
+        if (info.ArgCount > 1)
+        {
+            var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true, respectImmunity: false);
+            if (t == null) return;
+            target = t.Players[0];
+        }
+
+        if (target == null) { Chat.ReplyT(caller, info, "core.usage", "css_lrstats <player>"); return; }
+        var p = target.Jb();
+        if (!Tracked(p)) { Chat.ReplyT(caller, info, "stats.none", target.PlayerName); return; }
+        var s = Storage.Get<PlayerStats>(Ns, p!.SteamId64.ToString()) ?? new PlayerStats();
+        Chat.ReplyT(caller, info, "lrstats.title", target.PlayerName, s.LastRequestDuelsWon, s.LastRequestDuelsLost,
+            Leaderboard.DuelWinRate(s).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture));
+        var rows = TopLrs(s, 6);
+        if (rows.Count == 0) { Chat.ReplyT(caller, info, "lrstats.none"); return; }
+        foreach (var (name, won, lost) in rows) Chat.ReplyT(caller, info, "lrstats.line", name, won, lost);
+    }
+
+    /// <summary>Engine-free (unit-tested): the most played LRs, then by wins, then by name.</summary>
+    internal static List<(string Name, int Won, int Lost)> TopLrs(PlayerStats s, int count) =>
+        (s.LrRecord ?? new Dictionary<string, int[]>())
+        .Where(kv => kv.Value is { Length: 2 } && kv.Value[0] + kv.Value[1] > 0)
+        .Select(kv => (Name: kv.Key, Won: kv.Value[0], Lost: kv.Value[1]))
+        .OrderByDescending(r => r.Won + r.Lost).ThenByDescending(r => r.Won).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+        .Take(Math.Max(1, count))
+        .ToList();
 }

@@ -40,6 +40,8 @@ public class WardenToolsTests
     [InlineData("css_adminlog")]
     [InlineData("css_speedrun")]
     [InlineData("css_sr")]
+    [InlineData("css_lrstats")]
+    [InlineData("css_lrlog")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

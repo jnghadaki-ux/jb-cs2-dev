@@ -4,7 +4,7 @@
   "stats.rounds": "{olive}Rounds: {default}{0} {grey}({1} prisoner, {2} guard){olive}, survived {default}{3}%",
   "stats.warden": "{olive}Rounds as warden: {default}{0}",
   "stats.kills": "{olive}Guards killed: {default}{0}{olive}, prisoners killed: {default}{1}{olive}, deaths: {default}{2}",
-  "stats.lr": "{olive}Last requests played: {default}{0}{olive}, LR duels won: {default}{1}",
+  "stats.lr": "{olive}Last requests played: {default}{0}{olive}, LR duels won: {default}{1}{olive}, lost: {default}{2}{olive} ({default}{3}%{olive} won)",
   "stats.playtime": "{olive}Play time: {default}{0}h {1}m",
   "rank.title": "{gold}Leaderboard: {default}{0} {grey}({1} ranked players)",
   "rank.line": "{green}#{0} {default}{1} {grey}- {olive}{2}",
@@ -13,7 +13,7 @@
   "rank.unranked": "{olive}{0} needs {green}{1}{olive} more rounds to be ranked.",
   "rank.not_on_board": "{olive}{0} is not on this leaderboard yet.",
   "rank.empty": "{olive}Nobody is on the {0} leaderboard yet (players need {1} rounds).",
-  "rank.categories": "{olive}Use {green}!rank{olive} or {green}!rank <warden|guards|prisoners|lr|survived|rounds|rating|contraband|snitch>{olive}, or {green}!rank <player>{olive}.",
+  "rank.categories": "{olive}Use {green}!rank{olive} or {green}!rank <warden|guards|prisoners|lr|duelist|survived|rounds|rating|contraband|snitch>{olive}, or {green}!rank <player>{olive}.",
   "rank.cat.score": "Overall score",
   "rank.cat.warden": "Rounds as warden",
   "rank.cat.guardkills": "Guards killed",
@@ -38,5 +38,9 @@
   "rate.only_prisoners": "{red}Only prisoners can rate the warden.",
   "stats.contraband": "{olive}Contraband found: {default}{0}{grey}/{1} searches{olive}, caught: {default}{2}{olive}, correct tips: {default}{3}{grey}/{4}",
   "rank.cat.contraband": "Contraband found",
-  "rank.cat.snitch": "Correct snitch tips"
+  "rank.cat.snitch": "Correct snitch tips",
+  "rank.cat.duelwinrate": "LR duel win rate (%)",
+  "lrstats.title": "{olive}LR duels of {lightred}{0}{olive}: {green}{1} won{olive}, {red}{2} lost{olive} ({default}{3}%{olive}).",
+  "lrstats.line": "{default}{0}{olive}: {green}{1}{olive} won, {red}{2}{olive} lost",
+  "lrstats.none": "{olive}No LR duels decided yet."
 }

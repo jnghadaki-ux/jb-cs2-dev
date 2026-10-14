@@ -41,6 +41,10 @@ public sealed class GameDaysModule : JbModule
     private static readonly string[] ScopedWeapons = { "weapon_awp", "weapon_ssg08", "weapon_scar20", "weapon_g3sg1", "weapon_aug", "weapon_sg556" };
 
     private DayDefinition? _hns, _jetpack;
+    private LastRequestDefinition? _jetpackLr;
+
+    /// <summary>Prisoners flying with the Jetpack freeday LR (outside the Jetpack day).</summary>
+    private readonly HashSet<int> _jetpackSlots = new();
     private readonly float[] _fuel = new float[Players.MaxSlots];
     private readonly HashSet<uint> _unscoped = new(); // weapon handles whose scope this round blocked
     private bool _noScopeRound;
@@ -84,6 +88,24 @@ public sealed class GameDaysModule : JbModule
             days.Register(_jetpack);
         }
 
+        if (Jb.LastRequests is LastRequest.LastRequestModule && Section<LastRequest.LrExtraConfig>("LastRequestsExtra").JetpackFreedayEnabled)
+        {
+            // Jetpack freeday LR: like the other freedays it applies on the prisoner's next-round spawn.
+            _jetpackLr = new LastRequestDefinition
+            {
+                Name = "Jetpack", Category = "Freeday", Flags = LrFlags.Freeday,
+                Description = "Freeday next round with a jetpack: hold jump in the air to fly.",
+                OnStart = _ => { },
+                OnEnd = (p, _) =>
+                {
+                    _jetpackSlots.Remove(p.Slot);
+                    Hud.Clear(p.Controller, "games.jetpack");
+                }
+            };
+            Jb.LastRequests.Register(_jetpackLr);
+            JbEvents.SettingsSpawnPost += OnSpawnPost;
+        }
+
         DamageService.Register(Name, 95, OnDamage);
         Plugin.RegisterEventHandler<EventPlayerDeath>(OnDeath);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
@@ -91,11 +113,22 @@ public sealed class GameDaysModule : JbModule
 
     public override void OnUnload(bool hotReload)
     {
+        JbEvents.SettingsSpawnPost -= OnSpawnPost;
         DamageService.Unregister(OnDamage);
         if (Active(_hns)) HnsEnd();
     }
 
     public override void OnRoundEnd(CsTeam winner, int reason) => RestoreScopes();
+
+    public override void OnPlayerDisconnect(JbPlayer player) => _jetpackSlots.Remove(player.Slot);
+
+    private void OnSpawnPost(JbPlayer p)
+    {
+        if (_jetpackLr == null || !ReferenceEquals(Jb.LastRequests.GetActive(p), _jetpackLr)) return;
+        _jetpackSlots.Add(p.Slot);
+        _fuel[p.Slot] = Cfg.JetpackFuelSeconds;
+        Chat.Tell(p.Controller, "games.jetpack.how");
+    }
 
     public override void OnRoundStart()
     {
@@ -162,18 +195,19 @@ public sealed class GameDaysModule : JbModule
     private void OnTick()
     {
         _tick++;
-        if (Active(_jetpack)) JetpackTick();
+        if (Active(_jetpack) || _jetpackSlots.Count > 0) JetpackTick(Active(_jetpack));
         if (_noScopeRound && !Jb.Days.IsInProgress) NoScopeTick();
     }
 
     // ====================================================================== Jetpack
 
-    private void JetpackTick()
+    private void JetpackTick(bool everyone)
     {
         var dt = Server.TickInterval;
         var hud = _tick % 16 == 0;
         foreach (var c in Players.Alive())
         {
+            if (!everyone && !_jetpackSlots.Contains(c.Slot)) continue;
             var pawn = c.PawnOrNull();
             if (pawn == null || pawn.MoveType != MoveType_t.MOVETYPE_WALK) continue;
             var slot = c.Slot;
