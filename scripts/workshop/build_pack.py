@@ -128,11 +128,24 @@ echo       (no swbs_jailbreak folder next to this file, so using those files)
 
 :compile
 if "%RC%"=="" goto :no_compiler
-echo [2/3] Compiling (the compiler output goes to compile_log.txt)...
-"%RC%" -r -i "%DEST%\*" > "%LOG%" 2>&1
+rem Only the pack's own files: the example maps a new addon starts with are left alone (building them needs a
+rem lightmap-capable GPU and is not part of the pack).
+echo [2/3] Compiling the pack's sounds, materials and models (output in compile_log.txt)...
+> "%LOG%" echo SWBS workshop pack compile log
+echo === sounds >> "%LOG%"
+"%RC%" -r -i "%DEST%\sounds\swbs\*.wav" >> "%LOG%" 2>&1
+echo === sound events >> "%LOG%"
+"%RC%" -i "%DEST%\soundevents\swbs_jailbreak.vsndevts" >> "%LOG%" 2>&1
+echo === materials >> "%LOG%"
+"%RC%" -r -i "%DEST%\materials\swbs\*.vmat" >> "%LOG%" 2>&1
+echo === models >> "%LOG%"
+"%RC%" -i "%DEST%\models\swbs\*.vmdl" >> "%LOG%" 2>&1
 
 :check
 echo [3/3] Checking the result...
+rem Some setups write compiled files next to the sources (content); the Workshop upload takes them from game.
+if not exist "%OUT%" mkdir "%OUT%"
+robocopy "%DEST%" "%OUT%" *.vmdl_c *.vmat_c *.vtex_c *.vsnd_c *.vsndevts_c /S /XO /NFL /NDL /NJH /NJS /NP >nul
 if not exist "%OUT%\soundevents\swbs_jailbreak.vsndevts_c" goto :compile_failed
 set /a N=0
 for /r "%OUT%\sounds" %%F in (*.vsnd_c) do set /a N+=1
@@ -141,7 +154,10 @@ if exist "%OUT%\models" for /r "%OUT%\models" %%F in (*.vmdl_c) do set /a M+=1
 echo.
 echo SUCCESS: the sound events, %N% sounds and %M% of 5 models are compiled in
 echo   %OUT%
-if %M% LSS 5 echo NOTE: not every model compiled. Send compile_log.txt; until then set "UseModels": false in WorkshopPack.
+for %%G in (flag capture_point finish_line missile rocket_launcher) do if not exist "%OUT%\models\swbs\%%G.vmdl_c" echo   missing model: %%G
+if %M% LSS 5 echo NOTE: not every model compiled. The compiler's messages about them:
+if %M% LSS 5 if exist "%LOG%" findstr /i /c:"error" /c:"warning" /c:".vmdl" /c:".smd" /c:".vmat" /c:"fail" "%LOG%"
+if %M% LSS 5 echo Send compile_log.txt; until then set "UseModels": false in WorkshopPack.
 echo.
 echo Next: start the CS2 Workshop Tools, pick the swbs_jailbreak addon and upload it with the
 echo Workshop Manager (README.txt step 4).
