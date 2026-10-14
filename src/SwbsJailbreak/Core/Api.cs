@@ -63,6 +63,9 @@ public static class JbEvents
     public static event Action<JbPlayer, LrFlags>? LastRequestStarted;
     public static event Action<JbPlayer, JbPlayer?>? LastRequestEnded;
 
+    /// <summary>ADDITION: an LR with an opponent was decided by a death: (winner, loser, prisoner of the LR, the LR).</summary>
+    public static event Action<JbPlayer, JbPlayer, JbPlayer, LastRequestDefinition>? LastRequestDecided;
+
     // ---- days ----
     public static event Action<JbPlayer?, DayType, bool>? DayStarted;
     public static event Action<JbPlayer?>? WardayStarted;
@@ -109,6 +112,16 @@ public static class JbEvents
         foreach (var d in LastRequestStarted.GetInvocationList())
         {
             try { ((Action<JbPlayer, LrFlags>)d)(p, flags); }
+            catch (Exception ex) { LogError(ex); }
+        }
+    }
+
+    public static void RaiseLastRequestDecided(JbPlayer winner, JbPlayer loser, JbPlayer prisoner, LastRequestDefinition lr)
+    {
+        if (LastRequestDecided == null) return;
+        foreach (var d in LastRequestDecided.GetInvocationList())
+        {
+            try { ((Action<JbPlayer, JbPlayer, JbPlayer, LastRequestDefinition>)d)(winner, loser, prisoner, lr); }
             catch (Exception ex) { LogError(ex); }
         }
     }
@@ -183,6 +196,7 @@ public static class JbEvents
         LastRequestInitialized = null;
         LastRequestStarted = null;
         LastRequestEnded = null;
+        LastRequestDecided = null;
         DayStarted = null;
         WardayStarted = null;
         WardayFreezeEnded = DayEnded = null;
@@ -244,7 +258,10 @@ public enum LrFlags
     TempInvincible = 1 << 13,
     ShowAllGuardsOnRadar = 1 << 14,
     RandomTeleportLocation = 1 << 15,
-    Rebel = 1 << 16
+    Rebel = 1 << 16,
+
+    /// <summary>ADDITION: prisoners in this LR still see the other prisoners (group LRs such as Knife Tournament).</summary>
+    SeeTeammates = 1 << 17
 }
 
 [Flags]
@@ -273,6 +290,13 @@ public sealed class LastRequestDefinition
     public Action<JbPlayer>? OnOpponentLeft { get; init; }
 
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// ADDITION: live check for the prisoner opening the menu; returns the phrase key shown after the greyed-out name
+    /// (e.g. "lr.menu.need_two_t") or null when the LR can be picked. Random LRs skip unavailable ones.
+    /// </summary>
+    public Func<JbPlayer, string?>? Unavailable { get; init; }
+
     public int Id { get; internal set; } = -1;
 
     /// <summary>Set by the LR core.</summary>
@@ -584,6 +608,9 @@ public interface IPointsService
 {
     int GetPoints(JbPlayer player);
     void AddPoints(JbPlayer player, int amount, string? reason = null);
+
+    /// <summary>Add (or with a negative amount remove) points by SteamID64, also for players who left. Never below 0.</summary>
+    void AddPoints(ulong steamId64, int amount);
 }
 
 // ----------------------------------------------------------------------------------------------- mute
@@ -752,6 +779,7 @@ public sealed class NullServices : IWardenService, ICellService, ILastRequestSer
     // points
     public int GetPoints(JbPlayer player) => 0;
     public void AddPoints(JbPlayer player, int amount, string? reason = null) { }
+    public void AddPoints(ulong steamId64, int amount) { }
 
     // mute
     public bool IsMuted(JbPlayer player) => false;

@@ -45,7 +45,7 @@ public sealed partial class WardenModule
     private float _nextLineCheck;
 
     // ---- paintballs ----
-    private readonly Queue<CBeam?[]> _splats = new();
+    private readonly Queue<CEntityInstance?[]> _splats = new();
 
     private static readonly Color[] PaintColors =
     {
@@ -265,7 +265,7 @@ public sealed partial class WardenModule
         if (_savedCount < 2) _savedCount++;
     }
 
-    /// <summary>Warden paintball splat (TE World Decal substitute: two crossed beams on the surface).</summary>
+    /// <summary>Warden paintball splat: a splat model from the workshop pack (<see cref="Paint"/>), crossed beams without it.</summary>
     private bool TryPaint(CCSPlayerController c, Vector impact)
     {
         // No ray trace on CSS 1.0.368, so world and props cannot be told apart; at least never paint on players.
@@ -277,6 +277,15 @@ public sealed partial class WardenModule
             if (VectorUtil.Distance2D(o, impact) <= 24f && impact.Z >= o.Z - 4f && impact.Z <= o.Z + 76f) return false;
         }
 
+        var color = PaintColors[Random.Shared.Next(PaintColors.Length)];
+        var feet = c.Origin();
+        if (Paint.Splat(impact, c.EyePosition(), feet?.Z ?? float.NaN, color, Extras.WorkshopPackModule.PaintballModels()) is { } splat)
+        {
+            KeepSplat(new CEntityInstance?[] { splat });
+            return true;
+        }
+
+        // No splat models (workshop pack off): two crossed beams on the surface.
         var normal = TowardEye(c, impact);
 
         var p = new Vector(impact.X + normal.X, impact.Y + normal.Y, impact.Z + normal.Z);
@@ -284,7 +293,6 @@ public sealed partial class WardenModule
         var a = WDraw.Normalize(WDraw.Cross(normal, reference));
         var b = WDraw.Normalize(WDraw.Cross(normal, a));
         var half = Math.Max(1f, Cfg.PaintballSize) / 2f;
-        var color = PaintColors[Random.Shared.Next(PaintColors.Length)];
         var width = Math.Max(0.5f, Cfg.PaintballWidth);
 
         var b1 = WDraw.Beam(new Vector(p.X - a.X * half, p.Y - a.Y * half, p.Z - a.Z * half),
@@ -292,13 +300,17 @@ public sealed partial class WardenModule
         var b2 = WDraw.Beam(new Vector(p.X - b.X * half, p.Y - b.Y * half, p.Z - b.Z * half),
             new Vector(p.X + b.X * half, p.Y + b.Y * half, p.Z + b.Z * half), color, width, width);
         if (b1 == null && b2 == null) return false;
+        KeepSplat(new CEntityInstance?[] { b1, b2 });
+        return true;
+    }
 
-        _splats.Enqueue(new[] { b1, b2 });
+    private void KeepSplat(CEntityInstance?[] parts)
+    {
+        _splats.Enqueue(parts);
         var max = Math.Max(1, Cfg.PaintballMaxSplats);
         while (_splats.Count > max)
             foreach (var old in _splats.Dequeue())
                 Fx.SafeRemove(old);
-        return true;
     }
 
     private static Vector TowardEye(CCSPlayerController c, Vector impact)

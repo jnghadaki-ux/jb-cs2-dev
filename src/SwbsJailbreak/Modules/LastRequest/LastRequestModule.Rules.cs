@@ -307,7 +307,7 @@ public sealed partial class LastRequestModule
         var flags = GetFlags(viewer);
         if ((flags & LrFlags.Freeday) != 0) return true;
         if (other.Controller?.Team == viewer.Controller?.Team)
-            return _rebelAsTeamStarted && (flags & LrFlags.Rebel) != 0 && (GetFlags(other) & LrFlags.Rebel) != 0;
+            return (flags & LrFlags.SeeTeammates) != 0 || _rebelAsTeamStarted && (flags & LrFlags.Rebel) != 0 && (GetFlags(other) & LrFlags.Rebel) != 0;
         var opponent = PrisonersOpponent(viewer);
         return opponent == null || opponent.Slot == other.Slot;
     }
@@ -375,7 +375,9 @@ public sealed partial class LastRequestModule
         var pawn = c.PawnOrNull();
         if (pawn == null) return;
         // Original read the LR flags of the player itself: guards have none, so they always get radar + beacons.
-        var flags = c.Team == CsTeam.Terrorist ? GetFlags(p) : LrFlags.None;
+        // ADDITION: a prisoner LR with NoBeacon also hides the guard opponent's beacon and beam (Hide and Seek: the beam
+        // from the seeker to the hider would give the hiding place away).
+        var flags = c.Team == CsTeam.Terrorist ? GetFlags(p) : opponent != null ? GetFlags(opponent) & LrFlags.NoBeacon : LrFlags.None;
 
         if ((flags & LrFlags.NoRadar) == 0) SetSpotted(pawn);
         if ((flags & LrFlags.ShowAllGuardsOnRadar) != 0)

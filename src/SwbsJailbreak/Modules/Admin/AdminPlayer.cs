@@ -239,12 +239,17 @@ public sealed partial class AdminModule
         Activity(caller, "admin.act.team", t.Description, TeamName(team));
     }
 
-    [ConsoleCommand("css_teamswitch", "Switch a player's team now: !ts <target> [t|ct|spec]")]
-    [ConsoleCommand("css_ts", "Switch a player's team now")]
+    [ConsoleCommand("css_teamswitch", "Switch a player's team now: !ts <target> [t|ct|spec]; !ts alone swaps both teams")]
+    [ConsoleCommand("css_ts", "!ts swaps both teams (and restarts the round); !ts <target> [t|ct|spec] switches one player")]
     public void CmdTeamswitch(CCSPlayerController? caller, CommandInfo info)
     {
         if (!Require(caller, info, "teams")) return;
-        if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!ts <target> [t|ct|spec]"); return; }
+        if (info.ArgCount < 2)
+        {
+            SwapTeams(caller);
+            return;
+        }
+
         var t = Targets.FindOrReply(caller, info, info.GetArg(1));
         if (t == null) return;
         CsTeam? forced = info.ArgCount > 2 ? ParseTeam(info.GetArg(2)) : null;
@@ -283,6 +288,33 @@ public sealed partial class AdminModule
     }
 
     /// <summary>Admin move: respects nothing but immunity (admin override), uses the Teams contract when present.</summary>
+    [ConsoleCommand("css_swapteams", "Swap guards and prisoners (CT-banned players stay prisoners) and restart the round")]
+    public void CmdSwapTeams(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Require(caller, info, "teams")) return;
+        SwapTeams(caller);
+    }
+
+    /// <summary>
+    /// Guards become prisoners and prisoners guards, then the round restarts so everyone spawns on the new side.
+    /// CT-banned prisoners stay prisoners; spectators are untouched.
+    /// </summary>
+    private void SwapTeams(CCSPlayerController? caller)
+    {
+        var moved = 0;
+        foreach (var c in Players.All().Where(c => c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist).ToList())
+        {
+            var to = Other(c.Team);
+            if (to == CsTeam.CounterTerrorist && Jb.Teams.IsCtBanned(c.SteamID)) continue;
+            c.ChangeTeam(to);
+            moved++;
+        }
+
+        Chat.TellAll("admin.swapteams.announce", caller?.PlayerName ?? "Console", moved);
+        Server.ExecuteCommand("mp_restartgame 1");
+        Jb.Log.LogEvent($"{caller?.PlayerName ?? "Console"} swapped the teams ({moved} players)", caller.Jb(), null, LogType.Admin);
+    }
+
     internal void MoveTeam(CCSPlayerController c, CsTeam team)
     {
         if (!c.IsValid || c.Team == team) return;

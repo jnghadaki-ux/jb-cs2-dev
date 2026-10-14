@@ -1,0 +1,20 @@
+{
+  "afk.warning": "{red}You look away from keyboard: move or you will be moved to spectators in {0} seconds.",
+  "afk.hud": "<font color='#FF5555'>AFK?</font> Move within {0} s or you go to spectators",
+  "afk.moved": "{olive}You were moved to spectators for being away.",
+  "afk.moved_all": "{grey}{0} was moved to spectators for being away.",
+  "music.off": "{olive}Map music {red}off{olive}. Type {green}!music{olive} again to turn it back on.",
+  "music.on": "{olive}Map music {green}on{olive} (songs already playing will not restart).",
+  "chute.everyone": "{red}Everyone already has a parachute (Parachute.Everyone).",
+  "chute.given": "{olive}You got a parachute: hold {green}E{olive} while falling.",
+  "chute.removed": "{olive}Your parachute was taken away.",
+  "chute.gave": "{olive}Gave a parachute to {0}.",
+  "chute.took": "{olive}Removed the parachute of {0}.",
+  "spam.slow_down": "{red}Please do not spam.",
+  "spam.gag_warning": "{red}You will be gagged if you continue to spam.",
+  "spam.gagged": "{red}You have been gagged for spamming too much.",
+  "adminlog.none": "{olive}No admin activity found.",
+  "adminlog.printed": "{olive}{0} admin activity lines printed to your console.",
+  "workshop.disabled": "[SM] Turn on WorkshopPack.Enabled first (after the pack is uploaded and mounted).",
+  "workshop.applied": "[SM] {0} sound settings now use the SWBS workshop pack."
+}

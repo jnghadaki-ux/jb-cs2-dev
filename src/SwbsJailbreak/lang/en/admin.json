@@ -158,5 +158,8 @@
   "admin.menu.jb.no_warden": "{red}There is no warden.",
   "admin.menu.server.rr": "Restart Round",
   "admin.menu.server.maps": "Change Map",
-  "admin.menu.server.reloadadmins": "Reload Admins"
+  "admin.menu.server.reloadadmins": "Reload Admins",
+  "admin.swapteams.announce": "{green}{0}{default} swapped the teams ({1} players). Restarting the round.",
+  "admin.menu.jb.edit_days": "Turn Days On/Off",
+  "admin.menu.jb.edit_lrs": "Turn Last Requests On/Off"
 }

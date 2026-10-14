@@ -23,8 +23,8 @@ public sealed class PlayerModelsConfig
 
     /// <summary>
     /// Prisoner models. [0] = help 1 model (new players), [1] = help 2 model, [2..] = random pool for everyone else.
-    /// The Swoobles custom prisoner models cannot load in CS2; the stock CS2 jumpsuit agents keep the 3-slot design.
-    /// Workshop addon .vmdl paths can be used instead when the server mounts the addon.
+    /// Default: the stock CS2 jumpsuit agents. Turning WorkshopPack.Enabled on switches this to the SWBS prisoners,
+    /// rebuilt for CS2 in the workshop pack (characters/models/swbs/prisoners/...).
     /// </summary>
     public List<string> PrisonerModels { get; set; } = new()
     {

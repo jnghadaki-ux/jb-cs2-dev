@@ -1,5 +1,8 @@
 {
   "points.guard_kill": "You have been given {0} points for killing a guard.",
   "points.warden_kill": "You have been given {0} points for killing the warden.",
-  "points.yours": "{olive}You have {lightred}{0} {olive}points."
+  "points.yours": "{olive}You have {lightred}{0} {olive}points.",
+  "points.of": "{olive}{0} has {lightred}{1} {olive}points.",
+  "points.admin_changed": "{olive}{0}'s points: {lightred}{1}{olive} -> {green}{2}",
+  "points.admin_changed_you": "{olive}Admin {lightred}{0}{olive} set your points to {green}{1}{olive}."
 }

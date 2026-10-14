@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.10.6"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.18.3"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -176,6 +176,7 @@ public sealed class JailbreakPlugin : BasePlugin
         _modules.Clear();
         Round.KillRoundTimers();
         Glow.RemoveAll();
+        ChatDecor.Clear();
         Visibility.Reset();
         ChatInput.Reset();
         WeaponService.Clear();

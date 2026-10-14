@@ -28,6 +28,7 @@ public static class Perms
         ["days"] = "@css/generic",           // force-start / stop days
         ["days.edit"] = "@css/unban",        // sm_de / sm_daysedit (original: ADMFLAG_UNBAN)
         ["lr"] = "@css/generic",             // abort LRs
+        ["lr.edit"] = "@css/unban",          // !lredit: turn last requests on/off (like days.edit)
         ["mute"] = "@css/chat",              // mute/gag/silence
         ["teams"] = "@css/kick",             // move players between teams, swap
         ["slay"] = "@css/slay",              // slay, slap, beacon, freeze, ... (fun commands)
@@ -47,6 +48,7 @@ public static class Perms
         ["cvar"] = "@css/cvar",
         ["config"] = "@css/config",
         ["chat"] = "@css/chat",
+        ["points"] = "@css/root",            // !givepoints / !takepoints / !setpoints (testing the store)
     };
 
     /// <summary>Check a named capability (see <see cref="Defaults"/>) or a raw CSS flag / group ("@css/ban", "#css/admin").</summary>

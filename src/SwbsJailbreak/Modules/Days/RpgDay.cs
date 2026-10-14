@@ -11,6 +11,7 @@ namespace SwbsJailbreak.Modules.Days;
 /// <summary>Section "Rpg" (ultjb_warday_rpg_* cvars + assets).</summary>
 public sealed class RpgConfig
 {
+    public bool Enabled { get; set; } = true;
     public float MaxDamage { get; set; } = 30f;              // ultjb_warday_rpg_max_damage
     public float GuardDamageMultiplier { get; set; } = 1.5f; // ultjb_warday_rpg_guard_damage_multiplier
     public float RocketSpeed { get; set; } = 1000f;
@@ -18,6 +19,10 @@ public sealed class RpgConfig
     public string ExplosionSound { get; set; } = "BaseGrenade.Explode";
     public string ShootSound { get; set; } = "Weapon_Nova.Single";
     public string AirshotSound { get; set; } = "UIPanorama.round_report_round_won";
+
+    /// <summary>Played on a player hurt by a rocket / killed by one (the original's pain and death sounds; workshop pack).</summary>
+    public string PainSound { get; set; } = "";
+    public string DeathSound { get; set; } = "";
 }
 
 internal sealed class Rocket
@@ -27,6 +32,9 @@ internal sealed class Rocket
     public Vector Vel = new(0, 0, 0);
     public float Born;
     public int Tick;
+
+    /// <summary>The workshop pack missile model flying along with the rocket (null = beam trail only).</summary>
+    public CBaseModelEntity? Prop;
 }
 
 internal sealed class RpgPlayer
@@ -42,9 +50,8 @@ internal sealed class RpgPlayer
 /// 1.25 s per reloaded rocket), rockets push everyone within 115 units, deal up to 30 damage (self quarter, guards x1.5,
 /// airshots kill), no fall damage. The custom launcher/missile models and sounds cannot load in CS2: rockets are real
 /// beam trails with a CS2 explosion particle, and the rocket count is shown in the HUD.
-/// BLOCKED on CounterStrikeSharp 1.0.368 (.NET 8): rockets need a world-collision point and that CSS line has no ray
-/// trace, so the day is not registered (logged at load). Planned replacement: take the point from the engine's own
-/// bullet trace (weapon_fire + bullet_impact) - see FEATURE_GAPS.md. The simulation below is kept for that work.
+/// Rockets explode where their flight segment hits world geometry, found with the CounterStrikeSharp 1.0.376 ray trace
+/// (<see cref="Aim.WorldHit"/>); on 1.0.368 there was no trace and the day stayed unregistered.
 /// </summary>
 public sealed class RpgDay : JbModule
 {
@@ -65,42 +72,87 @@ public sealed class RpgDay : JbModule
 
     public override void OnLoad(bool hotReload)
     {
-        if (Jb.Days is not DaysModule) return;
-        if (!HasWorldCollision)
+        _instance = this;
+        var dayOn = Jb.Days is DaysModule && Cfg.Enabled;
+        var lrOn = Jb.LastRequests is LastRequest.LastRequestModule && Section<LastRequest.LrExtraConfig>("LastRequestsExtra").RocketeerEnabled;
+        if (!dayOn && !lrOn) return;
+
+        if (dayOn)
         {
-            Logger.LogInformation("[Days] RPG warday is not registered: rockets need a world-collision source (no ray trace in CSS 1.0.368)");
-            return;
+            _day = new DayDefinition
+            {
+                Name = "RPG", Type = DayType.Warday, AllowFreeForAll = true,
+                Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
+                OnStart = _ => ClearRockets(),
+                OnFreezeEnd = () =>
+                {
+                    _inProgress = true;
+                    foreach (var p in DayUtil.AliveAll())
+                    {
+                        if ((Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0) DayUtil.Give(p, "weapon_knife");
+                        else Prepare(p);
+                    }
+                },
+                OnEnd = _ =>
+                {
+                    if (!_inProgress) return;
+                    _inProgress = false;
+                    ClearRockets();
+                    foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
+                }
+            };
+            Jb.Days.Register(_day);
+            JbEvents.DaySpawnPost += OnDaySpawn;
         }
 
-        _day = new DayDefinition
+        if (lrOn)
         {
-            Name = "RPG", Type = DayType.Warday, AllowFreeForAll = true,
-            Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
-            OnStart = _ => _rockets.Clear(),
-            OnFreezeEnd = () =>
+            // Rocketeer (Rebel, last prisoner only): the RPG launcher against every guard.
+            var hp = Section<LastRequest.LrExtraConfig>("LastRequestsExtra").RocketeerHealth;
+            Jb.LastRequests.Register(new LastRequestDefinition
             {
-                _inProgress = true;
-                foreach (var p in DayUtil.AliveAll())
+                Name = "Rocketeer", Category = "Rebel",
+                Description = "The RPG rocket launcher (knife slot) against every guard: rocket jumps, airshots kill.",
+                Flags = LrFlags.Rebel | LrFlags.LastPrisonerOnlyCanUse | LrFlags.TempInvincible | LrFlags.NoRadar | LrFlags.RandomTeleportLocation,
+                OnStart = p =>
                 {
-                    if ((Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0) DayUtil.Give(p, "weapon_knife");
-                    else Prepare(p);
+                    Jb.LastRequests.SetHealth(p, Math.Max(1, hp));
+                    Jb.LastRequests.StripWeapons(p, true);
+                    _armed.Add(p.Slot);
+                    Prepare(p);
+                },
+                OnEnd = (p, _) =>
+                {
+                    _armed.Remove(p.Slot);
+                    if (_armed.Count == 0 && !(Active && _inProgress)) ClearRockets();
+                    Hud.Clear(p.Controller, "days.rpg");
+                    LastRequest.SimpleLastRequests.RestoreIfAlive(p);
                 }
-            },
-            OnEnd = _ =>
-            {
-                if (!_inProgress) return;
-                _inProgress = false;
-                _rockets.Clear();
-                foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
-            }
-        };
-        Jb.Days.Register(_day);
-        JbEvents.DaySpawnPost += OnDaySpawn;
+            });
+        }
+
         DamageService.Register(Name, 90, OnDamage);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
     }
 
-    public override void OnUnload(bool hotReload) => DamageService.Unregister(OnDamage);
+    public override void OnUnload(bool hotReload)
+    {
+        DamageService.Unregister(OnDamage);
+        JbEvents.DaySpawnPost -= OnDaySpawn;
+        _armed.Clear();
+        if (ReferenceEquals(_instance, this)) _instance = null;
+    }
+
+    public override void OnPlayerDisconnect(JbPlayer player) => _armed.Remove(player.Slot);
+
+    private static RpgDay? _instance;
+
+    /// <summary>Players holding the launcher outside the day (Rocketeer LR).</summary>
+    private readonly HashSet<int> _armed = new();
+
+    private bool DayRunning => Active && _inProgress;
+
+    private bool Launches(JbPlayer p) => DayRunning || _armed.Contains(p.Slot);
 
     private void OnDaySpawn(JbPlayer p)
     {
@@ -120,18 +172,22 @@ public sealed class RpgDay : JbModule
         s.NextAttack = (float)Server.EngineTime + 0.5f; // ATTACK_DELAY_DEPLOY
     }
 
-    private HookResult OnDamage(DamageContext ctx) =>
-        Active && _inProgress && ctx.IsFall ? HookResult.Handled : HookResult.Continue;
+    private HookResult OnDamage(DamageContext ctx)
+    {
+        if (!ctx.IsFall) return HookResult.Continue;
+        if (DayRunning) return HookResult.Handled;
+        return _armed.Contains(ctx.Victim.Slot) ? HookResult.Handled : HookResult.Continue;
+    }
 
     private void OnTick()
     {
-        if (!Active || !_inProgress) return;
+        if (!DayRunning && _armed.Count == 0 && _rockets.Count == 0) return;
         var now = (float)Server.EngineTime;
         foreach (var p in Players.Connected())
         {
             var c = p.Controller!;
             var s = S(p);
-            if (!c.IsAliveP() || s.Launcher == 0) continue;
+            if (!c.IsAliveP() || s.Launcher == 0 || !Launches(p)) continue;
             var active = c.ActiveWeapon();
             if (active == null || active.EntityHandle.Raw != s.Launcher) continue;
             // The knife itself never attacks.
@@ -184,15 +240,34 @@ public sealed class RpgDay : JbModule
         var aim = new Vector(eye.X + fwd.X * 8192f, eye.Y + fwd.Y * 8192f, eye.Z + fwd.Z * 8192f);
         var dir = new Vector(aim.X - spawn.X, aim.Y - spawn.Y, aim.Z - spawn.Z);
         var len = MathF.Max(0.001f, dir.Length());
-        _rockets.Add(new Rocket
+        var rocket = new Rocket
         {
             OwnerSlot = c.Slot, Pos = spawn, Born = now,
             Vel = new Vector(dir.X / len * Cfg.RocketSpeed, dir.Y / len * Cfg.RocketSpeed, dir.Z / len * Cfg.RocketSpeed)
-        });
+        };
+        if (Extras.WorkshopPackModule.Model(m => m.MissileModel) is { } missile)
+            rocket.Prop = Fx.Prop(missile, spawn, MissileAngles(rocket.Vel));
+        _rockets.Add(rocket);
         if (Cfg.ShootSound.Length > 0) Sound.PlayAt(c, Cfg.ShootSound);
         s.Clip--;
         s.NextAttack = now + 0.8f;
         s.Reloading = false;
+    }
+
+    private void ClearRockets()
+    {
+        foreach (var r in _rockets) Fx.SafeRemove(r.Prop);
+        _rockets.Clear();
+    }
+
+    /// <summary>The missile model points along +Z (nose up): angles that turn +Z onto the flight direction.</summary>
+    internal static QAngle MissileAngles(Vector vel)
+    {
+        var len = MathF.Max(0.001f, vel.Length());
+        var dz = Math.Clamp(vel.Z / len, -1f, 1f);
+        var pitch = MathF.Acos(dz) * 180f / MathF.PI;
+        var yaw = MathF.Atan2(vel.Y, vel.X) * 180f / MathF.PI;
+        return new QAngle(pitch, yaw, 0);
     }
 
     private void StepRockets(float now)
@@ -225,19 +300,35 @@ public sealed class RpgDay : JbModule
             if (impact == null)
             {
                 r.Pos = next;
+                if (r.Prop is { IsValid: true }) r.Prop.Teleport(next, null, null);
                 continue;
             }
 
             _rockets.Remove(r);
+            Fx.SafeRemove(r.Prop);
             Explode(r, impact, direct, owner);
         }
     }
 
-    /// <summary>False until a real world-collision source exists on CSS 1.0.368 (see the class summary).</summary>
-    private static bool HasWorldCollision => false;
-
-    /// <summary>World hit on the segment, or null. No source on CSS 1.0.368 yet (never an invented point).</summary>
-    private static Vector? WorldImpact(Vector from, Vector to, CCSPlayerController? owner) => null;
+    /// <summary>
+    /// World hit on the rocket's segment for this tick, pulled 4 units back so the explosion is not inside the wall; null
+    /// when the segment is clear. Without a valid owner pawn to ignore there is nothing to trace from: the rocket is
+    /// detonated where it is (never an invented point further on).
+    /// </summary>
+    private static Vector? WorldImpact(Vector from, Vector to, CCSPlayerController? owner)
+    {
+        var pawn = owner is { IsValid: true } ? owner.PawnOrNull() : null;
+        if (pawn == null) return from;
+        var hit = Aim.WorldHit(from, to, pawn);
+        if (hit == null) return null;
+        var dx = from.X - hit.X;
+        var dy = from.Y - hit.Y;
+        var dz = from.Z - hit.Z;
+        var len = MathF.Sqrt(dx * dx + dy * dy + dz * dz);
+        if (len < 0.01f) return hit;
+        var back = MathF.Min(4f, len) / len;
+        return new Vector(hit.X + dx * back, hit.Y + dy * back, hit.Z + dz * back);
+    }
 
     private void Explode(Rocket r, Vector at, CCSPlayerController? direct, CCSPlayerController? owner)
     {
@@ -312,9 +403,11 @@ public sealed class RpgDay : JbModule
         {
             pawn.Health -= rounded;
             Utilities.SetStateChanged(pawn, "CBaseEntity", "m_iHealth");
+            if (Cfg.PainSound.Length > 0) Sound.PlayAt(victim, Cfg.PainSound);
         }
         else
         {
+            if (Cfg.DeathSound.Length > 0) Sound.PlayAt(victim, Cfg.DeathSound);
             DamageService.KillWithCredit(victim, owner.Slot == victim.Slot ? null : owner, "rpg");
         }
     }

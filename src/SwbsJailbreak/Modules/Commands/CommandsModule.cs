@@ -34,12 +34,20 @@ public sealed class CommandsConfig
     public int TimerMin { get; set; } = 10;
     public int TimerMax { get; set; } = 180;
     public string TimerCompleteSound { get; set; } = "UIPanorama.round_report_round_won";
+
+    /// <summary>!fkslay: also respawn the freekilled prisoner where they died.</summary>
+    public bool FkSlayRespawn { get; set; } = true;
 }
 
 internal sealed class CommandsState : IRoundScoped
 {
     public bool DiedThisRound;
     public string KilledBy = "";
+
+    /// <summary>Slot / SteamID of the player who killed this one this round (-1 / 0 = world, suicide or unknown).</summary>
+    public int KillerSlot = -1;
+    public ulong KillerSteam;
+    public bool KillerWasGuard;
     public float NextFreekill;
     public float DeathTime;
     public Vector? LastPos;
@@ -51,6 +59,9 @@ internal sealed class CommandsState : IRoundScoped
     {
         DiedThisRound = false;
         KilledBy = "";
+        KillerSlot = -1;
+        KillerSteam = 0;
+        KillerWasGuard = false;
         NextFreekill = 0;
     }
 }
@@ -104,6 +115,10 @@ public sealed class CommandsModule : JbModule
         s.DiedThisRound = true;
         s.DeathTime = (float)Server.EngineTime;
         s.KilledBy = attacker?.Name ?? "world";
+        var real = attacker != null && !ReferenceEquals(attacker, victim);
+        s.KillerSlot = real ? attacker!.Slot : -1;
+        s.KillerSteam = real ? attacker!.SteamId64 : 0;
+        s.KillerWasGuard = real && attacker!.IsGuard;
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)
@@ -203,6 +218,7 @@ public sealed class CommandsModule : JbModule
             if (c.Slot != caller.Slot && !Perms.Has(c, "chat") && c.Team != CsTeam.CounterTerrorist && !c.IsBot) continue;
             Chat.Print(c, head, false);
             Chat.Print(c, body, false);
+            if (s.KillerWasGuard && Perms.Has(c, "slay")) Chat.Print(c, Lang.T("cmd.fkslay.hint", caller.PlayerName), false);
             Sound.Play(c, Cfg.FreekillSound);
         }
 
@@ -221,6 +237,45 @@ public sealed class CommandsModule : JbModule
         var s = S(target.Jb()!);
         if (!s.DiedThisRound || target.IsAliveP()) { Chat.ReplyT(caller, info, "cmd.whokilled.not_died", target.PlayerName); return; }
         Chat.ReplyT(caller, info, "cmd.whokilled.result", target.PlayerName, s.KilledBy);
+    }
+
+    // ------------------------------------------------------------------ fkslay
+
+    [ConsoleCommand("css_fkslay", "sm_fkslay <prisoner> - slay the guard who freekilled a prisoner and respawn the prisoner")]
+    public void CmdFkSlay(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "slay")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!fkslay <prisoner>"); return; }
+        var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true, respectImmunity: false);
+        if (t == null) return;
+        var victim = t.Players[0];
+        var vp = victim.Jb();
+        if (vp == null) return;
+        var s = S(vp);
+        if (!s.DiedThisRound || victim.IsAliveP()) { Chat.ReplyT(caller, info, "cmd.whokilled.not_died", victim.PlayerName); return; }
+        if (victim.Team != CsTeam.Terrorist) { Chat.ReplyT(caller, info, "cmd.fkslay.not_prisoner", victim.PlayerName); return; }
+        if (!s.KillerWasGuard || s.KillerSlot < 0) { Chat.ReplyT(caller, info, "cmd.fkslay.no_guard", victim.PlayerName, s.KilledBy); return; }
+
+        // The killer must still be the same player (the slot may have been reused after a disconnect).
+        var killer = Players.Get(s.KillerSlot);
+        var kc = killer.Controller;
+        if (!killer.Connected || killer.SteamId64 != s.KillerSteam || kc == null || !kc.IsValid)
+        {
+            Chat.ReplyT(caller, info, "cmd.fkslay.killer_gone", s.KilledBy);
+            if (Cfg.FkSlayRespawn) OneUp(victim, caller, "cmd.oneup.done");
+            return;
+        }
+
+        var admin = caller?.PlayerName ?? "Console";
+        if (kc.IsAliveP()) kc.Kill();
+        Chat.TellAll("cmd.fkslay.done", admin, kc.PlayerName, victim.PlayerName);
+        Jb.Log.LogEvent($"{admin} slayed {kc.PlayerName} for freekilling {victim.PlayerName}", caller.Jb(), killer, LogType.Admin);
+
+        // Clear the record so one freekill cannot be punished twice.
+        s.KillerSlot = -1;
+        s.KillerSteam = 0;
+        s.KillerWasGuard = false;
+        if (Cfg.FkSlayRespawn) OneUp(victim, caller, "cmd.oneup.done");
     }
 
     // ------------------------------------------------------------------ 1up / xup

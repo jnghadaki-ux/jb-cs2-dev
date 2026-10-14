@@ -104,8 +104,17 @@ public static class Fx
     {
         var origin = player.Origin();
         if (origin == null) return;
-        var center = new Vector(origin.X, origin.Y, origin.Z + 10f);
-        var ring = Ring(center, startRadius, color, 3f, duration + 0.1f, 16);
+        PulseAt(new Vector(origin.X, origin.Y, origin.Z + 10f), color, startRadius, endRadius, duration);
+        if (!string.IsNullOrEmpty(sound)) Sound.PlayAt(player, sound);
+    }
+
+    /// <summary>An expanding ring at a point (BeaconPulse without a player, e.g. where someone died).</summary>
+    public static void PulseAt(Vector center, Color color, float startRadius = 10f, float endRadius = 375f, float duration = 0.5f, float width = 3f,
+        Func<CCSPlayerController, bool>? visibleTo = null, int segments = 16)
+    {
+        var ring = Ring(center, startRadius, color, width, duration + 0.1f, segments);
+        if (visibleTo != null)
+            foreach (var b in ring) Visibility.OnlyFor(b, visibleTo);
         const int steps = 5;
         var plugin = JailbreakPlugin.Instance;
         if (plugin != null)
@@ -119,8 +128,35 @@ public static class Fx
                 });
             }
         }
+    }
 
-        if (!string.IsNullOrEmpty(sound)) Sound.PlayAt(player, sound);
+    /// <summary>A model prop without collision (workshop pack models), optionally tinted. Null when it cannot be created.</summary>
+    public static CBaseModelEntity? Prop(string model, Vector pos, QAngle angles, Color? tint = null)
+    {
+        if (string.IsNullOrWhiteSpace(model)) return null;
+        try
+        {
+            var prop = Utilities.CreateEntityByName<CBaseModelEntity>("prop_dynamic");
+            if (prop == null) return null;
+            prop.SetModel(model);
+            prop.Spawnflags = 256; // start with collision disabled
+            if (tint is { } c) prop.Render = c;
+            prop.DispatchSpawn();
+            prop.Teleport(pos, angles, new Vector(0, 0, 0));
+            return prop;
+        }
+        catch (Exception ex)
+        {
+            JailbreakPlugin.Instance?.Logger.LogWarning(ex, "Failed to create prop {Model}", model);
+            return null;
+        }
+    }
+
+    public static void Tint(CBaseModelEntity? prop, Color color)
+    {
+        if (prop is not { IsValid: true } || prop.Render == color) return;
+        prop.Render = color;
+        Utilities.SetStateChanged(prop, "CBaseModelEntity", "m_clrRender");
     }
 
     public static void RemoveLater(CEntityInstance ent, float seconds)

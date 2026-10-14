@@ -1,0 +1,18 @@
+{
+  "cb.day": "{red}No searching or snitching during days.",
+  "cb.lr": "{red}No searching or snitching during last requests.",
+  "cb.not_prisoner": "{red}{0} is not an alive prisoner.",
+  "cb.search.only_guards": "{red}Only alive guards can search prisoners.",
+  "cb.search.limit": "{red}You can only search {0} prisoners per round.",
+  "cb.search.no_target": "{red}Stand next to a prisoner and look at them (or use {green}!search <name>{red}).",
+  "cb.search.too_far": "{red}{0} is too far away: get closer to search them.",
+  "cb.search.recent": "{red}{0} was searched a moment ago.",
+  "cb.search.clean": "{lightblue}{0}{olive} searched {lightred}{1}{olive}: {green}clean{olive}.",
+  "cb.search.found": "{lightblue}{0}{olive} searched {lightred}{1}{olive} and found {red}{2}{olive}! Confiscated.",
+  "cb.snitch.only_prisoners": "{red}Only alive prisoners can snitch.",
+  "cb.snitch.limit": "{red}You already snitched this round.",
+  "cb.snitch.self": "{red}You cannot snitch on yourself.",
+  "cb.snitch.correct": "{olive}Your tip on {lightred}{0}{olive} was right: {green}+{1}{olive} points.",
+  "cb.snitch.wrong": "{olive}Your tip on {lightred}{0}{olive} was wrong: {red}-{1}{olive} points.",
+  "cb.snitch.tip": "{gold}[TIP] {olive}A prisoner says {lightred}{0}{olive} is carrying a weapon. Use {green}!search{olive}."
+}

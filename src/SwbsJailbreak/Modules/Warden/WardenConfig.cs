@@ -50,6 +50,9 @@ public sealed class WardenConfig
     /// <summary>Global !kiss cooldown in seconds (shared by every warden, consumed even on a miss).</summary>
     public float KissCooldown { get; set; } = 5.0f;
 
+    /// <summary>!kiss: how far away (units) the kissed player may be.</summary>
+    public float KissRange { get; set; } = 1500f;
+
     /// <summary>Original swoobles kiss.mp3. ".vsnd" path (played to players within KissSoundRadius) or sound event. Empty = silent.</summary>
     public string KissSound { get; set; } = "";
 
@@ -91,7 +94,10 @@ public sealed class WardenConfig
     public float LineWidth { get; set; } = 5f;
 
     // ---- warden paintballs ----
-    /// <summary>"beam" (crossed beam splats, the CS2 substitute for TE World Decal) or "off".</summary>
+    /// <summary>
+    /// "beam" = on: splat models from the workshop pack (WorkshopPack.PaintballModels) when it is enabled, crossed beam
+    /// splats otherwise (the CS2 substitutes for TE World Decal); "off" = no warden paintballs.
+    /// </summary>
     public string PaintballMode { get; set; } = "beam";
 
     public float PaintballDelay { get; set; } = 0.02f;

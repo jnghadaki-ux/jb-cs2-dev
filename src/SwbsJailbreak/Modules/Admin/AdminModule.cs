@@ -100,11 +100,8 @@ public sealed partial class AdminModule : JbModule
     public override int Order => 90;
     public override bool Enabled => Cfg.Enabled;
 
-    private string _activityLog = "";
-
     public override void OnLoad(bool hotReload)
     {
-        _activityLog = Path.Combine(Storage.DataDirectory, "admin_activity.log");
         DamageService.Register(Name, 200, OnDamage);
         Plugin.AddCommandListener("say", OnSay);
         Plugin.AddCommandListener("say_team", OnSayTeam);
@@ -213,17 +210,9 @@ public sealed partial class AdminModule : JbModule
 
     internal void LogActivity(CCSPlayerController? admin, string text)
     {
-        var line = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}Z [{Server.MapName}] {AdminName(admin)} ({admin?.SteamID.ToString() ?? "console"}): {text}";
-        Logger.LogInformation("[admin] {Line}", line);
+        Logger.LogInformation("[admin] {Admin} ({Steam}): {Text}", AdminName(admin), admin?.SteamID.ToString() ?? "console", text);
+        // Persisted by the AdminActivity module (daily files, optional Discord) through the logger.
         Jb.Log.LogEvent(text, admin.Jb(), null, LogType.Admin);
-        try
-        {
-            File.AppendAllText(_activityLog, line + Environment.NewLine);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Could not write admin activity log");
-        }
     }
 
     /// <summary>Accepts SteamID64, STEAM_X:Y:Z and [U:1:N]. Returns 0 when invalid.</summary>

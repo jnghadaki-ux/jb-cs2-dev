@@ -1,0 +1,17 @@
+{
+  "maprate.too_soon": "{red}Play on this map a bit longer before rating it ({0} more minutes).",
+  "maprate.title": "Rate the map: {0}",
+  "maprate.title_rerate": "Change your rating: {0}",
+  "maprate.current": "Your rating: {0}/3",
+  "maprate.option3": "★★★ Map is really good!",
+  "maprate.option2": "★★ Map is alright, sometimes.",
+  "maprate.option1": "★ Map sucks.. hate it.",
+  "maprate.option0": "I don't care.",
+  "maprate.thanks": "{olive}You rated {green}{1}{olive}: {gold}{0}/3{olive}. Thanks!",
+  "maprate.cleared": "{olive}Your rating for {1} was removed.",
+  "maprate.none": "{olive}{0} has no ratings yet.",
+  "maprate.summary": "{olive}{0}: {gold}{1}/3{olive} from {2} ratings.",
+  "maprate.top_empty": "{olive}No map has {0} ratings yet.",
+  "maprate.top_title": "{gold}Best rated maps:",
+  "maprate.top_line": "{green}#{0} {default}{1} {grey}- {gold}{2}/3 {grey}({3})"
+}

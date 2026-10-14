@@ -1,0 +1,81 @@
+{
+  "lr.menu.recent": "★ {0} ({1})",
+
+  "lr.duel.starting": "<font color='#6FC41A'>Duel starts in</font> <font color='#FFFFFF'>{0}</font>",
+  "lr.duel.go": "<font class='fontSize-l' color='#FF3C1E'>GO!</font>",
+
+  "lr.roulette.how": "{olive}Gun Roulette: {lightred}{0} {olive}random guns, one shot each per gun, taking turns. After the last gun the healthier player wins.",
+  "lr.roulette.hud": "<font color='#FFC828'>Gun {0}/{1}: {2}</font><br><font color='#FFFFFF'>{3} shoots</font>",
+  "lr.roulette.too_slow": "{red}Too slow: your shot is gone.",
+  "lr.roulette.final": "{olive}All {lightred}{0} {olive}guns fired: {lightred}{1} {olive}({2} HP) beats {lightred}{3} {olive}({4} HP).",
+
+  "lr.quickdraw.how": "{olive}Quick Draw: you stand back to back. Shoot only after {red}DRAW!{olive} Shooting early loses.",
+  "lr.quickdraw.ready": "<font color='#FFC828'>Wait for it...</font>",
+  "lr.quickdraw.draw": "<font class='fontSize-l' color='#FF3C1E'>DRAW!</font>",
+  "lr.quickdraw.early": "{lightred}{0} {olive}shot too early and loses!",
+
+  "lr.potato.how": "{olive}Hot Potato: the glowing player holds the potato. Knife the other to pass it. When it blows up, the holder dies.",
+  "lr.potato.boom": "{red}BOOM! {olive}The potato blew up on {lightred}{0}{olive}.",
+  "lr.potato.hud_holder": "<font color='#FF5A14'>You have the potato! Knife them!</font>",
+  "lr.potato.hud_run": "<font color='#6FC41A'>{0} has the potato. Run!</font>",
+
+  "lr.hide.how": "{olive}Hide and Seek: the guard is blind for {lightred}{0} {olive}s while the prisoner hides, then has {lightred}{1} {olive}s to knife them.",
+  "lr.hide.hiding": "<font color='#6FC41A'>Hiding time:</font> <font color='#FFFFFF'>{0}</font>",
+  "lr.hide.seek": "<font class='fontSize-l' color='#FF3C1E'>Ready or not, here I come!</font>",
+
+  "lr.jump.how": "{olive}Longest Jump: {lightred}{0} {olive}jumps each, landing at the same height. The longest jump wins.",
+  "lr.jump.result": "{lightred}{0} {olive}jumped {gold}{1} {olive}units (jump {2}/{3}).",
+  "lr.jump.invalid": "{red}Jump {0}/{1} doesn't count: land at the height you jumped from.",
+  "lr.jump.final": "{lightred}{0} {olive}wins the longest jump: {gold}{1} {olive}vs {2}'s {3}.",
+
+  "lr.chicken.how": "{olive}Chicken Hunt: {lightred}{0} {olive}chickens, {lightred}{1} {olive}seconds. Most chickens shot wins.",
+  "lr.chicken.hud": "<font color='#FFC828'>Chickens</font> {0}: <font color='#FFFFFF'>{1}</font> - {2}: <font color='#FFFFFF'>{3}</font><br><font color='#BBBBBB'>{4}s left</font>",
+
+  "lr.target.how": "{olive}Target Practice: {lightred}{0} {olive}shots each at the rings. Through the red centre = 10 points.",
+  "lr.target.hud": "<font color='#FFC828'>Score</font> {0}: <font color='#FFFFFF'>{1}</font> - {2}: <font color='#FFFFFF'>{3}</font><br><font color='#BBBBBB'>{4}s left</font>",
+
+  "lr.contestx.result": "{lightred}{0} {olive}wins {gold}{1}{olive} to {2} against {lightred}{3}{olive}.",
+
+  "lr.rps.title_prefix": "RPS:",
+  "lr.rps.title": "Round {0} - pick one",
+  "lr.rps.rock": "Rock",
+  "lr.rps.paper": "Paper",
+  "lr.rps.scissors": "Scissors",
+  "lr.rps.nothing": "nothing",
+  "lr.rps.reveal": "{lightred}{0} {olive}picked {gold}{1}{olive}, {lightred}{2} {olive}picked {gold}{3}{olive}.",
+
+  "lr.math.how": "{olive}Math Race: type the answer in chat. First to {lightred}{0} {olive}points wins.",
+  "lr.type.how": "{olive}Type Race: type the word in chat exactly. First to {lightred}{0} {olive}points wins.",
+  "lr.mind.question": "<font color='#FFC828'>Question {0}</font><br><font class='fontSize-l' color='#FFFFFF'>{1}</font>",
+  "lr.mind.question_chat": "{olive}Question {0}: {gold}{1}",
+  "lr.mind.wrong": "{red}Wrong!",
+  "lr.mind.right": "{lightred}{0} {olive}got it: {gold}{1}",
+  "lr.mind.nobody": "{olive}Nobody got it in time. It was {gold}{0}{olive}.",
+  "lr.mind.score": "{olive}Score: {lightred}{0} {default}{1} {olive}- {default}{3} {lightred}{2}",
+  "lr.mind.won": "{lightred}{0} {olive}wins {gold}{1}-{2} {olive}against {lightred}{3}{olive}.",
+
+  "lr.simon.how": "{olive}Simon Says: do what the screen says before time runs out. The first to fail loses.",
+  "lr.simon.ready": "<font color='#6FC41A'>Round {0}: get ready...</font>",
+  "lr.simon.do": "<font class='fontSize-l' color='#FFC828'>{0}</font><br><font color='#BBBBBB'>{1}s</font>",
+  "lr.simon.jump": "JUMP!",
+  "lr.simon.crouch": "CROUCH!",
+  "lr.simon.lookup": "LOOK UP!",
+  "lr.simon.lookdown": "LOOK DOWN!",
+  "lr.simon.freeze": "FREEZE!",
+  "lr.simon.failed": "{lightred}{0} {olive}failed {gold}{1} {olive}in round {2}.",
+  "lr.simon.both_ok": "<font color='#6FC41A'>Both made it!</font>",
+  "lr.simon.both_failed": "<font color='#FF3C1E'>Both failed: again!</font>",
+  "lr.simon.coin": "{olive}Nobody slipped up in 20 rounds: a coin decides.",
+
+  "lr.teleporter.how": "{olive}Teleporter: press {gold}E {olive}to teleport where you aim (every {0} s).",
+  "lr.teleporter.ready": "<font color='#50C8FF'>Teleport ready (E)</font>",
+  "lr.teleporter.cooldown": "<font color='#BBBBBB'>Teleport in {0}s</font>",
+
+  "lr.spec.panel": "<font color='#FFC828'>LR: {0}</font><br><font color='#FFFFFF'>{1} {2} HP</font> vs <font color='#FFFFFF'>{3} {4} HP</font>",
+
+  "lrlog.title": "Last {0} last requests on this map:",
+  "lrlog.empty": "No last requests on this map yet.",
+  "lrlog.won": "{0}: {1} beat {2}",
+  "lrlog.no_winner": "{0}: {1} vs {2}, no winner",
+  "lrlog.solo": "{0}: {1}"
+}
