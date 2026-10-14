@@ -94,7 +94,10 @@ public sealed class WardenConfig
     public float LineWidth { get; set; } = 5f;
 
     // ---- warden paintballs ----
-    /// <summary>"beam" (crossed beam splats, the CS2 substitute for TE World Decal) or "off".</summary>
+    /// <summary>
+    /// "beam" = on: splat models from the workshop pack (WorkshopPack.PaintballModels) when it is enabled, crossed beam
+    /// splats otherwise (the CS2 substitutes for TE World Decal); "off" = no warden paintballs.
+    /// </summary>
     public string PaintballMode { get; set; } = "beam";
 
     public float PaintballDelay { get; set; } = 0.02f;

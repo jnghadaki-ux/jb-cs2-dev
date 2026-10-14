@@ -6,7 +6,7 @@ Output (a zip and the folder it was made from):
   swbs_jailbreak/                     -> copy into  ...\\Counter-Strike Global Offensive\\content\\csgo_addons\\swbs_jailbreak\\
       sounds/swbs/...                    the original sounds, converted to 44.1 kHz 16-bit mono WAV (CS2's compiler input)
       soundevents/swbs_jailbreak.vsndevts   one sound event per sound (names used by the plugin's WorkshopPack module)
-      models/swbs/...                    the SWBS props (props.py)
+      models/swbs/...                    the SWBS props (props.py) and paintball splats (paintballs.py)
       characters/models/swbs/prisoners/  the SWBS prisoner player models on the CS2 skeleton (prisoners.py)
   compile_pack.bat + find_cs2.ps1     finds CS2, copies the addon in, compiles and checks it (or use the Asset Browser)
   preview.png                         512x512 Workshop preview image
@@ -26,6 +26,7 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paintballs  # noqa: E402  (paintball splats)
 import prisoners  # noqa: E402  (CS:GO prisoner models -> CS2 player models)
 import props  # noqa: E402  (CS:GO props -> CS2 models)
 import store_models  # noqa: E402  (downloaded CS2 player models -> current CS2 skeleton)
@@ -287,7 +288,10 @@ Models (the original SWBS props, converted to CS2: SMD mesh + PNG textures + .vm
   models/swbs/missile.vmdl         RPG day / Rocketeer rockets
   models/swbs/rocket_launcher.vmdl converted for later (CS2 cannot swap the knife's first-person model)
 
+  models/swbs/paintballs/*.vmdl    paintball splats: the 3 original SWBS splats + 5 new shapes (white, tinted in game)
+
 With WorkshopPack.Enabled and WorkshopPack.UseModels (default true) the plugin uses them instead of the beam versions.
+Paintballs (store items and the warden's) then leave a random splat, flat on the wall or floor the bullet hit.
 If compile_pack.bat reports missing prop models, send compile_log.txt and set "UseModels": false meanwhile (a missing
 model would show as the engine's error model).
 
@@ -430,6 +434,7 @@ def build_main(fork: Path, out: Path) -> int:
 
     print("models:")
     models = props.convert_all(fork, addon)
+    splats = paintballs.convert_all(fork, addon)
     print("player models:")
     players = prisoners.convert_all(fork, addon)
 
@@ -439,14 +444,15 @@ def build_main(fork: Path, out: Path) -> int:
          ("sound events", '-i "%DEST%\\soundevents\\swbs_jailbreak.vsndevts"'),
          ("materials", '-r -i "%DEST%\\materials\\swbs\\*.vmat"'),
          ("player materials", '-r -i "%DEST%\\characters\\models\\swbs\\*.vmat"'),
-         ("models", '-i "%DEST%\\models\\swbs\\*.vmdl"'),
+         ("models", '-r -i "%DEST%\\models\\swbs\\*.vmdl"'),
          ("player models", '-r -i "%DEST%\\characters\\models\\swbs\\*.vmdl"')],
-        models + players,
+        models + splats + players,
         'Until then set "UseModels": false in WorkshopPack if a prop is missing, and keep PlayerModels.ApplyModels off.')
     _tools(pack, bat, README, "JAILBREAK PACK")
     zip_path = out / "SwbsJailbreak-workshop-pack.zip"
     _zip(pack, zip_path)
-    print(f"pack: {zip_path} ({len(events)} sound events, {len(models)} models, {len(players)} player models)")
+    print(f"pack: {zip_path} ({len(events)} sound events, {len(models)} models, {len(splats)} paintball splats, "
+          f"{len(players)} player models)")
     return 0
 
 

@@ -36,7 +36,10 @@ public sealed class StoreItem
     public string Name { get; set; } = "";
     public StoreItemType Type { get; set; }
 
-    /// <summary>"R,G,B", or "rainbow" for a random colour every time (tracers, effects, hat tint).</summary>
+    /// <summary>
+    /// "R,G,B", or "rainbow" for a random colour every time (tracers, effects, hat tint). Several separated by "|" pick
+    /// one at random each time (e.g. the classic paintballs "0,128,255|0,220,0|255,0,170").
+    /// </summary>
     public string Color { get; set; } = "255,255,255";
 
     /// <summary>
@@ -88,7 +91,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = false;
 
-    public const int CurrentDefaultsVersion = 2;
+    public const int CurrentDefaultsVersion = 3;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -97,7 +100,7 @@ public sealed class StoreConfig
         new() { Id = "tracer_green", Name = "Green tracers", Type = StoreItemType.Tracer, Color = "60,230,90", Price = 300 },
         new() { Id = "tracer_gold", Name = "Gold tracers", Type = StoreItemType.Tracer, Color = "255,200,40", Price = 500 },
         new() { Id = "tracer_rainbow", Name = "Rainbow tracers", Type = StoreItemType.Tracer, Color = "rainbow", Price = 900 },
-        new() { Id = "paint_random", Name = "Paintballs", Type = StoreItemType.Paintball, Color = "rainbow", Price = 600 },
+        new() { Id = "paint_random", Name = "Rainbow paintballs", Type = StoreItemType.Paintball, Color = "rainbow", Price = PaintRainbowPrice },
         new() { Id = "kill_ring_red", Name = "Red kill shockwave", Type = StoreItemType.KillEffect, Color = "255,40,40", Data = "ring", Price = 700 },
         new() { Id = "kill_ring_gold", Name = "Gold kill shockwave", Type = StoreItemType.KillEffect, Color = "255,200,40", Data = "ring", Price = 900 },
         new() { Id = "trail_white", Name = "White trail", Type = StoreItemType.Trail, Color = "255,255,255", Price = 400 },
@@ -124,8 +127,24 @@ public sealed class StoreConfig
         new() { Id = "chat_title", Name = "Chat title (!title)", Type = StoreItemType.ChatTitle, Color = "{gold}", Price = 1500 },
         new() { Id = "body_transparent", Name = "See-through body", Type = StoreItemType.Transparency, Data = "165", Price = 1500 },
         new() { Id = "body_skinny", Name = "Skinny", Type = StoreItemType.BodySize, Data = "0.85", Price = 1200 },
-        new() { Id = "body_fatso", Name = "Fatso", Type = StoreItemType.BodySize, Data = "1.15", Price = 1200 }
+        new() { Id = "body_fatso", Name = "Fatso", Type = StoreItemType.BodySize, Data = "1.15", Price = 1200 },
+        // ---- version 3: paintball colours (the cheapest items; splat models from the workshop pack)
+        new() { Id = "paint_classic", Name = "Classic paintballs", Type = StoreItemType.Paintball, Color = ClassicPaint, Price = 150 },
+        new() { Id = "paint_red", Name = "Red paintballs", Type = StoreItemType.Paintball, Color = "230,25,25", Price = 100 },
+        new() { Id = "paint_orange", Name = "Orange paintballs", Type = StoreItemType.Paintball, Color = "255,130,0", Price = 100 },
+        new() { Id = "paint_yellow", Name = "Yellow paintballs", Type = StoreItemType.Paintball, Color = "255,225,30", Price = 100 },
+        new() { Id = "paint_green", Name = "Green paintballs", Type = StoreItemType.Paintball, Color = "0,220,0", Price = 100 },
+        new() { Id = "paint_blue", Name = "Blue paintballs", Type = StoreItemType.Paintball, Color = "0,128,255", Price = 100 },
+        new() { Id = "paint_purple", Name = "Purple paintballs", Type = StoreItemType.Paintball, Color = "150,60,255", Price = 100 },
+        new() { Id = "paint_pink", Name = "Pink paintballs", Type = StoreItemType.Paintball, Color = "255,0,170", Price = 100 },
+        new() { Id = "paint_white", Name = "White paintballs", Type = StoreItemType.Paintball, Color = "245,245,245", Price = 100 },
+        new() { Id = "paint_black", Name = "Black paintballs", Type = StoreItemType.Paintball, Color = "30,30,30", Price = 100 }
     };
+
+    /// <summary>The original SWBS splat colours (splat_blue, splat_green, splat_pink).</summary>
+    public const string ClassicPaint = "0,128,255|0,220,0|255,0,170";
+
+    internal const int PaintRainbowPrice = 200;
 }
 
 /// <summary>A player's store inventory (data/store.json, keyed by SteamID64).</summary>
@@ -167,7 +186,7 @@ public sealed class StoreModule : JbModule
     private readonly StoreInventory?[] _inv = new StoreInventory?[Players.MaxSlots];
     private readonly double[] _nextTracer = new double[Players.MaxSlots];
     private readonly Vector?[] _trailLast = new Vector?[Players.MaxSlots];
-    private readonly Queue<CBeam?[]>[] _paint = Enumerable.Range(0, Players.MaxSlots).Select(_ => new Queue<CBeam?[]>()).ToArray();
+    private readonly Queue<CEntityInstance?[]>[] _paint = Enumerable.Range(0, Players.MaxSlots).Select(_ => new Queue<CEntityInstance?[]>()).ToArray();
     private readonly int[] _alpha = new int[Players.MaxSlots];
     private readonly float[] _scale = new float[Players.MaxSlots];
     private readonly CBaseModelEntity?[] _hat = new CBaseModelEntity?[Players.MaxSlots];
@@ -204,8 +223,22 @@ public sealed class StoreModule : JbModule
         Plugin.Config.Update<StoreConfig>("Store", c =>
         {
             c.Items = Merge(c.Items, StoreConfig.DefaultItems());
+            if (c.DefaultsVersion < 3) CheapenPaintballs(c.Items);
             c.DefaultsVersion = StoreConfig.CurrentDefaultsVersion;
         });
+    }
+
+    /// <summary>
+    /// Version 3: paintballs are the cheapest items. The old default rainbow paintballs (600) get the new price; a price
+    /// an admin changed is kept.
+    /// </summary>
+    internal static void CheapenPaintballs(List<StoreItem> items)
+    {
+        foreach (var it in items.Where(i => i.Id.Equals("paint_random", StringComparison.OrdinalIgnoreCase) && i.Price == 600))
+        {
+            it.Price = StoreConfig.PaintRainbowPrice;
+            if (it.Name == "Paintballs") it.Name = "Rainbow paintballs";
+        }
     }
 
     /// <summary>Engine-free (unit-tested): the configured items plus the defaults whose id is not there yet.</summary>
@@ -303,6 +336,12 @@ public sealed class StoreModule : JbModule
 
     internal static Color ColorOf(string spec, Random rng)
     {
+        if (spec.Contains('|'))
+        {
+            var options = spec.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (options.Length > 0) spec = options[rng.Next(options.Length)];
+        }
+
         if (spec.Equals("rainbow", StringComparison.OrdinalIgnoreCase))
         {
             var hue = rng.NextDouble() * 360;
@@ -618,14 +657,28 @@ public sealed class StoreModule : JbModule
             if (o != null && VectorUtil.Distance2D(o, impact) <= 24f && impact.Z >= o.Z - 4f && impact.Z <= o.Z + 76f) return; // not on players
         }
 
-        const float half = 3f;
         var filter = ViewFilter(c);
-        var b1 = Fx.Beam(new Vector(impact.X - half, impact.Y, impact.Z), new Vector(impact.X + half, impact.Y, impact.Z), color, 4f, Cfg.PaintSeconds);
-        var b2 = Fx.Beam(new Vector(impact.X, impact.Y - half, impact.Z), new Vector(impact.X, impact.Y + half, impact.Z), color, 4f, Cfg.PaintSeconds);
-        Restrict(b1, filter);
-        Restrict(b2, filter);
+        CEntityInstance?[] parts;
+        var feet = c.Origin();
+        if (Core.Paint.Splat(impact, c.EyePosition(), feet?.Z ?? float.NaN, color, Extras.WorkshopPackModule.PaintballModels()) is { } splat)
+        {
+            Restrict(splat, filter);
+            Fx.RemoveLater(splat, Math.Max(1f, Cfg.PaintSeconds));
+            parts = new CEntityInstance?[] { splat };
+        }
+        else
+        {
+            // No splat models (workshop pack off): a small crossed-beam splat.
+            const float half = 3f;
+            var b1 = Fx.Beam(new Vector(impact.X - half, impact.Y, impact.Z), new Vector(impact.X + half, impact.Y, impact.Z), color, 4f, Cfg.PaintSeconds);
+            var b2 = Fx.Beam(new Vector(impact.X, impact.Y - half, impact.Z), new Vector(impact.X, impact.Y + half, impact.Z), color, 4f, Cfg.PaintSeconds);
+            Restrict(b1, filter);
+            Restrict(b2, filter);
+            parts = new CEntityInstance?[] { b1, b2 };
+        }
+
         var q = _paint[c.Slot];
-        q.Enqueue(new[] { b1, b2 });
+        q.Enqueue(parts);
         while (q.Count > Math.Max(1, Cfg.PaintMaxPerPlayer))
             foreach (var old in q.Dequeue())
                 Fx.SafeRemove(old);

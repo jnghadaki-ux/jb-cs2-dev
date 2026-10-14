@@ -44,6 +44,16 @@ public sealed class WorkshopPackConfig
     public string RocketLauncherModel { get; set; } = "models/swbs/rocket_launcher.vmdl";
 
     /// <summary>
+    /// Paintball splat models (the 3 original SWBS splats + 5 new shapes, scripts/workshop/paintballs.py). Store and
+    /// warden paintballs pick one at random per shot; with the pack or UseModels off they draw beam splats.
+    /// </summary>
+    public List<string> PaintballModels { get; set; } = DefaultPaintballModels();
+
+    internal static List<string> DefaultPaintballModels() =>
+        new[] { "splat_blue", "splat_green", "splat_pink", "splat_1", "splat_2", "splat_3", "splat_4", "splat_5" }
+            .Select(n => $"models/swbs/paintballs/{n}.vmdl").ToList();
+
+    /// <summary>
     /// Turn on once the SWBS store pack (addon swbs_store, its own Workshop item, also in mm_extra_addons) is uploaded:
     /// adds its character player models to the store once (category "Player models"). Independent of Enabled.
     /// </summary>
@@ -123,8 +133,19 @@ public sealed class WorkshopPackModule : JbModule
         return path.Length == 0 ? null : path;
     }
 
+    private static readonly IReadOnlyList<string> NoModels = Array.Empty<string>();
+
+    /// <summary>The paintball splat models to use, or none (pack off, models off): callers draw beam splats instead.</summary>
+    internal static IReadOnlyList<string> PaintballModels()
+    {
+        var cfg = _instance?.Cfg;
+        if (cfg is not { Enabled: true, UseModels: true }) return NoModels;
+        return cfg.PaintballModels.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
+    }
+
     private IEnumerable<string> Models() =>
         new[] { Cfg.FlagModel, Cfg.CapturePointModel, Cfg.FinishLineModel, Cfg.MissileModel, Cfg.RocketLauncherModel }
+            .Concat(Cfg.PaintballModels)
             .Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim());
 
     public override void OnUnload(bool hotReload)
