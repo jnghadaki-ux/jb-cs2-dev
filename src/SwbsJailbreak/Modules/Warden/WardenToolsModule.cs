@@ -53,6 +53,11 @@ public sealed class WardenToolsConfig
     public float SpotlightCooldown { get; set; } = 3f;
     public float SpotlightRange { get; set; } = 3000f;
     public string SpotlightColor { get; set; } = "0,255,255";
+
+    /// <summary>!blindfold: the warden blacks out a prisoner's screen for games; removed automatically after
+    /// BlindfoldMaxSeconds and at death, LR, days and round end.</summary>
+    public bool BlindfoldEnabled { get; set; } = true;
+    public float BlindfoldMaxSeconds { get; set; } = 60f;
 }
 
 /// <summary>
@@ -81,6 +86,9 @@ public sealed class WardenToolsModule : JbModule
     private float _wardenSince;
 
     private readonly Dictionary<int, GlowHandle> _spotlights = new();
+
+    /// <summary>Blindfolded prisoner slots → a token so an old auto-remove timer cannot lift a newer blindfold.</summary>
+    private readonly Dictionary<int, object> _blindfolds = new();
     private float _nextSpotlight;
 
     /// <summary>!split team index per prisoner slot.</summary>
@@ -118,6 +126,7 @@ public sealed class WardenToolsModule : JbModule
         SetFriendlyFire(false, null);
         ClearDeputy(false);
         ClearSpotlights();
+        ClearBlindfolds();
     }
 
     // ================================================================= lifecycle
@@ -132,6 +141,7 @@ public sealed class WardenToolsModule : JbModule
         _wardenVotes.Clear();
         _splitTeam.Clear();
         _spotlights.Clear(); // the glow entities went with the old map
+        _blindfolds.Clear();
         _nextSpotlight = 0;
     }
 
@@ -144,6 +154,7 @@ public sealed class WardenToolsModule : JbModule
         _wardenVotes.Clear();
         _splitTeam.Clear();
         ClearSpotlights();
+        ClearBlindfolds();
     }
 
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
@@ -151,6 +162,7 @@ public sealed class WardenToolsModule : JbModule
         if (IsDeputy(victim)) ClearDeputy(true);
         _splitTeam.Remove(victim.Slot);
         RemoveSpotlight(victim.Slot);
+        RemoveBlindfold(victim.Slot, announce: false);
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)
@@ -160,6 +172,7 @@ public sealed class WardenToolsModule : JbModule
         _wardenVotes.Remove(player.Slot);
         _splitTeam.Remove(player.Slot);
         RemoveSpotlight(player.Slot);
+        _blindfolds.Remove(player.Slot);
     }
 
     public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
@@ -173,6 +186,7 @@ public sealed class WardenToolsModule : JbModule
     {
         if (_ffOn) SetFriendlyFire(false, Lang.T("wt.ff.off_lr"));
         ClearSplit(false); // LRs tint and beacon players themselves
+        ClearBlindfolds();
     }
 
     private void OnWardenSelected(JbPlayer warden)
@@ -185,6 +199,7 @@ public sealed class WardenToolsModule : JbModule
 
     private void OnDayStarted(JbPlayer? starter, DayType type, bool freeForAll)
     {
+        ClearBlindfolds();
         if (!_ffOn) return;
         if (freeForAll)
         {
@@ -560,6 +575,80 @@ public sealed class WardenToolsModule : JbModule
     {
         foreach (var h in _spotlights.Values) Glow.Remove(h);
         _spotlights.Clear();
+    }
+
+    // ================================================================= !blindfold
+
+    [ConsoleCommand("css_blindfold", "sm_blindfold [player|off] - (warden/deputy) black out a prisoner's screen; again to remove")]
+    [ConsoleCommand("css_bf", "sm_bf [player|off] - (warden/deputy) black out a prisoner's screen; again to remove")]
+    public void CmdBlindfold(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Cfg.BlindfoldEnabled) { Chat.ReplyT(caller, info, "wt.disabled"); return; }
+        if (!CanCommand(caller, true)) { Chat.ReplyT(caller, info, "wt.not_warden"); return; }
+
+        if (info.ArgCount > 1 && info.GetArg(1).Equals("off", StringComparison.OrdinalIgnoreCase))
+        {
+            if (_blindfolds.Count == 0) { Chat.ReplyT(caller, info, "wt.bf.none"); return; }
+            ClearBlindfolds();
+            Chat.TellAll("wt.bf.all_off", caller?.PlayerName ?? "Console");
+            return;
+        }
+
+        CCSPlayerController? target;
+        if (info.ArgCount > 1)
+        {
+            var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true, singleOnly: true, respectImmunity: false);
+            if (t == null) return;
+            target = t.Players[0];
+        }
+        else
+        {
+            if (caller == null || !caller.IsAliveP()) { Chat.ReplyT(caller, info, "core.usage", "!blindfold <player|off>"); return; }
+            target = Aim.LookTarget(caller, 3000f);
+            if (target == null) { Chat.ReplyT(caller, info, "wt.bf.no_target"); return; }
+        }
+
+        if (target.Team != CsTeam.Terrorist) { Chat.ReplyT(caller, info, "wt.spot.not_prisoner", target.PlayerName); return; }
+        var who = caller?.PlayerName ?? "Console";
+
+        if (_blindfolds.ContainsKey(target.Slot))
+        {
+            RemoveBlindfold(target.Slot, announce: false);
+            Chat.TellAll("wt.bf.off", who, target.PlayerName);
+            return;
+        }
+
+        if (Jb.LastRequests.IsInLastRequest(target.Jb()!)) { Chat.ReplyT(caller, info, "wt.split.lr"); return; }
+        var token = new object();
+        _blindfolds[target.Slot] = token;
+        ApplyBlindfold(target);
+        Chat.TellAll("wt.bf.on", who, target.PlayerName);
+        Chat.Tell(target, "wt.bf.you", (int)Cfg.BlindfoldMaxSeconds);
+
+        var slot = target.Slot;
+        Round.Timer(Math.Max(5f, Cfg.BlindfoldMaxSeconds), () =>
+        {
+            if (_blindfolds.TryGetValue(slot, out var current) && ReferenceEquals(current, token)) RemoveBlindfold(slot, announce: true);
+        });
+        Jb.Log.LogEvent($"{who} blindfolded {target.PlayerName}", caller.Jb(), target.Jb(), LogType.Warden);
+    }
+
+    /// <summary>Full black screen that stays until cleared (the same fade !blind uses, at full opacity).</summary>
+    private static void ApplyBlindfold(CCSPlayerController c) =>
+        Fx.Fade(c, Color.FromArgb(255, 0, 0, 0), 0.4f, 0f, Fx.FadeOut | Fx.FadeStayOut | Fx.FadePurge);
+
+    private void RemoveBlindfold(int slot, bool announce)
+    {
+        if (!_blindfolds.Remove(slot)) return;
+        var c = Players.Get(slot).Controller;
+        if (c == null || !c.IsValid) return;
+        Fx.ClearFade(c);
+        if (announce) Chat.TellAll("wt.bf.expired", c.PlayerName);
+    }
+
+    private void ClearBlindfolds()
+    {
+        foreach (var slot in _blindfolds.Keys.ToList()) RemoveBlindfold(slot, announce: false);
     }
 
     // ================================================================= helpers

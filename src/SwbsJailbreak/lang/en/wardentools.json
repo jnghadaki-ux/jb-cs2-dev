@@ -47,5 +47,12 @@
   "wt.spot.no_target": "{red}Look at a prisoner (or use {green}!spotlight <name>{red}).",
   "wt.spot.not_prisoner": "{red}{0} is not a prisoner.",
   "wt.spot.failed": "{red}The spotlight could not be created.",
-  "wt.spot.done": "{olive}{0} put the spotlight on {lightred}{1}{olive}."
+  "wt.spot.done": "{olive}{0} put the spotlight on {lightred}{1}{olive}.",
+  "wt.bf.none": "{red}Nobody is blindfolded.",
+  "wt.bf.no_target": "{red}Look at a prisoner (or use {green}!blindfold <name>{red}).",
+  "wt.bf.on": "{olive}{0} blindfolded {lightred}{1}{olive}.",
+  "wt.bf.off": "{olive}{0} took the blindfold off {lightred}{1}{olive}.",
+  "wt.bf.all_off": "{olive}{0} removed every blindfold.",
+  "wt.bf.you": "{olive}You are blindfolded! It comes off by itself after {0} seconds.",
+  "wt.bf.expired": "{olive}{0}'s blindfold came off."
 }

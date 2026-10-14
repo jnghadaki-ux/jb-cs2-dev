@@ -1,0 +1,20 @@
+{
+  "bet.no_points_system": "{red}Betting needs the points system, which is turned off.",
+  "bet.open": "{olive}Betting is open: a winning bet now pays {green}x{0}{olive}. Bets: {1}-{2} points.",
+  "bet.yours": "{olive}Your bet: {green}{0}{olive} on {lightred}{1}{olive}, pays {green}{2}{olive} if they get a last request.",
+  "bet.closed_round": "{red}Betting opens when the round starts.",
+  "bet.closed_day": "{red}No betting during days.",
+  "bet.closed_lr": "{red}Betting is closed: last requests have started.",
+  "bet.closed_few": "{red}Betting is closed: too few prisoners are left.",
+  "bet.dead_only": "{red}Only dead players and spectators can bet.",
+  "bet.already": "{red}You already bet {0} on {1} this round.",
+  "bet.not_prisoner": "{red}{0} is not an alive prisoner.",
+  "bet.self": "{red}You cannot bet on yourself.",
+  "bet.limits": "{red}Bets must be between {0} and {1} points.",
+  "bet.not_enough": "{red}You only have {0} points.",
+  "bet.placed": "{lightblue}{0}{olive} bet {green}{1}{olive} points that {lightred}{2}{olive} gets a last request (x{3}, pays {green}{4}{olive}).",
+  "bet.winner_entry": "{0} +{1} ({2})",
+  "bet.winners": "{olive}Bet winners: {green}{0}",
+  "bet.no_winners": "{olive}Nobody bet on the last-request prisoner this round.",
+  "bet.refunded_all": "{olive}Nobody got a last request this round: all bets were refunded."
+}

@@ -584,6 +584,9 @@ public interface IPointsService
 {
     int GetPoints(JbPlayer player);
     void AddPoints(JbPlayer player, int amount, string? reason = null);
+
+    /// <summary>Add (or with a negative amount remove) points by SteamID64, also for players who left. Never below 0.</summary>
+    void AddPoints(ulong steamId64, int amount);
 }
 
 // ----------------------------------------------------------------------------------------------- mute
@@ -752,6 +755,7 @@ public sealed class NullServices : IWardenService, ICellService, ILastRequestSer
     // points
     public int GetPoints(JbPlayer player) => 0;
     public void AddPoints(JbPlayer player, int amount, string? reason = null) { }
+    public void AddPoints(ulong steamId64, int amount) { }
 
     // mute
     public bool IsMuted(JbPlayer player) => false;

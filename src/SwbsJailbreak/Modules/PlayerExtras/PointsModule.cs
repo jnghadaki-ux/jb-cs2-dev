@@ -74,8 +74,14 @@ public sealed class PointsModule : JbModule, IPointsService
 
     public void AddPoints(JbPlayer player, int amount, string? reason = null)
     {
-        if (player.IsBot || player.SteamId64 == 0 || amount == 0) return;
-        var key = player.SteamId64.ToString();
+        if (player.IsBot) return;
+        AddPoints(player.SteamId64, amount);
+    }
+
+    public void AddPoints(ulong steamId64, int amount)
+    {
+        if (steamId64 == 0 || amount == 0) return;
+        var key = steamId64.ToString();
         Storage.Set(Ns, key, Math.Max(0, Storage.Get<int>(Ns, key) + amount));
     }
 
