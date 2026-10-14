@@ -103,6 +103,16 @@ if ($PackOnly) {
 
 # ------------------------------------------------------------------ find the compiled addon
 if (-not $Cs2) {
+    # Run from inside the CS2 folder (e.g. game\csgo_addons\...): use that install.
+    $dir = $Here
+    while ($dir) {
+        if ((Test-Path (Join-Path $dir 'game\csgo_addons')) -and (Test-Path (Join-Path $dir 'game\csgo'))) { $Cs2 = $dir; break }
+        $parent = Split-Path -Parent $dir
+        if ($parent -eq $dir) { break }
+        $dir = $parent
+    }
+}
+if (-not $Cs2 -and (Test-Path (Join-Path $Here 'find_cs2.ps1'))) {
     foreach ($line in (& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Here 'find_cs2.ps1'))) {
         if ($line -like 'CS2=*') { $Cs2 = $line.Substring(4) }
     }
@@ -133,7 +143,9 @@ if (Test-Path $UserFile) { $User = (Get-Content $UserFile -Raw).Trim() } else {
 $Work = Join-Path $Here 'workshop_upload'
 $Vdf = Join-Path $Work 'item.vdf'
 $Content = Join-Path $Work 'content'
-$Preview = Join-Path $Here 'preview.png'
+# Preview image: next to this script, one folder up, or none (the item then has Steam's default picture).
+$Preview = @((Join-Path $Here 'preview.png'), (Join-Path (Split-Path -Parent $Here) 'preview.png')) |
+    Where-Object { Test-Path $_ } | Select-Object -First 1
 New-Item -ItemType Directory -Force -Path $Work | Out-Null
 
 function Write-ItemVdf([string]$Id, [string]$Note) {
@@ -144,8 +156,7 @@ function Write-ItemVdf([string]$Id, [string]$Note) {
     "appid" "730"
     "publishedfileid" "$Id"
     "contentfolder" "$(& $esc $Content)"
-    "previewfile" "$(& $esc $Preview)"
-    "visibility" "3"
+$(if ($Preview) { "    ""previewfile"" ""$(& $esc $Preview)""`r`n" })    "visibility" "3"
     "title" "$(& $esc $Title)"
     "description" "$(& $esc $Description)"
     "changenote" "$(& $esc $Note)"
