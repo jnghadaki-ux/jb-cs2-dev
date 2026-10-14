@@ -167,12 +167,22 @@ $(if ($Preview) { "    ""previewfile"" ""$(& $esc $Preview)""`r`n" })    "visibi
 function Invoke-Upload {
     Write-Output "Logging in to Steam as $User (enter your password / Steam Guard code if asked)..."
     & $SteamCmd +login $User +workshop_build_item ($Vdf.Replace('\', '/')) +quit
-    if ($LASTEXITCODE -ne 0) { throw "SteamCMD failed (exit code $LASTEXITCODE). Read the messages above." }
+    # SteamCMD often exits with 7 even after "Committing update...Success", so its exit code is only reported.
+    if ($LASTEXITCODE -ne 0) { Write-Output "(SteamCMD exit code $LASTEXITCODE - check that it said 'Success' above)" }
 }
 
 # ------------------------------------------------------------------ first run: create the item to get its id
 $IdFile = Join-Path $Here 'workshop_id.txt'
 $Id = if (Test-Path $IdFile) { (Get-Content $IdFile -Raw).Trim() } else { '' }
+if (-not $Id -and (Test-Path $Vdf)) {
+    # An earlier run created the item but stopped before saving its id: SteamCMD wrote it into item.vdf.
+    $m = Select-String -Path $Vdf -Pattern '"publishedfileid"\s+"(\d+)"'
+    if ($m -and $m.Matches[0].Groups[1].Value -ne '0') {
+        $Id = $m.Matches[0].Groups[1].Value
+        Set-Content -Path $IdFile -Value $Id
+        Write-Output "Using the Workshop item created earlier: $Id"
+    }
+}
 if (-not $Id) {
     Write-Output "Creating the Workshop item (first upload)..."
     if (Test-Path $Content) { Remove-Item -Recurse -Force $Content }
