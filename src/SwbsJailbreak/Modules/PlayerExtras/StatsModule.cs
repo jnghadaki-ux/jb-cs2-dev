@@ -13,6 +13,13 @@ public sealed class StatsConfig
 
     /// <summary>Rounds need at least this many human players on prisoners + guards to count.</summary>
     public int MinPlayers { get; set; } = 2;
+
+    /// <summary>!rank: rounds a player needs before they appear on the leaderboard, and lines shown per board.</summary>
+    public int RankMinRounds { get; set; } = 10;
+    public int RankTopCount { get; set; } = 5;
+
+    /// <summary>!rank overall score = survived x1 + warden rounds x3 + guards killed x2 + prisoners killed x1 + LR duels x3.</summary>
+    public RankWeights RankWeights { get; set; } = new();
 }
 
 /// <summary>One player's totals, stored in data/stats.json keyed by SteamID64.</summary>
@@ -126,6 +133,53 @@ public sealed class StatsModule : JbModule
     }
 
     // ================================================================= !stats
+
+    // ================================================================= !rank
+
+    [ConsoleCommand("css_rank", "sm_rank [category|player] - jailbreak leaderboard and your position")]
+    [ConsoleCommand("css_top", "sm_top [category] - jailbreak leaderboard")]
+    public void CmdRank(CCSPlayerController? caller, CommandInfo info)
+    {
+        var category = RankCategory.Score;
+        CCSPlayerController? subject = caller;
+        if (info.ArgCount > 1)
+        {
+            var arg = info.GetArg(1);
+            if (Leaderboard.Aliases.TryGetValue(arg, out var c)) category = c;
+            else
+            {
+                var t = Targets.FindOrReply(caller, info, arg, singleOnly: true, respectImmunity: false);
+                if (t == null) { Chat.ReplyT(caller, info, "rank.categories"); return; }
+                subject = t.Players[0];
+            }
+        }
+
+        // Unsaved rounds from this map are in memory; Storage.All reads the same in-memory copy.
+        var board = Leaderboard.Build(Storage.All<PlayerStats>(Ns), category, Cfg.RankWeights, Cfg.RankMinRounds);
+        var title = Lang.T("rank.cat." + category.ToString().ToLowerInvariant());
+        if (board.Count == 0) { Chat.ReplyT(caller, info, "rank.empty", title, Cfg.RankMinRounds); return; }
+
+        Chat.ReplyT(caller, info, "rank.title", title, board.Count);
+        foreach (var e in board.Take(Math.Clamp(Cfg.RankTopCount, 1, 15)))
+            Chat.ReplyT(caller, info, "rank.line", e.Position, e.Name, Format(e.Value));
+
+        var p = subject.Jb();
+        if (subject == null || !Tracked(p)) return;
+        var mine = board.FirstOrDefault(e => e.SteamId == p!.SteamId64.ToString());
+        if (mine != null)
+        {
+            Chat.ReplyT(caller, info, ReferenceEquals(subject, caller) ? "rank.you" : "rank.them", subject.PlayerName, mine.Position, board.Count, Format(mine.Value));
+            return;
+        }
+
+        var s = Storage.Get<PlayerStats>(Ns, p!.SteamId64.ToString()) ?? new PlayerStats();
+        var left = Math.Max(0, Cfg.RankMinRounds - Leaderboard.Rounds(s));
+        if (left > 0) Chat.ReplyT(caller, info, "rank.unranked", subject.PlayerName, left);
+        else Chat.ReplyT(caller, info, "rank.not_on_board", subject.PlayerName);
+    }
+
+    private static string Format(double v) =>
+        v % 1 == 0 ? ((long)v).ToString() : v.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
 
     [ConsoleCommand("css_stats", "sm_stats [player] - show jailbreak statistics")]
     [ConsoleCommand("css_jbstats", "sm_jbstats [player] - show jailbreak statistics")]

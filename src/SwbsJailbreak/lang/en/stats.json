@@ -5,5 +5,20 @@
   "stats.warden": "{olive}Rounds as warden: {default}{0}",
   "stats.kills": "{olive}Guards killed: {default}{0}{olive}, prisoners killed: {default}{1}{olive}, deaths: {default}{2}",
   "stats.lr": "{olive}Last requests played: {default}{0}{olive}, LR duels won: {default}{1}",
-  "stats.playtime": "{olive}Play time: {default}{0}h {1}m"
+  "stats.playtime": "{olive}Play time: {default}{0}h {1}m",
+  "rank.title": "{gold}Leaderboard: {default}{0} {grey}({1} ranked players)",
+  "rank.line": "{green}#{0} {default}{1} {grey}- {olive}{2}",
+  "rank.you": "{olive}You are {green}#{1}{olive} of {2} with {green}{3}{olive}.",
+  "rank.them": "{olive}{0} is {green}#{1}{olive} of {2} with {green}{3}{olive}.",
+  "rank.unranked": "{olive}{0} needs {green}{1}{olive} more rounds to be ranked.",
+  "rank.not_on_board": "{olive}{0} is not on this leaderboard yet.",
+  "rank.empty": "{olive}Nobody is on the {0} leaderboard yet (players need {1} rounds).",
+  "rank.categories": "{olive}Use {green}!rank{olive} or {green}!rank <warden|guards|prisoners|lr|survived|rounds>{olive}, or {green}!rank <player>{olive}.",
+  "rank.cat.score": "Overall score",
+  "rank.cat.warden": "Rounds as warden",
+  "rank.cat.guardkills": "Guards killed",
+  "rank.cat.prisonerkills": "Prisoners killed",
+  "rank.cat.lastrequests": "LR duels won",
+  "rank.cat.survived": "Rounds survived",
+  "rank.cat.rounds": "Rounds played"
 }

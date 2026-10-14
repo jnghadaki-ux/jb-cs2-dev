@@ -21,6 +21,7 @@ public class WardenToolsTests
     [InlineData("css_ts")]
     [InlineData("css_swapteams")]
     [InlineData("css_stats")]
+    [InlineData("css_rank")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

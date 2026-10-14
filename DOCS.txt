@@ -6,4 +6,4 @@ of this repository so that this branch shows code only.
   View:     switch to the "docs" branch on GitHub
   Restore:  git checkout docs -- .        (puts the .md files next to the code; they are git-ignored on this branch)
 
-Installable package: releases/SwbsJailbreak-0.11.0-server-package.zip (net10.0 build for CounterStrikeSharp 1.0.376+; contains INSTALL.txt, the Windows scripts and docs).
+Installable package: releases/SwbsJailbreak-0.11.1-server-package.zip (net10.0 build for CounterStrikeSharp 1.0.376+; contains INSTALL.txt, the Windows scripts and docs).
