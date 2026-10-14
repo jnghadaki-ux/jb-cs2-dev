@@ -35,6 +35,17 @@ public sealed class WardenToolsConfig
     public float RepeatCooldown { get; set; } = 30f;
     public float RepeatGlobalCooldown { get; set; } = 8f;
     public string RepeatSound { get; set; } = "UIPanorama.generic_button_press";
+
+    /// <summary>!votewarden: share of human prisoners + guards (excluding the warden) needed, the minimum votes, and the
+    /// seconds a new warden is safe from votes.</summary>
+    public bool VoteWardenEnabled { get; set; } = true;
+    public double VoteWardenRatio { get; set; } = 0.6;
+    public int VoteWardenMinVotes { get; set; } = 3;
+    public float VoteWardenGraceSeconds { get; set; } = 20f;
+
+    /// <summary>!split [2-4]: colour-coded prisoner teams for warden games.</summary>
+    public bool SplitEnabled { get; set; } = true;
+    public float SplitHudSeconds { get; set; } = 6f;
 }
 
 /// <summary>
@@ -59,6 +70,19 @@ public sealed class WardenToolsModule : JbModule
     private JbPlayer? _deputy;
     private Color? _deputySavedColor;
 
+    private readonly HashSet<int> _wardenVotes = new();
+    private float _wardenSince;
+
+    /// <summary>!split team index per prisoner slot.</summary>
+    private readonly Dictionary<int, int> _splitTeam = new();
+
+    private static readonly Color[] SplitColors =
+    {
+        Color.FromArgb(255, 255, 60, 60), Color.FromArgb(255, 70, 120, 255), Color.FromArgb(255, 60, 220, 90), Color.FromArgb(255, 255, 220, 40)
+    };
+
+    private static readonly string[] SplitHex = { "#FF3C3C", "#4678FF", "#3CDC5A", "#FFDC28" };
+
     public override void OnLoad(bool hotReload)
     {
         DamageService.Register(Name, 40, OnDamage);
@@ -69,6 +93,8 @@ public sealed class WardenToolsModule : JbModule
         JbEvents.WardenDeath += OnWardenDeath;
         JbEvents.LastRequestInitialized += OnLastRequestInitialized;
         JbEvents.DayStarted += OnDayStarted;
+        JbEvents.WardenSelected += OnWardenSelected;
+        JbEvents.WardenRemoved += OnWardenRemoved;
     }
 
     public override void OnUnload(bool hotReload)
@@ -76,6 +102,8 @@ public sealed class WardenToolsModule : JbModule
         JbEvents.WardenDeath -= OnWardenDeath;
         JbEvents.LastRequestInitialized -= OnLastRequestInitialized;
         JbEvents.DayStarted -= OnDayStarted;
+        JbEvents.WardenSelected -= OnWardenSelected;
+        JbEvents.WardenRemoved -= OnWardenRemoved;
         DamageService.Unregister(OnDamage);
         SetFriendlyFire(false, null);
         ClearDeputy(false);
@@ -90,6 +118,8 @@ public sealed class WardenToolsModule : JbModule
         _deputySavedColor = null;
         _nextRand = _nextRepeatGlobal = 0;
         Array.Clear(_nextRepeat);
+        _wardenVotes.Clear();
+        _splitTeam.Clear();
     }
 
     public override void OnRoundStart() => _extendsThisRound = 0;
@@ -98,28 +128,44 @@ public sealed class WardenToolsModule : JbModule
     {
         SetFriendlyFire(false, null);
         ClearDeputy(false);
+        _wardenVotes.Clear();
+        _splitTeam.Clear();
     }
 
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
     {
         if (IsDeputy(victim)) ClearDeputy(true);
+        _splitTeam.Remove(victim.Slot);
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)
     {
         if (IsDeputy(player)) ClearDeputy(false);
         _nextRepeat[player.Slot] = 0;
+        _wardenVotes.Remove(player.Slot);
+        _splitTeam.Remove(player.Slot);
     }
 
     public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
     {
         if (IsDeputy(player) && newTeam != CsTeam.CounterTerrorist) ClearDeputy(!disconnect);
+        if (newTeam is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) _wardenVotes.Remove(player.Slot);
+        _splitTeam.Remove(player.Slot);
     }
 
     private void OnLastRequestInitialized(JbPlayer prisoner)
     {
         if (_ffOn) SetFriendlyFire(false, Lang.T("wt.ff.off_lr"));
+        ClearSplit(false); // LRs tint and beacon players themselves
     }
+
+    private void OnWardenSelected(JbPlayer warden)
+    {
+        _wardenVotes.Clear();
+        _wardenSince = (float)Server.EngineTime;
+    }
+
+    private void OnWardenRemoved(JbPlayer warden) => _wardenVotes.Clear();
 
     private void OnDayStarted(JbPlayer? starter, DayType type, bool freeForAll)
     {
@@ -172,7 +218,7 @@ public sealed class WardenToolsModule : JbModule
             Round.Timer(Cfg.RandHighlightSeconds, () =>
             {
                 var c = Players.Get(slot).Controller;
-                if (c != null && c.IsAliveP() && !IsDeputy(c)) c.ResetColor();
+                if (c != null && c.IsAliveP() && !IsDeputy(c)) RestoreColor(c);
             });
         }
 
@@ -319,6 +365,130 @@ public sealed class WardenToolsModule : JbModule
 
         if (warden.Controller is { } wc && !string.IsNullOrWhiteSpace(Cfg.RepeatSound)) Sound.Play(wc, Cfg.RepeatSound);
         Jb.Log.LogEvent($"{caller.PlayerName} asked the warden to repeat", caller.Jb(), warden, LogType.Warden);
+    }
+
+    // ================================================================= !votewarden
+
+    [ConsoleCommand("css_votewarden", "sm_votewarden - vote to remove the current warden (type again to take your vote back)")]
+    [ConsoleCommand("css_vw", "sm_vw - vote to remove the current warden")]
+    public void CmdVoteWarden(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Cfg.VoteWardenEnabled) { Chat.Tell(caller, "wt.disabled"); return; }
+        if (caller.Team is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) { Chat.Tell(caller, "wt.vw.not_playing"); return; }
+        var warden = Jb.Warden.Warden;
+        if (warden == null) { Chat.Tell(caller, "wt.repeat.no_warden"); return; }
+        if (warden.Slot == caller.Slot) { Chat.Tell(caller, "wt.vw.self"); return; }
+
+        var since = (float)Server.EngineTime - _wardenSince;
+        if (since < Cfg.VoteWardenGraceSeconds) { Chat.Tell(caller, "wt.vw.grace", (int)Math.Ceiling(Cfg.VoteWardenGraceSeconds - since)); return; }
+
+        var added = _wardenVotes.Add(caller.Slot);
+        if (!added) _wardenVotes.Remove(caller.Slot);
+
+        var eligible = VoteEligible(warden).ToList();
+        _wardenVotes.IntersectWith(eligible.Select(c => c.Slot));
+        var needed = VotesNeeded(eligible.Count, Cfg.VoteWardenRatio, Cfg.VoteWardenMinVotes);
+        Chat.TellAll(added ? "wt.vw.voted" : "wt.vw.unvoted", caller.PlayerName, warden.Name, _wardenVotes.Count, needed);
+
+        if (_wardenVotes.Count < needed) return;
+        _wardenVotes.Clear();
+        var removed = Plugin.GetModule<WardenModule>()?.ForceRemoveWarden();
+        if (removed == null) return;
+        Chat.TellAll("wt.vw.passed", removed.Name);
+        Jb.Log.LogEvent($"{removed.Name} was voted out as warden", removed, null, LogType.Warden);
+    }
+
+    /// <summary>Humans on prisoners or guards, except the warden.</summary>
+    private static IEnumerable<CCSPlayerController> VoteEligible(JbPlayer warden) =>
+        Players.Humans().Where(c => c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist && c.Slot != warden.Slot);
+
+    /// <summary>Votes needed: ratio of the eligible players, rounded up, never below the minimum (unit-tested).</summary>
+    internal static int VotesNeeded(int eligible, double ratio, int minVotes) =>
+        Math.Max(Math.Max(1, minVotes), (int)Math.Ceiling(Math.Max(0, eligible) * Math.Clamp(ratio, 0.0, 1.0)));
+
+    // ================================================================= !split
+
+    [ConsoleCommand("css_split", "sm_split [2-4|off] - (warden/deputy) split the alive prisoners into colour teams")]
+    [ConsoleCommand("css_teams", "sm_teams [2-4|off] - (warden/deputy) split the alive prisoners into colour teams")]
+    public void CmdSplit(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Cfg.SplitEnabled) { Chat.ReplyT(caller, info, "wt.disabled"); return; }
+        if (!CanCommand(caller, true)) { Chat.ReplyT(caller, info, "wt.not_warden"); return; }
+
+        var arg = info.ArgCount > 1 ? info.GetArg(1).Trim() : "2";
+        if (arg.Equals("off", StringComparison.OrdinalIgnoreCase) || arg == "0")
+        {
+            if (_splitTeam.Count == 0) { Chat.ReplyT(caller, info, "wt.split.none"); return; }
+            ClearSplit(true);
+            Chat.TellAll("wt.split.cleared", caller?.PlayerName ?? "Console");
+            return;
+        }
+
+        if (!int.TryParse(arg, out var teams) || teams < 2 || teams > SplitColors.Length)
+        {
+            Chat.ReplyT(caller, info, "core.usage", "!split [2-4|off]");
+            return;
+        }
+
+        if (Jb.LastRequests.NumInitialized > 0) { Chat.ReplyT(caller, info, "wt.split.lr"); return; }
+        var pool = Players.AlivePrisoners().Where(c => c.Jb() is { } p && !Jb.LastRequests.IsInLastRequest(p)).ToList();
+        if (pool.Count < teams) { Chat.ReplyT(caller, info, "wt.split.too_few", teams); return; }
+
+        ClearSplit(true);
+        var order = SplitAssign(pool.Count, teams, Random.Shared);
+        for (var i = 0; i < pool.Count; i++) _splitTeam[pool[i].Slot] = order[i];
+
+        Chat.TellAll("wt.split.done", caller?.PlayerName ?? "Console", teams);
+        for (var t = 0; t < teams; t++)
+        {
+            var names = pool.Where(c => _splitTeam[c.Slot] == t).Select(c => c.PlayerName);
+            Chat.TellAll("wt.split.team", Lang.T("wt.split.color" + t), string.Join(", ", names));
+        }
+
+        foreach (var c in pool)
+        {
+            var t = _splitTeam[c.Slot];
+            c.SetColor(SplitColors[t]);
+            Hud.Set(c, "wt.split", Lang.T("wt.split.hud", SplitHex[t], Colors.Strip(Lang.T("wt.split.color" + t))), 60, Math.Max(1f, Cfg.SplitHudSeconds));
+        }
+
+        Jb.Log.LogEvent($"{caller?.PlayerName ?? "Console"} split the prisoners into {teams} teams", caller.Jb(), null, LogType.Warden);
+    }
+
+    /// <summary>Balanced random team per index: sizes differ by at most one (unit-tested).</summary>
+    internal static int[] SplitAssign(int count, int teams, Random rng)
+    {
+        var result = new int[count];
+        for (var i = 0; i < count; i++) result[i] = i % teams;
+        // Fisher-Yates shuffle of the team labels keeps the counts balanced.
+        for (var i = count - 1; i > 0; i--)
+        {
+            var j = rng.Next(i + 1);
+            (result[i], result[j]) = (result[j], result[i]);
+        }
+
+        return result;
+    }
+
+    private void ClearSplit(bool resetColors)
+    {
+        if (_splitTeam.Count == 0) return;
+        var slots = _splitTeam.Keys.ToList();
+        _splitTeam.Clear();
+        if (!resetColors) return;
+        foreach (var slot in slots)
+        {
+            var c = Players.Get(slot).Controller;
+            if (c != null && c.IsValid && c.IsAliveP() && c.Team == CsTeam.Terrorist) c.ResetColor();
+        }
+    }
+
+    /// <summary>Back to the !split team colour if the prisoner has one, otherwise no tint.</summary>
+    private void RestoreColor(CCSPlayerController c)
+    {
+        if (_splitTeam.TryGetValue(c.Slot, out var t)) c.SetColor(SplitColors[t]);
+        else c.ResetColor();
     }
 
     // ================================================================= helpers

@@ -26,5 +26,22 @@
   "wt.repeat.no_warden": "{red}There is no warden right now.",
   "wt.repeat.wait": "{red}You can ask again in {0} seconds.",
   "wt.repeat.recent": "{red}Someone just asked; give the warden a moment.",
-  "wt.repeat.line": "{lightred}{0}{olive} asks the warden to {green}repeat the last order{olive}."
+  "wt.repeat.line": "{lightred}{0}{olive} asks the warden to {green}repeat the last order{olive}.",
+  "wt.vw.not_playing": "{red}Only prisoners and guards can vote.",
+  "wt.vw.self": "{red}You cannot vote against yourself. Use {green}!uw{red} to step down.",
+  "wt.vw.grace": "{red}The warden was just chosen: you can vote in {0} seconds.",
+  "wt.vw.voted": "{lightred}{0}{olive} voted to remove the warden {lightblue}{1}{olive} ({green}{2}/{3}{olive}). Type {green}!votewarden{olive} to vote.",
+  "wt.vw.unvoted": "{lightred}{0}{olive} took back their vote against {lightblue}{1}{olive} ({green}{2}/{3}{olive}).",
+  "wt.vw.passed": "{olive}The vote passed: {lightblue}{0}{olive} is no longer the warden.",
+  "wt.split.none": "{red}The prisoners are not split into teams.",
+  "wt.split.cleared": "{olive}{0} removed the prisoner teams.",
+  "wt.split.lr": "{red}Teams cannot be made during last requests.",
+  "wt.split.too_few": "{red}There are not enough alive prisoners for {0} teams.",
+  "wt.split.done": "{olive}{0} split the prisoners into {green}{1}{olive} teams:",
+  "wt.split.team": "{olive}{0}: {default}{1}",
+  "wt.split.hud": "You are on team <font color='{0}'>{1}</font>",
+  "wt.split.color0": "{red}Red",
+  "wt.split.color1": "{blue}Blue",
+  "wt.split.color2": "{green}Green",
+  "wt.split.color3": "{yellow}Yellow"
 }

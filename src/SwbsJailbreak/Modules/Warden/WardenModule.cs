@@ -713,6 +713,18 @@ public sealed partial class WardenModule : JbModule, IWardenService
         PlayNear(player, Cfg.KissSound, Cfg.KissSoundRadius);
     }
 
+    /// <summary>
+    /// Remove the warden like !rw (no announcement): they are skipped by this round's reselection and cannot rejoin the
+    /// queue. Used by !votewarden. Returns the removed warden, or null.
+    /// </summary>
+    internal JbPlayer? ForceRemoveWarden()
+    {
+        var w = Warden;
+        if (w == null || !TryRemoveClientFromWarden(w)) return null;
+        _lastForceRemoved = w;
+        return w;
+    }
+
     [ConsoleCommand("css_rw", "css_rw - Removes the current warden.")]
     public void OnRemoveWardenCommand(CCSPlayerController? player, CommandInfo info)
     {
