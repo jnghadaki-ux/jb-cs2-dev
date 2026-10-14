@@ -511,6 +511,7 @@ def build_vmdl(smd_rel: str, bind_pose_rel: str, remaps, groups=None, gloves: st
 						[
 							{
 								_class = "BodyGroupChoice"
+								name = "body"
 								meshes =
 								[
 									"body",
