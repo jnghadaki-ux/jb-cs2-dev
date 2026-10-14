@@ -87,13 +87,12 @@ title SWBS workshop pack - compile
 rem Finds CS2 (any Steam library) and its resource compiler, copies the pack into content\csgo_addons\swbs_jailbreak,
 rem compiles it and checks the result. Optional: drag your "Counter-Strike Global Offensive" folder onto this file.
 set "PACK=%~dp0"
-set "SRC=%PACK%swbs_jailbreak"
 set "LOG=%PACK%compile_log.txt"
 echo ============================================
 echo  SWBS workshop pack - compile
 echo ============================================
+echo Running from: %PACK%
 echo.
-if not exist "%SRC%\soundevents\swbs_jailbreak.vsndevts" goto :not_extracted
 if not exist "%PACK%find_cs2.ps1" goto :not_extracted
 
 echo Looking for Counter-Strike 2 and the Workshop Tools compiler (can take a few seconds)...
@@ -108,11 +107,26 @@ if not "%RC%"=="" echo   Compiler:   %RC%
 if "%RC%"=="" echo   Compiler:   not found in this CS2 folder
 echo.
 
+rem The pack's swbs_jailbreak folder: next to this file, one folder down (zip extracted into a folder of the same
+rem name), or already copied into CS2's content folder by hand.
+set "SRC="
+if exist "%PACK%swbs_jailbreak\soundevents\swbs_jailbreak.vsndevts" set "SRC=%PACK%swbs_jailbreak"
+if "%SRC%"=="" if exist "%PACK%SwbsJailbreak-workshop-pack\swbs_jailbreak\soundevents\swbs_jailbreak.vsndevts" set "SRC=%PACK%SwbsJailbreak-workshop-pack\swbs_jailbreak"
+if "%SRC%"=="" if exist "%DEST%\soundevents\swbs_jailbreak.vsndevts" goto :already_copied
+if "%SRC%"=="" goto :no_source
+
 echo [1/3] Copying the pack into
 echo       %DEST%
 robocopy "%SRC%" "%DEST%" /E /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :copy_failed
+goto :compile
 
+:already_copied
+echo [1/3] The pack is already in
+echo       %DEST%
+echo       (no swbs_jailbreak folder next to this file, so using those files)
+
+:compile
 if "%RC%"=="" goto :no_compiler
 echo [2/3] Compiling (the compiler output goes to compile_log.txt)...
 "%RC%" -r -i "%DEST%\*" > "%LOG%" 2>&1
@@ -142,9 +156,19 @@ echo   4. Run compile_pack.bat again: it says SUCCESS once the compiled files ar
 goto :end
 
 :not_extracted
-echo PROBLEM: the swbs_jailbreak folder or find_cs2.ps1 is not next to this file.
-echo Extract the WHOLE zip first (right click the zip - Extract All), then run compile_pack.bat
-echo from the extracted folder. Running it from inside the zip does not work.
+echo PROBLEM: find_cs2.ps1 is not next to compile_pack.bat.
+if not "%PACK:\Temp\=%"=="%PACK%" echo It looks like compile_pack.bat was opened from INSIDE the zip (Windows unpacks only that file).
+echo Right click the zip - Extract All - Extract, then open the extracted folder and run compile_pack.bat there.
+echo The folder you run it from must contain: compile_pack.bat, find_cs2.ps1 and the swbs_jailbreak folder.
+goto :end
+
+:no_source
+echo PROBLEM: the swbs_jailbreak folder is not next to compile_pack.bat and not in
+echo   %DEST%
+echo These are the files next to compile_pack.bat:
+dir /b "%PACK%"
+echo.
+echo Extract the WHOLE zip again (right click the zip - Extract All) and run compile_pack.bat from the extracted folder.
 goto :end
 
 :no_cs2
