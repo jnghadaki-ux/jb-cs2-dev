@@ -88,6 +88,8 @@ public sealed class LoggerModule : JbModule, ILogService
 
     public void LogEvent(string message, JbPlayer? primary, JbPlayer? secondary, LogType type, bool global = true)
     {
+        if (type == LogType.Admin) Admin.AdminActivityModule.Record(message, primary, secondary);
+
         var t = Math.Max(0, (int)(Server.CurrentTime - _roundStart));
         var line = new LogLine($"[{(t / 60) % 60:00}:{t % 60:00}] {message}", type);
 

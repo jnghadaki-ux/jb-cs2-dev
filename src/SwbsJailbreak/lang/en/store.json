@@ -1,0 +1,17 @@
+{
+  "store.no_points_system": "{red}The store needs the points system, which is turned off.",
+  "store.not_ready": "{red}Your store items are still loading, try again in a moment.",
+  "store.title": "SWBS Store",
+  "store.balance": "You have {0} points",
+  "store.cat.tracer": "Bullet tracers",
+  "store.cat.paintball": "Paintballs",
+  "store.cat.killeffect": "Kill effects",
+  "store.cat.trail": "Trails",
+  "store.item.price": "{0} <font color='#AAAAAA'>- {1} pts</font>",
+  "store.item.owned": "{0} <font color='#AAAAAA'>(owned)</font>",
+  "store.item.equipped": "{0} <font color='#00FF7F'>(equipped)</font>",
+  "store.not_enough": "{red}That costs {0} points; you have {1}.",
+  "store.bought": "{olive}You bought {green}{0}{olive} for {1} points. It is equipped.",
+  "store.equipped": "{olive}{0} equipped.",
+  "store.unequipped": "{olive}{0} unequipped."
+}

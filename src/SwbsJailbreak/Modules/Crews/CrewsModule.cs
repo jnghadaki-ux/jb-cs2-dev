@@ -330,6 +330,7 @@ public sealed partial class CrewsModule : JbModule, ICrewService
         var text = info.GetArg(1).Trim();
         if (text.Length == 0 || text[0] is '!' or '/' or '@') return HookResult.Continue;
         if (ChatInput.IsWaiting(player) || player.Jb() is { AdminChatGagged: true }) return HookResult.Continue;
+        if (Extras.ChatSpamModule.Blocks(player, text)) return HookResult.Continue; // the spam listener blocks it
 
         // Player text must not carry colour tags of its own.
         text = Colors.Strip(text).Replace("{", "(").Replace("}", ")");

@@ -104,8 +104,14 @@ public static class Fx
     {
         var origin = player.Origin();
         if (origin == null) return;
-        var center = new Vector(origin.X, origin.Y, origin.Z + 10f);
-        var ring = Ring(center, startRadius, color, 3f, duration + 0.1f, 16);
+        PulseAt(new Vector(origin.X, origin.Y, origin.Z + 10f), color, startRadius, endRadius, duration);
+        if (!string.IsNullOrEmpty(sound)) Sound.PlayAt(player, sound);
+    }
+
+    /// <summary>An expanding ring at a point (BeaconPulse without a player, e.g. where someone died).</summary>
+    public static void PulseAt(Vector center, Color color, float startRadius = 10f, float endRadius = 375f, float duration = 0.5f, float width = 3f)
+    {
+        var ring = Ring(center, startRadius, color, width, duration + 0.1f, 16);
         const int steps = 5;
         var plugin = JailbreakPlugin.Instance;
         if (plugin != null)
@@ -119,8 +125,6 @@ public static class Fx
                 });
             }
         }
-
-        if (!string.IsNullOrEmpty(sound)) Sound.PlayAt(player, sound);
     }
 
     public static void RemoveLater(CEntityInstance ent, float seconds)
