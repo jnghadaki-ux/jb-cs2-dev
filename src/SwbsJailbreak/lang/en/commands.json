@@ -38,9 +38,5 @@
   "cmd.timer.hud": "<font color='#6FC41A'>Countdown Timer:</font> <font color='#DE2626'>{0}</font> <font color='#6FC41A'>seconds.</font>",
   "cmd.timer.complete": "<font color='#6FC41A'>Countdown Complete!</font>",
   "cmd.timer.stopped_lr": "<font color='#DE2626'>Countdown Stopped due to LR!</font>",
-  "cmd.timer.stopped_day": "<font color='#DE2626'>Countdown Stopped due to a day starting!</font>",
-
-  "cmd.xray.wait": "Please wait a few seconds before toggling xray again.",
-  "cmd.xray.on": "X-ray enabled (outlines are visible while you are dead or spectating).",
-  "cmd.xray.off": "X-ray disabled."
+  "cmd.timer.stopped_day": "<font color='#DE2626'>Countdown Stopped due to a day starting!</font>"
 }
