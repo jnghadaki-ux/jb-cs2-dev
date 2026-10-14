@@ -38,6 +38,8 @@ public class WardenToolsTests
     [InlineData("css_giveparachute")]
     [InlineData("css_store")]
     [InlineData("css_adminlog")]
+    [InlineData("css_speedrun")]
+    [InlineData("css_sr")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

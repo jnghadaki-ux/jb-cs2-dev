@@ -106,6 +106,26 @@ public static class Aim
         InteractsWith = CounterStrikeSharp.API.Modules.Utils.Masks.ShotBrushOnly
     };
 
+    /// <summary>
+    /// Where the line from <paramref name="from"/> to <paramref name="to"/> first hits world geometry (brushes, not players),
+    /// or null when the line is clear or tracing fails. <paramref name="ignore"/> is skipped (usually the caller's pawn).
+    /// </summary>
+    public static Vector? WorldHit(Vector from, Vector to, CBaseEntity ignore)
+    {
+        try
+        {
+            var t = CounterStrikeSharp.API.Modules.Utils.Trace.TraceEndShape(from, to, ignore, WorldOptions);
+            if (!t.DidHit() || t.Fraction >= 1f) return null;
+            var end = t.EndPos;
+            return new Vector(end.X, end.Y, end.Z);
+        }
+        catch (Exception ex)
+        {
+            JailbreakPlugin.Instance?.Logger.LogDebug(ex, "[Aim] world trace failed");
+            return null;
+        }
+    }
+
     private static Vector? Chest(CCSPlayerController c)
     {
         var o = c.PawnOrNull()?.AbsOrigin;

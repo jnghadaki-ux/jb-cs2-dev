@@ -11,6 +11,7 @@ namespace SwbsJailbreak.Modules.Days;
 /// <summary>Section "Rpg" (ultjb_warday_rpg_* cvars + assets).</summary>
 public sealed class RpgConfig
 {
+    public bool Enabled { get; set; } = true;
     public float MaxDamage { get; set; } = 30f;              // ultjb_warday_rpg_max_damage
     public float GuardDamageMultiplier { get; set; } = 1.5f; // ultjb_warday_rpg_guard_damage_multiplier
     public float RocketSpeed { get; set; } = 1000f;
@@ -42,9 +43,8 @@ internal sealed class RpgPlayer
 /// 1.25 s per reloaded rocket), rockets push everyone within 115 units, deal up to 30 damage (self quarter, guards x1.5,
 /// airshots kill), no fall damage. The custom launcher/missile models and sounds cannot load in CS2: rockets are real
 /// beam trails with a CS2 explosion particle, and the rocket count is shown in the HUD.
-/// BLOCKED on CounterStrikeSharp 1.0.368 (.NET 8): rockets need a world-collision point and that CSS line has no ray
-/// trace, so the day is not registered (logged at load). Planned replacement: take the point from the engine's own
-/// bullet trace (weapon_fire + bullet_impact) - see FEATURE_GAPS.md. The simulation below is kept for that work.
+/// Rockets explode where their flight segment hits world geometry, found with the CounterStrikeSharp 1.0.376 ray trace
+/// (<see cref="Aim.WorldHit"/>); on 1.0.368 there was no trace and the day stayed unregistered.
 /// </summary>
 public sealed class RpgDay : JbModule
 {
@@ -65,12 +65,7 @@ public sealed class RpgDay : JbModule
 
     public override void OnLoad(bool hotReload)
     {
-        if (Jb.Days is not DaysModule) return;
-        if (!HasWorldCollision)
-        {
-            Logger.LogInformation("[Days] RPG warday is not registered: rockets need a world-collision source (no ray trace in CSS 1.0.368)");
-            return;
-        }
+        if (Jb.Days is not DaysModule || !Cfg.Enabled) return;
 
         _day = new DayDefinition
         {
@@ -233,11 +228,25 @@ public sealed class RpgDay : JbModule
         }
     }
 
-    /// <summary>False until a real world-collision source exists on CSS 1.0.368 (see the class summary).</summary>
-    private static bool HasWorldCollision => false;
-
-    /// <summary>World hit on the segment, or null. No source on CSS 1.0.368 yet (never an invented point).</summary>
-    private static Vector? WorldImpact(Vector from, Vector to, CCSPlayerController? owner) => null;
+    /// <summary>
+    /// World hit on the rocket's segment for this tick, pulled 4 units back so the explosion is not inside the wall; null
+    /// when the segment is clear. Without a valid owner pawn to ignore there is nothing to trace from: the rocket is
+    /// detonated where it is (never an invented point further on).
+    /// </summary>
+    private static Vector? WorldImpact(Vector from, Vector to, CCSPlayerController? owner)
+    {
+        var pawn = owner is { IsValid: true } ? owner.PawnOrNull() : null;
+        if (pawn == null) return from;
+        var hit = Aim.WorldHit(from, to, pawn);
+        if (hit == null) return null;
+        var dx = from.X - hit.X;
+        var dy = from.Y - hit.Y;
+        var dz = from.Z - hit.Z;
+        var len = MathF.Sqrt(dx * dx + dy * dy + dz * dz);
+        if (len < 0.01f) return hit;
+        var back = MathF.Min(4f, len) / len;
+        return new Vector(hit.X + dx * back, hit.Y + dy * back, hit.Z + dz * back);
+    }
 
     private void Explode(Rocket r, Vector at, CCSPlayerController? direct, CCSPlayerController? owner)
     {
