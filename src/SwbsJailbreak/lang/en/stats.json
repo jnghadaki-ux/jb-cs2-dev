@@ -1,0 +1,9 @@
+{
+  "stats.none": "{red}No statistics for {0}.",
+  "stats.title": "{gold}Jailbreak stats: {default}{0}",
+  "stats.rounds": "{olive}Rounds: {default}{0} {grey}({1} prisoner, {2} guard){olive}, survived {default}{3}%",
+  "stats.warden": "{olive}Rounds as warden: {default}{0}",
+  "stats.kills": "{olive}Guards killed: {default}{0}{olive}, prisoners killed: {default}{1}{olive}, deaths: {default}{2}",
+  "stats.lr": "{olive}Last requests played: {default}{0}{olive}, LR duels won: {default}{1}",
+  "stats.playtime": "{olive}Play time: {default}{0}h {1}m"
+}

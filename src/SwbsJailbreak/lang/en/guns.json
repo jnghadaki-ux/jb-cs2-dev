@@ -1,0 +1,7 @@
+{
+  "guns.only_guards": "{red}Only alive guards can use !guns.",
+  "guns.day": "{red}You cannot change weapons during a day.",
+  "guns.lr": "{red}You cannot change weapons during last requests.",
+  "guns.used": "{red}You already picked your weapons this round.",
+  "guns.too_late": "{red}Weapons can only be picked in the first {0} seconds of the round."
+}
