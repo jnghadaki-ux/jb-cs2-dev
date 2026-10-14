@@ -696,24 +696,35 @@ public sealed partial class WardenModule : JbModule, IWardenService
         WText.TellBoth(player, w != null ? WText.T("warden.current", w.Name) : WText.T("warden.none"));
     }
 
-    [ConsoleCommand("css_kiss", "Kisses the player you're looking at.")]
-    [ConsoleCommand("css_smooch", "Kisses the player you're looking at.")]
+    [ConsoleCommand("css_kiss", "Kisses the player you're looking at (or !kiss <player>).")]
+    [ConsoleCommand("css_smooch", "Kisses the player you're looking at (or !smooch <player>).")]
     [CommandHelper(0, "", CommandUsage.CLIENT_ONLY)]
     public void OnWardenKiss(CCSPlayerController? player, CommandInfo info)
     {
         var p = Players.Get(player);
-        if (player == null || p == null || !IsWardenP(p)) return;
+        if (player == null || p == null) return;
+        if (!IsWardenP(p) || !player.IsAliveP()) { Chat.Tell(player, "warden.kiss.not_warden"); return; }
 
-        // Global cooldown, consumed before the trace even if nothing is hit (original quirk kept).
         var now = Server.EngineTime;
-        if (now < _nextKiss) return;
-        _nextKiss = now + Math.Max(0f, Cfg.KissCooldown);
+        if (now < _nextKiss) { Chat.Tell(player, "warden.kiss.wait", (int)Math.Ceiling(_nextKiss - now)); return; }
 
         CCSPlayerController? target;
-        try { target = Round.GameRules?.GetClientAimTarget(player); }
-        catch { target = null; }
-        if (target == null || !target.IsValid || target.Slot == player.Slot) return;
+        if (info.ArgCount > 1)
+        {
+            var t = Targets.FindOrReply(player, info, info.GetArg(1), aliveOnly: true, singleOnly: true, respectImmunity: false);
+            if (t == null) return;
+            target = t.Players[0];
+            if (target.DistanceTo(player) > Cfg.KissRange) { Chat.Tell(player, "warden.kiss.too_far", target.PlayerName); return; }
+        }
+        else
+        {
+            // CSS 1.0.376 ray trace (GetClientAimTarget returned nothing on current builds, so !kiss silently did nothing).
+            target = Aim.LookTarget(player, Cfg.KissRange);
+        }
 
+        if (target == null || !target.IsValid || target.Slot == player.Slot) { Chat.Tell(player, "warden.kiss.no_target"); return; }
+
+        _nextKiss = now + Math.Max(0f, Cfg.KissCooldown);
         var color = target.Team == CsTeam.CounterTerrorist ? "{blue}" : "{red}";
         var key = Random.Shared.Next(2) == 0 ? "warden.kiss.smooch" : "warden.kiss.blow";
         Chat.PrintAll(WText.T(key, player.PlayerName, color, target.PlayerName), false);

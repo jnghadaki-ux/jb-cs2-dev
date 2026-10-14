@@ -50,6 +50,9 @@ public sealed class WardenConfig
     /// <summary>Global !kiss cooldown in seconds (shared by every warden, consumed even on a miss).</summary>
     public float KissCooldown { get; set; } = 5.0f;
 
+    /// <summary>!kiss: how far away (units) the kissed player may be.</summary>
+    public float KissRange { get; set; } = 1500f;
+
     /// <summary>Original swoobles kiss.mp3. ".vsnd" path (played to players within KissSoundRadius) or sound event. Empty = silent.</summary>
     public string KissSound { get; set; } = "";
 

@@ -20,6 +20,12 @@ public sealed class StatsConfig
 
     /// <summary>!rank overall score = survived x1 + warden rounds x3 + guards killed x2 + prisoners killed x1 + LR duels x3.</summary>
     public RankWeights RankWeights { get; set; } = new();
+
+    /// <summary>!ratewarden: prisoners rate the round's warden 1-5. The warden must have served this many seconds;
+    /// prisoners get the menu at round end when RateWardenPrompt is on.</summary>
+    public bool RateWardenEnabled { get; set; } = true;
+    public float RateWardenMinSeconds { get; set; } = 60f;
+    public bool RateWardenPrompt { get; set; } = true;
 }
 
 /// <summary>One player's totals, stored in data/stats.json keyed by SteamID64.</summary>
@@ -35,6 +41,10 @@ public sealed class PlayerStats
     public int Deaths { get; set; }
     public int LastRequestsPlayed { get; set; }
     public int LastRequestDuelsWon { get; set; }
+
+    /// <summary>Warden ratings received from prisoners (1-5 each).</summary>
+    public int WardenRatingSum { get; set; }
+    public int WardenRatingCount { get; set; }
 }
 
 /// <summary>
@@ -56,16 +66,35 @@ public sealed class StatsModule : JbModule
 
     private readonly HashSet<ulong> _wardenThisRound = new();
 
+    // !ratewarden: seconds each warden served this round, and the warden open for rating (last finished round).
+    private readonly Dictionary<ulong, (string Name, float Seconds)> _served = new();
+    private ulong _currentWarden;
+    private float _currentWardenSince;
+    private ulong _rateable;
+    private string _rateableName = "";
+    private readonly HashSet<ulong> _ratedBy = new();
+
     public override void OnAllModulesLoaded(bool hotReload)
     {
         JbEvents.WardenSelected += OnWardenSelected;
+        JbEvents.WardenRemoved += OnWardenRemoved;
         JbEvents.LastRequestStarted += OnLastRequestStarted;
     }
 
     public override void OnUnload(bool hotReload)
     {
         JbEvents.WardenSelected -= OnWardenSelected;
+        JbEvents.WardenRemoved -= OnWardenRemoved;
         JbEvents.LastRequestStarted -= OnLastRequestStarted;
+    }
+
+    public override void OnMapStart(string mapName)
+    {
+        _served.Clear();
+        _currentWarden = 0;
+        _rateable = 0;
+        _rateableName = "";
+        _ratedBy.Clear();
     }
 
     // ================================================================= counting
@@ -83,10 +112,16 @@ public sealed class StatsModule : JbModule
         Storage.Set(Ns, key, s);
     }
 
-    public override void OnRoundStart() => _wardenThisRound.Clear();
+    public override void OnRoundStart()
+    {
+        _wardenThisRound.Clear();
+        _served.Clear();
+        _currentWarden = 0;
+    }
 
     public override void OnRoundEnd(CsTeam winner, int reason)
     {
+        OpenRating();
         if (!Counting) return;
         foreach (var c in Players.Humans().Where(c => c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist).ToList())
         {
@@ -123,8 +158,92 @@ public sealed class StatsModule : JbModule
 
     private void OnWardenSelected(JbPlayer warden)
     {
+        CloseServedTime();
+        if (Tracked(warden))
+        {
+            _currentWarden = warden.SteamId64;
+            _currentWardenSince = (float)CounterStrikeSharp.API.Server.EngineTime;
+            if (!_served.ContainsKey(_currentWarden)) _served[_currentWarden] = (warden.Name, 0f);
+        }
+
         if (!Tracked(warden) || !Counting || !_wardenThisRound.Add(warden.SteamId64)) return;
         Update(warden, s => s.WardenRounds++);
+    }
+
+    private void OnWardenRemoved(JbPlayer warden) => CloseServedTime();
+
+    /// <summary>Add the current warden's time to <see cref="_served"/>.</summary>
+    private void CloseServedTime()
+    {
+        if (_currentWarden == 0) return;
+        var add = Math.Max(0f, (float)CounterStrikeSharp.API.Server.EngineTime - _currentWardenSince);
+        if (_served.TryGetValue(_currentWarden, out var v)) _served[_currentWarden] = (v.Name, v.Seconds + add);
+        _currentWarden = 0;
+    }
+
+    // ================================================================= !ratewarden
+
+    /// <summary>Round end: the warden who served longest (at least RateWardenMinSeconds) becomes rateable.</summary>
+    private void OpenRating()
+    {
+        CloseServedTime();
+        if (!Cfg.RateWardenEnabled) return;
+        var best = _served.OrderByDescending(kv => kv.Value.Seconds).FirstOrDefault();
+        if (best.Key == 0 || best.Value.Seconds < Cfg.RateWardenMinSeconds) return;
+
+        _rateable = best.Key;
+        _rateableName = best.Value.Name;
+        _ratedBy.Clear();
+        if (!Cfg.RateWardenPrompt) return;
+
+        var voters = Players.Humans().Where(c => c.Team == CsTeam.Terrorist && c.SteamID != _rateable).Select(c => c.Slot).ToList();
+        // Shortly after the round_end handlers, so the menu is not replaced by round-end cleanup.
+        Plugin.AddTimer(1f, () =>
+        {
+            foreach (var slot in voters)
+            {
+                var c = Players.Get(slot).Controller;
+                if (c != null && c.IsValid && !c.IsBot) ShowRatingMenu(c, prompt: true);
+            }
+        }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+    }
+
+    [ConsoleCommand("css_ratewarden", "sm_ratewarden - rate the last round's warden from 1 to 5")]
+    [ConsoleCommand("css_rate", "sm_rate - rate the last round's warden from 1 to 5")]
+    public void CmdRateWarden(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Cfg.RateWardenEnabled) { Chat.Tell(caller, "rate.disabled"); return; }
+        ShowRatingMenu(caller, prompt: false);
+    }
+
+    private void ShowRatingMenu(CCSPlayerController c, bool prompt)
+    {
+        if (_rateable == 0) { if (!prompt) Chat.Tell(c, "rate.none"); return; }
+        if (c.SteamID == _rateable) { if (!prompt) Chat.Tell(c, "rate.self"); return; }
+        if (c.Team != CsTeam.Terrorist) { if (!prompt) Chat.Tell(c, "rate.only_prisoners"); return; }
+        if (_ratedBy.Contains(c.SteamID)) { if (!prompt) Chat.Tell(c, "rate.already", _rateableName); return; }
+
+        var target = _rateable;
+        var m = new JbMenu(Lang.T("rate.title", Hud.Escape(_rateableName))) { Subtitle = Lang.T("rate.subtitle") };
+        for (var stars = 5; stars >= 1; stars--)
+        {
+            var value = stars;
+            m.Add(Lang.T("rate.option" + stars), p => Rate(p, target, value));
+        }
+
+        m.Open(c);
+    }
+
+    private void Rate(CCSPlayerController voter, ulong warden, int stars)
+    {
+        if (warden != _rateable || warden == 0 || voter.SteamID == warden || !_ratedBy.Add(voter.SteamID)) return;
+        var key = warden.ToString();
+        var s = Storage.Get<PlayerStats>(Ns, key) ?? new PlayerStats { Name = _rateableName };
+        s.WardenRatingSum += Math.Clamp(stars, 1, 5);
+        s.WardenRatingCount++;
+        Storage.Set(Ns, key, s);
+        Chat.Tell(voter, "rate.thanks", stars, _rateableName);
     }
 
     private void OnLastRequestStarted(JbPlayer prisoner, LrFlags flags)
@@ -207,6 +326,8 @@ public sealed class StatsModule : JbModule
         Chat.ReplyT(caller, info, "stats.warden", s.WardenRounds);
         Chat.ReplyT(caller, info, "stats.kills", s.GuardsKilled, s.PrisonersKilled, s.Deaths);
         Chat.ReplyT(caller, info, "stats.lr", s.LastRequestsPlayed, s.LastRequestDuelsWon);
+        if (s.WardenRatingCount > 0)
+            Chat.ReplyT(caller, info, "stats.rating", Leaderboard.AverageRating(s).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), s.WardenRatingCount);
         Chat.ReplyT(caller, info, "stats.playtime", minutes / 60, minutes % 60);
     }
 }

@@ -9,6 +9,9 @@ public sealed class RankWeights
     public double PrisonerKilled { get; set; } = 1;
     public double LastRequestDuelWon { get; set; } = 3;
     public double Death { get; set; } = 0;
+
+    /// <summary>Warden ratings a player needs before they appear on the "rating" board.</summary>
+    public int RatingMinCount { get; set; } = 5;
 }
 
 /// <summary>What a leaderboard is ordered by.</summary>
@@ -20,7 +23,8 @@ public enum RankCategory
     PrisonerKills,
     LastRequests,
     Survived,
-    Rounds
+    Rounds,
+    Rating
 }
 
 public sealed record RankEntry(string SteamId, string Name, double Value, int Position);
@@ -37,8 +41,13 @@ public static class Leaderboard
         ["prisoners"] = RankCategory.PrisonerKills, ["prisonerkills"] = RankCategory.PrisonerKills,
         ["lr"] = RankCategory.LastRequests, ["lrs"] = RankCategory.LastRequests, ["duels"] = RankCategory.LastRequests,
         ["survived"] = RankCategory.Survived, ["survival"] = RankCategory.Survived,
-        ["rounds"] = RankCategory.Rounds, ["played"] = RankCategory.Rounds
+        ["rounds"] = RankCategory.Rounds, ["played"] = RankCategory.Rounds,
+        ["rating"] = RankCategory.Rating, ["ratings"] = RankCategory.Rating, ["rated"] = RankCategory.Rating
     };
+
+    /// <summary>Average warden rating (1-5), 0 when unrated.</summary>
+    public static double AverageRating(PlayerStats s) =>
+        s.WardenRatingCount <= 0 ? 0 : Math.Round((double)s.WardenRatingSum / s.WardenRatingCount, 2);
 
     public static int Rounds(PlayerStats s) => s.RoundsPrisoner + s.RoundsGuard;
 
@@ -58,6 +67,7 @@ public static class Leaderboard
         RankCategory.LastRequests => s.LastRequestDuelsWon,
         RankCategory.Survived => s.RoundsSurvived,
         RankCategory.Rounds => Rounds(s),
+        RankCategory.Rating => s.WardenRatingCount >= Math.Max(1, w.RatingMinCount) ? AverageRating(s) : 0,
         _ => Math.Round(Score(s, w), 1)
     };
 

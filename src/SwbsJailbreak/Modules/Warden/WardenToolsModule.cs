@@ -46,6 +46,13 @@ public sealed class WardenToolsConfig
     /// <summary>!split [2-4]: colour-coded prisoner teams for warden games.</summary>
     public bool SplitEnabled { get; set; } = true;
     public float SplitHudSeconds { get; set; } = 6f;
+
+    /// <summary>!spotlight: the prisoner the warden looks at (or names) glows for guards through walls.</summary>
+    public bool SpotlightEnabled { get; set; } = true;
+    public float SpotlightSeconds { get; set; } = 8f;
+    public float SpotlightCooldown { get; set; } = 3f;
+    public float SpotlightRange { get; set; } = 3000f;
+    public string SpotlightColor { get; set; } = "0,255,255";
 }
 
 /// <summary>
@@ -72,6 +79,9 @@ public sealed class WardenToolsModule : JbModule
 
     private readonly HashSet<int> _wardenVotes = new();
     private float _wardenSince;
+
+    private readonly Dictionary<int, GlowHandle> _spotlights = new();
+    private float _nextSpotlight;
 
     /// <summary>!split team index per prisoner slot.</summary>
     private readonly Dictionary<int, int> _splitTeam = new();
@@ -107,6 +117,7 @@ public sealed class WardenToolsModule : JbModule
         DamageService.Unregister(OnDamage);
         SetFriendlyFire(false, null);
         ClearDeputy(false);
+        ClearSpotlights();
     }
 
     // ================================================================= lifecycle
@@ -120,6 +131,8 @@ public sealed class WardenToolsModule : JbModule
         Array.Clear(_nextRepeat);
         _wardenVotes.Clear();
         _splitTeam.Clear();
+        _spotlights.Clear(); // the glow entities went with the old map
+        _nextSpotlight = 0;
     }
 
     public override void OnRoundStart() => _extendsThisRound = 0;
@@ -130,12 +143,14 @@ public sealed class WardenToolsModule : JbModule
         ClearDeputy(false);
         _wardenVotes.Clear();
         _splitTeam.Clear();
+        ClearSpotlights();
     }
 
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
     {
         if (IsDeputy(victim)) ClearDeputy(true);
         _splitTeam.Remove(victim.Slot);
+        RemoveSpotlight(victim.Slot);
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)
@@ -144,6 +159,7 @@ public sealed class WardenToolsModule : JbModule
         _nextRepeat[player.Slot] = 0;
         _wardenVotes.Remove(player.Slot);
         _splitTeam.Remove(player.Slot);
+        RemoveSpotlight(player.Slot);
     }
 
     public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
@@ -489,6 +505,61 @@ public sealed class WardenToolsModule : JbModule
     {
         if (_splitTeam.TryGetValue(c.Slot, out var t)) c.SetColor(SplitColors[t]);
         else c.ResetColor();
+    }
+
+    // ================================================================= !spotlight
+
+    [ConsoleCommand("css_spotlight", "sm_spotlight [player] - (warden/deputy) the prisoner you look at glows for guards")]
+    [ConsoleCommand("css_spot", "sm_spot [player] - (warden/deputy) the prisoner you look at glows for guards")]
+    public void CmdSpotlight(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Cfg.SpotlightEnabled) { Chat.ReplyT(caller, info, "wt.disabled"); return; }
+        if (!CanCommand(caller, true)) { Chat.ReplyT(caller, info, "wt.not_warden"); return; }
+        var now = (float)Server.EngineTime;
+        if (now < _nextSpotlight) { Chat.ReplyT(caller, info, "wt.wait"); return; }
+
+        CCSPlayerController? target;
+        if (info.ArgCount > 1)
+        {
+            var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true, singleOnly: true, respectImmunity: false);
+            if (t == null) return;
+            target = t.Players[0];
+        }
+        else
+        {
+            if (caller == null || !caller.IsAliveP()) { Chat.ReplyT(caller, info, "core.usage", "!spotlight <player>"); return; }
+            target = Aim.LookTarget(caller, Cfg.SpotlightRange);
+            if (target == null) { Chat.ReplyT(caller, info, "wt.spot.no_target"); return; }
+        }
+
+        if (target.Team != CsTeam.Terrorist) { Chat.ReplyT(caller, info, "wt.spot.not_prisoner", target.PlayerName); return; }
+        if (!TryParseColor(Cfg.SpotlightColor, out var color)) color = Color.Cyan;
+
+        RemoveSpotlight(target.Slot);
+        var handle = Glow.Attach(target, color, viewer => viewer.Team == CsTeam.CounterTerrorist || Perms.IsAdmin(viewer));
+        if (handle == null) { Chat.ReplyT(caller, info, "wt.spot.failed"); return; }
+        _spotlights[target.Slot] = handle;
+        _nextSpotlight = now + Math.Max(0f, Cfg.SpotlightCooldown);
+
+        var slot = target.Slot;
+        Round.Timer(Math.Max(1f, Cfg.SpotlightSeconds), () =>
+        {
+            if (_spotlights.TryGetValue(slot, out var h) && ReferenceEquals(h, handle)) RemoveSpotlight(slot);
+        });
+
+        Chat.TellAll("wt.spot.done", caller?.PlayerName ?? "Console", target.PlayerName);
+        Jb.Log.LogEvent($"{caller?.PlayerName ?? "Console"} spotlighted {target.PlayerName}", caller.Jb(), target.Jb(), LogType.Warden);
+    }
+
+    private void RemoveSpotlight(int slot)
+    {
+        if (_spotlights.Remove(slot, out var h)) Glow.Remove(h);
+    }
+
+    private void ClearSpotlights()
+    {
+        foreach (var h in _spotlights.Values) Glow.Remove(h);
+        _spotlights.Clear();
     }
 
     // ================================================================= helpers
