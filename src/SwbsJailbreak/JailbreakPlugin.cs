@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.16.0"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.16.1"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;

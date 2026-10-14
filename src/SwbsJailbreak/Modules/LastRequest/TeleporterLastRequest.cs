@@ -97,6 +97,7 @@ public sealed class TeleporterLastRequest : JbModule
             pawn.Teleport(to, null, new Vector(0, 0, 0));
             Fx.PulseAt(from, Color.FromArgb(255, 80, 200, 255), 10f, 120f, 0.4f);
             Fx.PulseAt(to, Color.FromArgb(255, 80, 200, 255), 120f, 10f, 0.4f);
+            if (Cfg.TeleporterSound.Length > 0) Sound.PlayAt(c, Cfg.TeleporterSound);
             return true;
         }
         catch

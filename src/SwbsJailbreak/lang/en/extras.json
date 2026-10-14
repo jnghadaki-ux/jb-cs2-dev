@@ -14,5 +14,7 @@
   "spam.gag_warning": "{red}You will be gagged if you continue to spam.",
   "spam.gagged": "{red}You have been gagged for spamming too much.",
   "adminlog.none": "{olive}No admin activity found.",
-  "adminlog.printed": "{olive}{0} admin activity lines printed to your console."
+  "adminlog.printed": "{olive}{0} admin activity lines printed to your console.",
+  "workshop.disabled": "[SM] Turn on WorkshopPack.Enabled first (after the pack is uploaded and mounted).",
+  "workshop.applied": "[SM] {0} sound settings now use the SWBS workshop pack."
 }

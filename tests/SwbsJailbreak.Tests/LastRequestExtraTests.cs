@@ -225,7 +225,7 @@ public class LastRequestExtraTests
             "Modules/LastRequest/LrExtrasModule.cs", "Modules/LastRequest/TournamentLastRequest.cs",
             "Modules/Days/NewDays.cs", "Modules/Days/GunGameDay.cs", "Modules/Days/SpyDay.cs", "Modules/Days/SpeedrunDay.cs",
             "Modules/PlayerExtras/BettingModule.cs", "Modules/PlayerExtras/StatsModule.cs",
-            "Modules/PlayerExtras/StoreModule.cs", "Modules/Extras/ChatFormatModule.cs"
+            "Modules/PlayerExtras/StoreModule.cs", "Modules/Extras/ChatFormatModule.cs", "Modules/Extras/WorkshopPackModule.cs"
         };
         var call = new Regex(@"(?:Lang\.T|TellAll|TellBoth|Tell|ReplyT)\((?:[^""()]*?,\s*)?""([a-z_]+\.[a-z0-9_.]+)""\s*[,)]"); // a key followed by + is built at run time
         var missing = new List<string>();

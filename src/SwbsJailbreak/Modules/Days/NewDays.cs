@@ -42,6 +42,9 @@ public sealed class NewDaysConfig
     /// <summary>Guards can be swapped with prisoners too (never guard with guard).</summary>
     public bool TeleportIncludeGuards { get; set; } = true;
 
+    /// <summary>Played from both players of a swap (workshop pack teleport sound).</summary>
+    public string TeleportSound { get; set; } = "";
+
     // ---------------------------------------------------------------- Gun Game (warday)
     public bool GunGameEnabled { get; set; } = true;
     /// <summary>The levels in order; the knife is always added as the last level.</summary>
@@ -332,6 +335,11 @@ public sealed class NewDays : JbModule
             var still = new Vector(0, 0, 0);
             pa.Teleport(posB, angB, still);
             pb.Teleport(posA, angA, still);
+            if (Cfg.TeleportSound.Length > 0)
+            {
+                Sound.PlayAt(ca!, Cfg.TeleportSound);
+                Sound.PlayAt(cb!, Cfg.TeleportSound);
+            }
             Fx.PulseAt(posA, Color.FromArgb(255, 160, 60, 255), 10f, 120f, 0.4f);
             Fx.PulseAt(posB, Color.FromArgb(255, 160, 60, 255), 10f, 120f, 0.4f);
             swapped++;

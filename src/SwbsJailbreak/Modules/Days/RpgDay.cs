@@ -19,6 +19,10 @@ public sealed class RpgConfig
     public string ExplosionSound { get; set; } = "BaseGrenade.Explode";
     public string ShootSound { get; set; } = "Weapon_Nova.Single";
     public string AirshotSound { get; set; } = "UIPanorama.round_report_round_won";
+
+    /// <summary>Played on a player hurt by a rocket / killed by one (the original's pain and death sounds; workshop pack).</summary>
+    public string PainSound { get; set; } = "";
+    public string DeathSound { get; set; } = "";
 }
 
 internal sealed class Rocket
@@ -375,9 +379,11 @@ public sealed class RpgDay : JbModule
         {
             pawn.Health -= rounded;
             Utilities.SetStateChanged(pawn, "CBaseEntity", "m_iHealth");
+            if (Cfg.PainSound.Length > 0) Sound.PlayAt(victim, Cfg.PainSound);
         }
         else
         {
+            if (Cfg.DeathSound.Length > 0) Sound.PlayAt(victim, Cfg.DeathSound);
             DamageService.KillWithCredit(victim, owner.Slot == victim.Slot ? null : owner, "rpg");
         }
     }
