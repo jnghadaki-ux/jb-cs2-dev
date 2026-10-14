@@ -84,5 +84,8 @@
   "lr.contest.race.watch": "[SM] Carefully watch where your opponent goes.",
   "lr.contest.race.too_close": "[SM] Move at least {0} more units away from the start.",
   "lr.contest.race.starting": "[SM] The race will start in {0} seconds.",
-  "lr.contest.race.started": "[SM] The race has started!"
+  "lr.contest.race.started": "[SM] The race has started!",
+  "lr.edit.title": "Last Requests On/Off",
+  "lr.edit.category": "Last Requests - {0}",
+  "lr.edit.category_off": "{0} ({1} off)"
 }

@@ -108,7 +108,88 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
     {
         // OnRegisterReady: LRs registered themselves in their OnLoad; sort like SortLastRequestsByName.
         _lrs.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-        if (hotReload) CountSlots(false);
+        if (hotReload)
+        {
+            CountSlots(false);
+            _map = Server.MapName; // cold start: no map yet (Server.* must not be read in OnLoad); OnMapStart covers it
+        }
+
+        LoadLrConfig();
+    }
+
+    // ================================================================== !lredit (admin on/off, this map or every map)
+
+    private DisabledListDoc _lrMapOff = new();
+    private DisabledListDoc _lrGlobalOff = new();
+    private string _map = "";
+
+    private static string LrKey(LastRequestDefinition lr) => $"{lr.Category}/{lr.Name}";
+
+    private Availability StateOf(LastRequestDefinition lr) => AvailabilityRules.Of(_lrMapOff.Disabled, _lrGlobalOff.Disabled, LrKey(lr));
+
+    private void LoadLrConfig()
+    {
+        try { _lrMapOff = _map.Length == 0 ? new DisabledListDoc() : Storage.LoadMapDoc<DisabledListDoc>("lrs", _map.ToLowerInvariant()); }
+        catch { _lrMapOff = new DisabledListDoc(); }
+        try { _lrGlobalOff = Storage.LoadMapDoc<DisabledListDoc>("lrs", AvailabilityRules.GlobalDoc); }
+        catch { _lrGlobalOff = new DisabledListDoc(); }
+        foreach (var lr in _lrs) lr.Enabled = StateOf(lr) == Availability.On;
+    }
+
+    [ConsoleCommand("css_lre", "sm_lre - turn last requests on/off (this map or every map)")]
+    [ConsoleCommand("css_lredit", "sm_lredit - turn last requests on/off (this map or every map)")]
+    public void CmdLrEdit(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        if (!Perms.Has(caller, "lr.edit")) { Chat.Tell(caller, "core.no_access"); return; }
+        OpenEditMenu(caller);
+    }
+
+    /// <summary>The admin on/off menu (also in !admin > Jailbreak).</summary>
+    public void OpenEditMenu(CCSPlayerController c, JbMenu? parent = null)
+    {
+        var m = new JbMenu(Lang.T("lr.edit.title")) { Parent = parent, Subtitle = Lang.T("toggle.help") };
+        foreach (var cat in _lrs.Select(l => l.Category).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            var category = cat;
+            var off = _lrs.Count(l => l.Category == category && StateOf(l) != Availability.On);
+            m.Add(off == 0 ? Hud.Escape(category) : Lang.T("lr.edit.category_off", Hud.Escape(category), off), x => OpenEditCategory(x, category, m));
+        }
+
+        m.Open(c);
+    }
+
+    private void OpenEditCategory(CCSPlayerController c, string category, JbMenu parent)
+    {
+        var m = new JbMenu(Lang.T("lr.edit.category", category)) { Parent = parent, Subtitle = Lang.T("toggle.help") };
+        foreach (var l in _lrs.Where(l => l.Category == category))
+        {
+            var lr = l;
+            m.Add($"{Lang.T(AvailabilityRules.TagKey(StateOf(lr)))} {Hud.Escape(lr.Name)}", x =>
+            {
+                if (!Perms.Has(x, "lr.edit")) return;
+                var next = AvailabilityRules.Next(StateOf(lr));
+                AvailabilityRules.Apply(_lrMapOff.Disabled, _lrGlobalOff.Disabled, LrKey(lr), next);
+                lr.Enabled = next == Availability.On;
+                var state = Colors.Strip(Lang.T(AvailabilityRules.TagKey(next)));
+                x.PrintToChat(" " + Lang.T("toggle.changed", lr.Name, state));
+                Jb.Log.LogEvent($"{x.PlayerName} set last request {lr.Category}/{lr.Name} to {state}", x.Jb(), null, LogType.Admin);
+                try
+                {
+                    if (_map.Length > 0) Storage.SaveMapDoc("lrs", _map.ToLowerInvariant(), _lrMapOff);
+                    Storage.SaveMapDoc("lrs", AvailabilityRules.GlobalDoc, _lrGlobalOff);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Saving the LR on/off lists failed");
+                    x.PrintToChat(" " + Lang.T("days.edit.save_error"));
+                }
+
+                OpenEditCategory(x, category, parent);
+            });
+        }
+
+        m.Open(c);
     }
 
     public override void OnUnload(bool hotReload)
@@ -125,6 +206,8 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
 
     public override void OnMapStart(string mapName)
     {
+        _map = mapName;
+        LoadLrConfig();
         _roundStarted = false; // warmup has no round_start: no LR until the first real round
         _roundNumber = 0;
         _shownRebelAsTeamMenu = false;

@@ -28,6 +28,7 @@ public static class Perms
         ["days"] = "@css/generic",           // force-start / stop days
         ["days.edit"] = "@css/unban",        // sm_de / sm_daysedit (original: ADMFLAG_UNBAN)
         ["lr"] = "@css/generic",             // abort LRs
+        ["lr.edit"] = "@css/unban",          // !lredit: turn last requests on/off (like days.edit)
         ["mute"] = "@css/chat",              // mute/gag/silence
         ["teams"] = "@css/kick",             // move players between teams, swap
         ["slay"] = "@css/slay",              // slay, slap, beacon, freeze, ... (fun commands)

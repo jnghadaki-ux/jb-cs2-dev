@@ -42,6 +42,9 @@ public class WardenToolsTests
     [InlineData("css_sr")]
     [InlineData("css_lrstats")]
     [InlineData("css_lrlog")]
+    [InlineData("css_lredit")]
+    [InlineData("css_lre")]
+    [InlineData("css_daysedit")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

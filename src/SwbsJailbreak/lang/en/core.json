@@ -12,5 +12,10 @@
   "core.usage": "{grey}Usage: {0}",
   "core.console_only_ingame": "This command can only be used in-game.",
   "core.input.hint": "{grey}Type it in chat now (or type cancel).",
-  "core.input.cancelled": "{grey}Cancelled."
+  "core.input.cancelled": "{grey}Cancelled.",
+  "toggle.on": "[ON]",
+  "toggle.off_map": "[OFF - this map]",
+  "toggle.off_all": "[OFF - all maps]",
+  "toggle.help": "Click: on > off this map > off all maps",
+  "toggle.changed": "[SM] {0} is now {1}."
 }

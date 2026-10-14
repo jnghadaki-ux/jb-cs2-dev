@@ -62,6 +62,7 @@ public sealed partial class DaysModule : JbModule, IDayService
     private Timer? _freezeTimer;
     private readonly HashSet<uint> _spawnedByDay = new();
     private DayMapConfig _mapConfig = new();
+    private DayMapConfig _globalConfig = new();
     private string _map = "";
 
     // ================================================================== lifecycle
@@ -746,30 +747,45 @@ public sealed partial class DaysModule : JbModule, IDayService
 
     // ================================================================== !daysedit (per-map enabled days)
 
-    [ConsoleCommand("css_de", "sm_de - edit the enabled days for this map")]
-    [ConsoleCommand("css_daysedit", "sm_daysedit - edit the enabled days for this map")]
+    [ConsoleCommand("css_de", "sm_de - turn days on/off (this map or every map)")]
+    [ConsoleCommand("css_daysedit", "sm_daysedit - turn days on/off (this map or every map)")]
     public void CmdDaysEdit(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null) return;
         if (!Perms.Has(caller, "days.edit")) { Chat.Tell(caller, "core.no_access"); return; }
-        var m = new JbMenu(Lang.T("days.menu.title"));
-        m.Add(Lang.T("days.type.freeday"), x => DisplayEditMenu(x, DayType.Freeday));
-        m.Add(Lang.T("days.type.warday"), x => DisplayEditMenu(x, DayType.Warday));
-        m.Open(caller);
+        OpenEditMenu(caller);
     }
 
-    private void DisplayEditMenu(CCSPlayerController c, DayType type)
+    /// <summary>The admin on/off menu (also in !admin > Jailbreak).</summary>
+    public void OpenEditMenu(CCSPlayerController c, JbMenu? parent = null)
     {
-        var m = new JbMenu(Lang.T(type == DayType.Warday ? "days.edit.wardays" : "days.edit.freedays"));
+        var m = new JbMenu(Lang.T("days.menu.title")) { Parent = parent, Subtitle = Lang.T("toggle.help") };
+        m.Add(Lang.T("days.type.freeday"), x => DisplayEditMenu(x, DayType.Freeday, m));
+        m.Add(Lang.T("days.type.warday"), x => DisplayEditMenu(x, DayType.Warday, m));
+        m.Open(c);
+    }
+
+    private static string DayKey(DayDefinition d) => $"{(int)d.Type}-{d.Name}";
+
+    private Availability StateOf(DayDefinition d) => AvailabilityRules.Of(_mapConfig.Disabled, _globalConfig.Disabled, DayKey(d));
+
+    private void DisplayEditMenu(CCSPlayerController c, DayType type, JbMenu? parent = null)
+    {
+        var m = new JbMenu(Lang.T(type == DayType.Warday ? "days.edit.wardays" : "days.edit.freedays")) { Parent = parent, Subtitle = Lang.T("toggle.help") };
         foreach (var d in _days.Where(d => d.Type == type))
         {
             var day = d;
-            m.Add($"[{(d.Enabled ? "Y" : "N")}] {Hud.Escape(d.Name)}", x =>
+            m.Add($"{Lang.T(AvailabilityRules.TagKey(StateOf(d)))} {Hud.Escape(d.Name)}", x =>
             {
-                day.Enabled = !day.Enabled;
-                x.PrintToChat(" " + Lang.T(day.Enabled ? "days.edit.enabled" : "days.edit.disabled", day.Name));
+                if (!Perms.Has(x, "days.edit")) return;
+                var next = AvailabilityRules.Next(StateOf(day));
+                AvailabilityRules.Apply(_mapConfig.Disabled, _globalConfig.Disabled, DayKey(day), next);
+                day.Enabled = next == Availability.On;
+                var state = Colors.Strip(Lang.T(AvailabilityRules.TagKey(next)));
+                x.PrintToChat(" " + Lang.T("toggle.changed", day.Name, state));
+                Jb.Log.LogEvent($"{x.PlayerName} set day {day.Name} to {state}", x.Jb(), null, LogType.Admin);
                 SaveDayConfig(x);
-                DisplayEditMenu(x, type);
+                DisplayEditMenu(x, type, parent);
             });
         }
 
@@ -778,10 +794,10 @@ public sealed partial class DaysModule : JbModule, IDayService
 
     private void SaveDayConfig(CCSPlayerController c)
     {
-        _mapConfig.Disabled = _days.Where(d => !d.Enabled).Select(d => $"{(int)d.Type}-{d.Name}").ToList();
         try
         {
             Storage.SaveMapDoc("days", _map.ToLowerInvariant(), _mapConfig);
+            Storage.SaveMapDoc("days", AvailabilityRules.GlobalDoc, _globalConfig);
             c.PrintToChat(" " + Lang.T("days.edit.saved"));
         }
         catch (Exception ex)
@@ -795,6 +811,8 @@ public sealed partial class DaysModule : JbModule, IDayService
     {
         try { _mapConfig = Storage.LoadMapDoc<DayMapConfig>("days", (_map ?? "").ToLowerInvariant()); }
         catch { _mapConfig = new DayMapConfig(); }
-        foreach (var d in _days) d.Enabled = !_mapConfig.Disabled.Contains($"{(int)d.Type}-{d.Name}");
+        try { _globalConfig = Storage.LoadMapDoc<DayMapConfig>("days", AvailabilityRules.GlobalDoc); }
+        catch { _globalConfig = new DayMapConfig(); }
+        foreach (var d in _days) d.Enabled = StateOf(d) == Availability.On;
     }
 }
