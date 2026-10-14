@@ -337,8 +337,11 @@ Steps (Windows)
    Quick check before uploading: in the Workshop Tools, open the Asset Browser, find swbs_jailbreak.vsndevts,
    double click a sound event and press play.
 
-4. Upload: in the Workshop Tools open the Workshop Manager (Tools menu / the Steam Workshop button), "New", pick the
-   swbs_jailbreak addon, give it a title, use this pack's preview.png, publish.
+4. Upload: double click upload_workshop.bat (no Workshop Tools or GPU needed). It downloads SteamCMD, asks for your
+   Steam account name (and password / Steam Guard code), creates the Workshop item on the first run, packs the
+   compiled files into <id>_dir.vpk (what MultiAddonManager mounts) and uploads it as Unlisted with preview.png.
+   Run it again after recompiling to update the same item (the id is kept in workshop_id.txt).
+   (With working Workshop Tools you can also use their Workshop Manager instead.)
    Then on the Steam Workshop page of the item set Visibility to "Unlisted" (players must be able to download it;
    "Hidden" items do not download). Note the item id (the number in the page URL ...?id=1234567890).
 
@@ -373,8 +376,8 @@ Steps (same as the main pack, with the addon name swbs_store):
 1. Workshop Tools: Create New Addon named exactly   swbs_store
 2. Extract this zip, run compile_pack.bat (it reports how many models compiled).
 3. Check each model in the Asset Browser / Model Editor as in the main pack's README step 7.
-4. Upload it with the Workshop Manager as a NEW item, Visibility "Unlisted". Credit the model authors in the
-   description (listed above).
+4. Upload: double click upload_workshop.bat (no Workshop Tools or GPU needed; see the main pack's README step 4).
+   It makes a NEW Unlisted item with the credits above in its description.
 5. Server: add its id to MultiAddonManager next to the main pack:   mm_extra_addons "<main id>,<store id>"
 6. Plugin: the store already sells them (Store items of type PlayerModel, category "Player models"). Players
    equip one with !store; it replaces their model on spawn while PlayerModels.ApplyModels is on.
@@ -407,6 +410,25 @@ def _zip(folder: Path, zip_path: Path) -> None:
         for f in sorted(folder.rglob("*")):
             if f.is_file():
                 z.write(f, f.relative_to(folder.parent))
+
+
+UPLOAD_BAT = r"""@echo off
+setlocal
+title @TITLE@ - Workshop upload
+rem Uploads the compiled pack to the Steam Workshop without the CS2 Workshop Tools (SteamCMD, no GPU needed).
+rem Run compile_pack.bat first. Optional: drag your "Counter-Strike Global Offensive" folder onto this file.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0upload_workshop.ps1" -Addon "@ADDON@" -Title "@TITLE@" -Description "@DESCRIPTION@" -Cs2 "%~1"
+echo.
+echo Press any key to close this window.
+pause >nul
+"""
+
+
+def _upload_tools(pack: Path, addon: str, title: str, description: str) -> None:
+    bat = UPLOAD_BAT.replace("@ADDON@", addon).replace("@TITLE@", title).replace("@DESCRIPTION@", description)
+    (pack / "upload_workshop.bat").write_text(bat.replace("\n", "\r\n"), encoding="ascii")
+    ps1 = (Path(__file__).resolve().parent / "upload_workshop.ps1").read_text()
+    (pack / "upload_workshop.ps1").write_text(ps1.replace("\n", "\r\n"), encoding="utf-8")
 
 
 def _tools(pack: Path, bat: str, readme: str, title: str) -> None:
@@ -456,6 +478,7 @@ def build_main(fork: Path, out: Path) -> int:
         models + splats + trail_pieces + players,
         'Until then set "UseModels": false in WorkshopPack if a prop is missing, and keep PlayerModels.ApplyModels off.')
     _tools(pack, bat, README, "JAILBREAK PACK")
+    _upload_tools(pack, ADDON, "SWBS Jailbreak Pack", "Sounds, props, paintballs, trails and prisoner models for the SWBS Jailbreak server.")
     zip_path = out / "SwbsJailbreak-workshop-pack.zip"
     _zip(pack, zip_path)
     print(f"pack: {zip_path} ({len(events)} sound events, {len(models)} models, {len(splats)} paintball splats, {len(trail_pieces)} trail pieces, "
@@ -486,6 +509,8 @@ def build_store(sources, out: Path, tool=None, kotor=None) -> int:
          ("player models", '-r -i "%DEST%\\characters\\models\\swbs\\*.vmdl"')],
         made, "Keep the store's player model items disabled until they compile.")
     _tools(pack, bat, STORE_README.replace("@MODELS@", lines), "STORE MODELS")
+    _upload_tools(pack, "swbs_store", "SWBS Store Models", "Player models for the SWBS Jailbreak server store. " +
+                  "Credits: " + "; ".join(credits[m] for m in made))
     zip_path = out / "SwbsJailbreak-store-pack.zip"
     _zip(pack, zip_path)
     print(f"store pack: {zip_path} ({len(made)} player models)")
