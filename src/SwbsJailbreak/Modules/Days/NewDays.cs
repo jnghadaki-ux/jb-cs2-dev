@@ -69,15 +69,6 @@ public sealed class NewDaysConfig
     /// <summary>Hide the kill feed during Spy Day so kills do not give the spies away.</summary>
     public bool SpyHideKillFeed { get; set; } = true;
 
-    // ---------------------------------------------------------------- Tournament (warday)
-    public bool TournamentEnabled { get; set; } = true;
-    /// <summary>A Teleport Destination zone with this name is the arena; without one, where the warden stands.</summary>
-    public string TournamentArenaZone { get; set; } = "arena";
-    /// <summary>Distance between the two duelists.</summary>
-    public float TournamentSpacing { get; set; } = 220f;
-    public int TournamentDuelSeconds { get; set; } = 45;
-    public int TournamentWinPoints { get; set; } = 100;
-
     // ---------------------------------------------------------------- Speedrun (freeday)
     public bool SpeedrunEnabled { get; set; } = true;
     public int SpeedrunCountdown { get; set; } = 5;
@@ -90,7 +81,7 @@ public sealed class NewDaysConfig
 
 /// <summary>
 /// Smaller 0.14 days: Juggernaut, Dodgeball, HE Day and Headshot Only (wardays) and Teleport Freeday.
-/// Gun Game, Spy Day, Tournament and Speedrun have their own files.
+/// Gun Game, Spy Day and Speedrun have their own files.
 /// </summary>
 public sealed class NewDays : JbModule
 {

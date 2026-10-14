@@ -64,6 +64,24 @@ internal static class DayLogic
         return pairs;
     }
 
+    public enum TournamentPhase
+    {
+        None,
+        Lobby,
+        Running
+    }
+
+    /// <summary>
+    /// Knife Tournament LR menu state: null = can be picked, else the phrase key shown next to it. A new tournament needs
+    /// at least two prisoners who are still choosing their LR (the picker included); an open lobby can always be joined.
+    /// </summary>
+    public static string? TournamentUnavailable(TournamentPhase phase, int choosingPrisoners) => phase switch
+    {
+        TournamentPhase.Running => "lr.menu.tournament_running",
+        TournamentPhase.Lobby => null,
+        _ => choosingPrisoners >= 2 ? null : "lr.menu.need_two_t"
+    };
+
     /// <summary>Winner of a timed-out duel: more health wins; a tie goes to <paramref name="coin"/> (0 = a, 1 = b).</summary>
     public static int DuelTimeoutWinner(int a, int healthA, int b, int healthB, int coin) =>
         healthA > healthB ? a : healthB > healthA ? b : coin == 0 ? a : b;

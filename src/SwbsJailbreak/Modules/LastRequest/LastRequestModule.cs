@@ -594,6 +594,7 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
             string? disabled = null;
             if ((lr.Flags & LrFlags.Freeday) != 0 && mapEndingSoon) disabled = "lr.menu.map_end";
             else if ((lr.Flags & LrFlags.LastPrisonerOnlyCanUse) != 0 && prisonersAlive > 1) disabled = "lr.menu.last_t";
+            else if (lr.Unavailable?.Invoke(p) is { } why) disabled = why;
             else if ((lr.Flags & LrFlags.Rebel) != 0 && _numRebelingTogether == 1)
             {
                 if (prisonersAlive > 1) disabled = "lr.menu.last_t";
@@ -610,8 +611,16 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
             {
                 var pl = x.Jb();
                 if (pl == null) return;
-                Kill(ref S(pl).SelectTimer);
                 if (!S(pl).Initialized || S(pl).Started) return;
+                if (def.Unavailable?.Invoke(pl) is { } now)
+                {
+                    // Changed while the menu was open: show the menu again with the current state.
+                    if (pl.Controller is { } pc) Plain(pc, "lr.menu.no_longer", def.Name, Colors.Strip(Lang.T(now)));
+                    DisplayLrMenu(pl, category, parent);
+                    return;
+                }
+
+                Kill(ref S(pl).SelectTimer);
                 StartLastRequest(pl, def);
             });
         }
@@ -882,7 +891,9 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
             return;
         }
 
-        var options = Usable.Where(l => (l.Flags & (LrFlags.Freeday | LrFlags.LastPrisonerOnlyCanUse | LrFlags.Rebel)) == 0).ToList();
+        // Group LRs (SeeTeammates) involve other prisoners: only ever a deliberate choice, never a random one.
+        var options = Usable.Where(l => (l.Flags & (LrFlags.Freeday | LrFlags.LastPrisonerOnlyCanUse | LrFlags.Rebel | LrFlags.SeeTeammates)) == 0
+                                        && l.Unavailable?.Invoke(p) == null).ToList();
         if (options.Count == 0)
         {
             if (p.Controller is { } c) Plain(c, "lr.no_usable_options");

@@ -68,6 +68,16 @@ public class NewDaysTests
     }
 
     [Fact]
+    public void TournamentLr_NeedsTwoChoosingPrisonersAndJoinsAnOpenLobby()
+    {
+        Assert.Equal("lr.menu.need_two_t", DayLogic.TournamentUnavailable(DayLogic.TournamentPhase.None, 1));
+        Assert.Null(DayLogic.TournamentUnavailable(DayLogic.TournamentPhase.None, 2));
+        Assert.Null(DayLogic.TournamentUnavailable(DayLogic.TournamentPhase.Lobby, 1));
+        Assert.Null(DayLogic.TournamentUnavailable(DayLogic.TournamentPhase.Lobby, 0));
+        Assert.Equal("lr.menu.tournament_running", DayLogic.TournamentUnavailable(DayLogic.TournamentPhase.Running, 5));
+    }
+
+    [Fact]
     public void DuelTimeoutWinner_HealthThenCoin()
     {
         Assert.Equal(1, DayLogic.DuelTimeoutWinner(1, 80, 2, 40, 1));
@@ -142,8 +152,9 @@ public class NewDaysTests
     {
         var c = new NewDaysConfig();
         Assert.True(c.JuggernautEnabled && c.DodgeballEnabled && c.HeDayEnabled && c.HeadshotOnlyEnabled && c.TeleportFreedayEnabled);
-        Assert.True(c.GunGameEnabled && c.SpyDayEnabled && c.TournamentEnabled && c.SpeedrunEnabled);
+        Assert.True(c.GunGameEnabled && c.SpyDayEnabled && c.SpeedrunEnabled);
         Assert.True(new RpgConfig().Enabled);
+        Assert.True(new SwbsJailbreak.Modules.LastRequest.TournamentLrConfig().Enabled);
         Assert.NotEmpty(c.GunGameWeapons);
     }
 }

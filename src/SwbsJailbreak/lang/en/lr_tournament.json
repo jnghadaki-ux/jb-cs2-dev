@@ -1,0 +1,22 @@
+{
+  "lr.menu.need_two_t": "[Need 2+ Ts Choosing]",
+  "lr.menu.tournament_running": "[Already Running]",
+  "lr.menu.no_longer": "[SM] {0} can't be picked right now {1}.",
+  "lr.tournament.opened": "{lightred}{0} {olive}opened a {gold}Knife Tournament{olive}! Prisoners choosing a last request: pick {gold}Tournament > Knife Tournament {olive}within {lightred}{1} {olive}seconds to join.",
+  "lr.tournament.invite": "{lightred}{0} {olive}wants a knife tournament. Join from your {gold}!lr {olive}menu: {gold}Tournament > Knife Tournament{olive}.",
+  "lr.tournament.joined": "{lightred}{0} {olive}joined the knife tournament ({lightred}{1} {olive}in).",
+  "lr.tournament.not_enough": "{olive}Nobody joined the knife tournament. Pick another last request.",
+  "lr.tournament.no_arena": "{olive}No arena for the knife tournament. Pick another last request.",
+  "lr.tournament.start": "{gold}Knife Tournament{olive}: {lightred}{0} {olive}prisoners in the bracket. Only the duelists can be hurt.",
+  "lr.tournament.round": "{olive}Bracket round {lightred}{0}{olive}: {lightred}{1} {olive}players left.",
+  "lr.tournament.duel": "{lightred}{0} {olive}vs {lightred}{1}{olive}!",
+  "lr.tournament.bye": "{lightred}{0} {olive}goes through without a duel.",
+  "lr.tournament.timeout": "{olive}Time! The healthier duelist goes through.",
+  "lr.tournament.duel_won": "{lightred}{0} {olive}wins the duel.",
+  "lr.tournament.no_winner": "{olive}The knife tournament ended without a champion.",
+  "lr.tournament.champion": "{gold}{0} {olive}is the knife tournament champion and wins {lightred}{1} {olive}points!",
+  "lr.tournament.pick_lr": "{olive}Now pick your last request.",
+  "lr.tournament.hud_lobby": "<font color='#FFC828'>Knife Tournament</font><br><font color='#FFFFFF'>{0} in - join in {1}s (!lr)</font>",
+  "lr.tournament.hud_vs": "<font color='#FFC828'>{0}</font> vs <font color='#FFC828'>{1}</font><br><font color='#FFFFFF'>{2}</font>",
+  "lr.tournament.hud_fight": "<font class='fontSize-l' color='#FF3C1E'>FIGHT!</font>"
+}

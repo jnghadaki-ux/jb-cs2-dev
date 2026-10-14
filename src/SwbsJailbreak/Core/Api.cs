@@ -244,7 +244,10 @@ public enum LrFlags
     TempInvincible = 1 << 13,
     ShowAllGuardsOnRadar = 1 << 14,
     RandomTeleportLocation = 1 << 15,
-    Rebel = 1 << 16
+    Rebel = 1 << 16,
+
+    /// <summary>ADDITION: prisoners in this LR still see the other prisoners (group LRs such as Knife Tournament).</summary>
+    SeeTeammates = 1 << 17
 }
 
 [Flags]
@@ -273,6 +276,13 @@ public sealed class LastRequestDefinition
     public Action<JbPlayer>? OnOpponentLeft { get; init; }
 
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// ADDITION: live check for the prisoner opening the menu; returns the phrase key shown after the greyed-out name
+    /// (e.g. "lr.menu.need_two_t") or null when the LR can be picked. Random LRs skip unavailable ones.
+    /// </summary>
+    public Func<JbPlayer, string?>? Unavailable { get; init; }
+
     public int Id { get; internal set; } = -1;
 
     /// <summary>Set by the LR core.</summary>
