@@ -1,9 +1,10 @@
 """
-Minimal reader for Source 1 (CS:GO, MDL v44-49) models: the LOD 0 mesh of every body part, with materials, written as a
-static SMD reference mesh (one root bone) that CS2's ModelDoc can import.
+Minimal reader for Source 1 (CS:GO, MDL v44-49) models: the LOD 0 mesh of every body part, with materials, the bone
+table and per-vertex bone weights. write_smd() writes it as a static SMD reference mesh (one root bone) that CS2's
+ModelDoc can import; player_model.py uses the bones and weights to move a player model onto the CS2 skeleton.
 
 Layouts follow studio.h / optimize.h (studiohdr_t, mstudiobodyparts_t, mstudiomodel_t, mstudiomesh_t, mstudiovertex_t,
-vertexFileHeader_t, OptimizedModel::*). Only what a static prop needs is read: no animation, flexes or eyeballs.
+vertexFileHeader_t, OptimizedModel::*, mstudiobone_t). No animation, flexes or eyeballs.
 """
 import struct
 from dataclasses import dataclass, field
@@ -22,12 +23,23 @@ class Mesh:
 
 
 @dataclass
+class Bone:
+    name: str
+    parent: int  # -1 for a root
+    pos: tuple  # local position (parent space)
+    quat: tuple  # local rotation (x, y, z, w)
+    pose_to_bone: tuple  # 3x4 row-major matrix: model space -> bone space in the bind pose
+
+
+@dataclass
 class Model:
     name: str
     textures: list
     cdmaterials: list
     vertices: list  # [(pos(3), normal(3), uv(2))]
     meshes: list
+    bones: list = field(default_factory=list)  # [Bone]
+    weights: list = field(default_factory=list)  # per vertex: [(bone index, weight)]
 
 
 def read_model(mdl_path: Path) -> Model:
@@ -39,6 +51,16 @@ def read_model(mdl_path: Path) -> Model:
 
     num_tex, tex_index, num_cd, cd_index, num_skinref, num_families, skin_index, num_bodyparts, bodypart_index = \
         struct.unpack_from("<9i", mdl, 204)
+
+    num_bones, bone_index = struct.unpack_from("<2i", mdl, 156)
+    bones = []
+    for i in range(num_bones):
+        base = bone_index + i * 216
+        name_off, parent = struct.unpack_from("<2i", mdl, base)
+        pos = struct.unpack_from("<3f", mdl, base + 32)
+        quat = struct.unpack_from("<4f", mdl, base + 44)
+        pose_to_bone = struct.unpack_from("<12f", mdl, base + 96)
+        bones.append(Bone(_cstr(mdl, base + name_off), parent, pos, quat, pose_to_bone))
 
     textures = []
     for i in range(num_tex):
@@ -64,15 +86,23 @@ def read_model(mdl_path: Path) -> Model:
         px, py, pz, nx, ny, nz, u, v = struct.unpack_from("<8f", vvd, o + 16)
         return (px, py, pz), (nx, ny, nz), (u, v)
 
+    def weight(i):
+        o = vert_start + i * 48
+        w = struct.unpack_from("<3f", vvd, o)
+        b = struct.unpack_from("<3B", vvd, o + 12)
+        n = vvd[o + 15]
+        return [(b[k], w[k]) for k in range(min(n, 3)) if w[k] > 0]
+
     if num_fixups:
         order = []
         for f in range(num_fixups):
             lod, src, count = struct.unpack_from("<3i", vvd, fixup_start + f * 12)
             if lod >= 0:
                 order.extend(range(src, src + count))
-        vertices = [vertex(i) for i in order]
     else:
-        vertices = [vertex(i) for i in range(lod_verts[0])]
+        order = range(lod_verts[0])
+    vertices = [vertex(i) for i in order]
+    weights = [weight(i) for i in order]
 
     # ---- MDL: body parts -> models -> meshes (vertex offsets)
     mdl_meshes = []  # per body part, per model: [(material skinref, first vertex of the mesh)]
@@ -137,7 +167,7 @@ def read_model(mdl_path: Path) -> Model:
                 if mesh.triangles:
                     out_meshes.append(mesh)
 
-    return Model(name, textures, cdmaterials, vertices, out_meshes)
+    return Model(name, textures, cdmaterials, vertices, out_meshes, bones, weights)
 
 
 def _front_facing(v0, v1, v2) -> bool:

@@ -9,3 +9,5 @@ artifacts/
 
 # Documentation lives on the "docs" branch (all Markdown files), not here.
 *.md
+__pycache__/
+*.pyc

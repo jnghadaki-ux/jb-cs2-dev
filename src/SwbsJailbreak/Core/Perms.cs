@@ -48,6 +48,7 @@ public static class Perms
         ["cvar"] = "@css/cvar",
         ["config"] = "@css/config",
         ["chat"] = "@css/chat",
+        ["points"] = "@css/root",            // !givepoints / !takepoints / !setpoints (testing the store)
     };
 
     /// <summary>Check a named capability (see <see cref="Defaults"/>) or a raw CSS flag / group ("@css/ban", "#css/admin").</summary>

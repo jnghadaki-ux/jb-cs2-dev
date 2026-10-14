@@ -26,7 +26,8 @@ public enum StoreItemType
     BodySize,
     KillSound,
     GrenadeSound,
-    Hat
+    Hat,
+    PlayerModel
 }
 
 public sealed class StoreItem
@@ -41,7 +42,7 @@ public sealed class StoreItem
     /// <summary>
     /// Per type: KillEffect "ring" / "fire" / "explosion"; ChatColor a chat colour tag ("{red}"); BodySize a scale
     /// ("0.85"); Transparency an alpha 0-255; KillSound a sound event; GrenadeSound "bounce event|explode event"; Hat a
-    /// .vmdl path from your workshop pack.
+    /// .vmdl path from your workshop pack; PlayerModel a player .vmdl path (the store pack, see WorkshopPack.StoreModels).
     /// </summary>
     public string Data { get; set; } = "";
 
@@ -80,6 +81,12 @@ public sealed class StoreConfig
 
     /// <summary>Player model attachment hats are parented to.</summary>
     public string HatAttachment { get; set; } = "facemask";
+
+    /// <summary>
+    /// Player model items change prisoners only: guards keep the uniform PlayerModels.GuardModel so nobody mistakes a
+    /// guard for a prisoner. True lets guards wear them too.
+    /// </summary>
+    public bool PlayerModelsForGuards { get; set; } = false;
 
     public const int CurrentDefaultsVersion = 2;
 
@@ -175,14 +182,17 @@ public sealed class StoreModule : JbModule
         Plugin.AddTimer(0.15f, EffectsTick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(m =>
         {
-            foreach (var hat in Cfg.Items.Where(i => i.Type == StoreItemType.Hat && i.Data.Length > 0)) m.AddResource(hat.Data);
+            foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0))
+                m.AddResource(it.Data.Trim());
         });
+        JbEvents.PlayerModelsApplied += ApplyPlayerModel;
         ChatDecor.AddPrefix(Name, TitlePrefix);
         ChatDecor.AddColor(Name, ChatColor);
     }
 
     public override void OnUnload(bool hotReload)
     {
+        JbEvents.PlayerModelsApplied -= ApplyPlayerModel;
         ChatDecor.Remove(Name);
         for (var i = 0; i < Players.MaxSlots; i++) RemoveHat(i);
     }
@@ -247,6 +257,24 @@ public sealed class StoreModule : JbModule
         ClearPaint(slot);
         RemoveHat(slot);
     }
+
+    /// <summary>After PlayerModels gave the player their team model: the equipped store player model replaces it.</summary>
+    private void ApplyPlayerModel(JbPlayer player)
+    {
+        if (player.Controller is not { } c || Equipped(c.Slot, StoreItemType.PlayerModel) is not { Data.Length: > 0 } item) return;
+        if (!WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards)) return;
+        var model = item.Data.Trim();
+        // Next frame: the team model (or the game's own agent) is set during this same spawn.
+        Server.NextFrame(() =>
+        {
+            if (player.Controller is not { } ctrl || !ctrl.IsAliveP() || ctrl.PawnOrNull() is not { } pawn) return;
+            try { pawn.SetModel(model); }
+            catch (Exception ex) { Logger.LogWarning(ex, "[Store] player model {Model} could not be applied", model); }
+        });
+    }
+
+    internal static bool WearsPlayerModel(CsTeam team, bool guardsToo) =>
+        team == CsTeam.Terrorist || guardsToo && team == CsTeam.CounterTerrorist;
 
     // ================================================================= rules (engine-free, unit-tested)
 
@@ -457,6 +485,7 @@ public sealed class StoreModule : JbModule
                     Jb.Log.LogEvent($"{c.PlayerName} bought {item.Name} for {item.Price} points", p, null, LogType.Item);
                     if (item.Type == StoreItemType.ChatTitle) Chat.Tell(c, "store.title.how", Cfg.TitleMaxLength);
                     if (item.Type is StoreItemType.Transparency or StoreItemType.BodySize && !Cfg.BodyItemsAnytime) Chat.Tell(c, "store.body.when");
+                    if (item.Type == StoreItemType.PlayerModel) Chat.Tell(c, Cfg.PlayerModelsForGuards ? "store.model.when" : "store.model.when_prisoner");
                     break;
             }
         }

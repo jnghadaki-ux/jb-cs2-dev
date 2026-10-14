@@ -45,6 +45,41 @@ public class WorkshopPackTests
         Assert.True(c.UseModels);
     }
 
+    /// <summary>The prisoner paths the plugin switches PlayerModels to are the ones prisoners.py writes.</summary>
+    [Fact]
+    public void PrisonerPaths_MatchTheConverter()
+    {
+        var script = File.ReadAllText(Path.Combine(RepoRoot(), "scripts", "workshop", "prisoners.py"));
+        var root = Regex.Match(script, @"^OUT_ROOT = ""([^""]+)""", RegexOptions.Multiline).Groups[1].Value;
+        var block = script[script.IndexOf("PRISONERS = {", StringComparison.Ordinal)..];
+        block = block[..block.IndexOf('}')];
+        var names = Regex.Matches(block, @"""([a-z_]+)"": """).Select(m => m.Groups[1].Value);
+        Assert.Equal(names.Select(n => $"{root}/{n}/{n}.vmdl"), WorkshopPackModule.PrisonerModels);
+    }
+
+    /// <summary>The store items point at the .vmdl files store_models.py writes, and are player model items.</summary>
+    [Fact]
+    public void StoreModelItems_MatchTheConverter()
+    {
+        var script = File.ReadAllText(Path.Combine(RepoRoot(), "scripts", "workshop", "store_models.py"));
+        var root = Regex.Match(script, @"^OUT_ROOT = ""([^""]+)""", RegexOptions.Multiline).Groups[1].Value;
+        var block = script[script.IndexOf("STORE_MODELS = {", StringComparison.Ordinal)..];
+        var names = Regex.Matches(block, @"^    ""([a-z_]+)"": \{", RegexOptions.Multiline).Select(m => m.Groups[1].Value).ToList();
+        var items = WorkshopPackModule.StoreModelItems();
+        Assert.NotEmpty(names);
+        Assert.Equal(names.Select(n => $"{root}/{n}/{n}.vmdl"), items.Select(i => i.Data));
+        Assert.All(items, i => Assert.Equal(SwbsJailbreak.Modules.PlayerExtras.StoreItemType.PlayerModel, i.Type));
+        Assert.False(new WorkshopPackConfig().StoreModels);
+    }
+
+    [Theory]
+    [InlineData(false, CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, true)]
+    [InlineData(false, CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false)]
+    [InlineData(true, CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, true)]
+    [InlineData(true, CounterStrikeSharp.API.Modules.Utils.CsTeam.Spectator, false)]
+    public void StorePlayerModel_PrisonersOnlyByDefault(bool guardsToo, CounterStrikeSharp.API.Modules.Utils.CsTeam team, bool wears) =>
+        Assert.Equal(wears, SwbsJailbreak.Modules.PlayerExtras.StoreModule.WearsPlayerModel(team, guardsToo));
+
     [Theory]
     [InlineData(1f, 0f, 0f, 90f, 0f)]    // flying straight ahead (+X): nose (+Z) tipped forward
     [InlineData(0f, 1f, 0f, 90f, 90f)]

@@ -7,7 +7,10 @@ using SwbsJailbreak.Modules.PlayerExtras;
 
 namespace SwbsJailbreak.Modules.Extras;
 
-/// <summary>Section "WorkshopPack": the SWBS workshop addon (sounds) built by scripts/workshop/build_pack.py.</summary>
+/// <summary>
+/// Section "WorkshopPack": the SWBS workshop addon (sounds, props, prisoner player models) and the separate store pack
+/// (character player models), both built by scripts/workshop/build_pack.py.
+/// </summary>
 public sealed class WorkshopPackConfig
 {
     /// <summary>Turn on once the addon is uploaded and MultiAddonManager mounts it (mm_extra_addons &lt;id&gt;).</summary>
@@ -39,14 +42,28 @@ public sealed class WorkshopPackConfig
 
     /// <summary>Converted too, not used yet (CS2 cannot replace the knife's first-person model).</summary>
     public string RocketLauncherModel { get; set; } = "models/swbs/rocket_launcher.vmdl";
+
+    /// <summary>
+    /// Turn on once the SWBS store pack (addon swbs_store, its own Workshop item, also in mm_extra_addons) is uploaded:
+    /// adds its character player models to the store once (category "Player models"). Independent of Enabled.
+    /// </summary>
+    public bool StoreModels { get; set; } = false;
+
+    /// <summary>For your reference: the Steam Workshop id of the store pack.</summary>
+    public string StoreWorkshopId { get; set; } = "";
+
+    /// <summary>Set by the plugin after it added the store pack's models to the store; set false to add them again.</summary>
+    public bool StoreModelsAdded { get; set; } = false;
 }
 
 /// <summary>
 /// Loads the SWBS workshop pack: precaches its sound event file (and any extra resources) and, the first time it is
 /// enabled, points every sound setting the pack covers at the pack's sound events (round wins, LR activated, freekill,
-/// guard message, Horror Movie cowbell, RPG / Rocketeer shoot, explode, pain and death, slaps, jetpack, teleports) and
-/// adds the "Cowbell" kill sound to the store. Admins can change any of them afterwards; !workshoppack re-applies.
-/// Players only hear the sounds when the server makes them download the addon (MultiAddonManager).
+/// guard message, Horror Movie cowbell, RPG / Rocketeer shoot, explode, pain and death, slaps, jetpack, teleports),
+/// adds the "Cowbell" kill sound to the store and sets PlayerModels.PrisonerModels to the pack's SWBS prisoners.
+/// Admins can change any of them afterwards; !workshoppack re-applies. With StoreModels on, the store pack's character
+/// player models are added to the store once. Players only get the files when the server makes them download the
+/// addons (MultiAddonManager).
 /// </summary>
 public sealed class WorkshopPackModule : JbModule
 {
@@ -77,6 +94,23 @@ public sealed class WorkshopPackModule : JbModule
             GuardsWin, PrisonersWin, LrActivated, Freekill, ChatAlert, Cowbell, RpgShoot, RpgExplode, RpgPain, RpgDeath, Jetpack, Slap, Teleport
         };
     }
+
+    /// <summary>The SWBS prisoner player models in the pack (scripts/workshop/prisoners.py writes the same paths).</summary>
+    internal static readonly string[] PrisonerModels =
+    {
+        "characters/models/swbs/prisoners/male_black_big/male_black_big.vmdl",
+        "characters/models/swbs/prisoners/female_asian/female_asian.vmdl",
+        "characters/models/swbs/prisoners/male_white_hair/male_white_hair.vmdl"
+    };
+
+    /// <summary>The store pack's player models (scripts/workshop/store_models.py writes the same paths).</summary>
+    internal static List<StoreItem> StoreModelItems() => new()
+    {
+        new() { Id = "model_deadpool_xforce", Name = "Deadpool (X-Force)", Type = StoreItemType.PlayerModel,
+            Data = "characters/models/swbs/store/deadpool_xforce/deadpool_xforce.vmdl", Price = 6000 },
+        new() { Id = "model_flash", Name = "The Flash", Type = StoreItemType.PlayerModel,
+            Data = "characters/models/swbs/store/flash/flash.vmdl", Price = 6000 }
+    };
 
     private static WorkshopPackModule? _instance;
 
@@ -109,6 +143,15 @@ public sealed class WorkshopPackModule : JbModule
             foreach (var r in Cfg.ExtraResources.Where(r => !string.IsNullOrWhiteSpace(r))) manifest.AddResource(r.Trim());
         });
         if (Cfg.Enabled && !Cfg.SoundsApplied) Apply();
+        if (Cfg.StoreModels && !Cfg.StoreModelsAdded) AddStoreModels();
+    }
+
+    private void AddStoreModels()
+    {
+        var items = StoreModelItems();
+        Plugin.Config.Update<StoreConfig>("Store", c => c.Items = StoreModule.Merge(c.Items, items));
+        Plugin.Config.Update<WorkshopPackConfig>("WorkshopPack", c => c.StoreModelsAdded = true);
+        Logger.LogInformation("[WorkshopPack] added the store pack's {Count} player models to the store", items.Count);
     }
 
     [ConsoleCommand("css_workshoppack", "sm_workshoppack - point the sound settings at the SWBS workshop pack again")]
@@ -152,6 +195,8 @@ public sealed class WorkshopPackModule : JbModule
             if (!c.Items.Any(i => i.Id.Equals("killsound_cowbell", StringComparison.OrdinalIgnoreCase)))
                 c.Items.Add(new StoreItem { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = Events.Cowbell, Price = 800 });
         });
+        // The pack's SWBS prisoners replace the stock jumpsuits; they only show once PlayerModels.ApplyModels is on.
+        config.Update<PlayerModelsConfig>("PlayerModels", c => c.PrisonerModels = PrisonerModels.ToList());
         config.Update<WorkshopPackConfig>("WorkshopPack", c => c.SoundsApplied = true);
         Logger.LogInformation("[WorkshopPack] sound settings now use the pack's {Count} sound events", Events.All.Length);
     }
