@@ -24,6 +24,7 @@ public class WardenToolsTests
     [InlineData("css_rank")]
     [InlineData("css_votewarden")]
     [InlineData("css_split")]
+    [InlineData("css_fkslay")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

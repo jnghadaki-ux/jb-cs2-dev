@@ -10,6 +10,11 @@
   "cmd.freekill.message": "{red}Message: {yellow}{0}",
   "cmd.whokilled.not_died": "{0} has not died this round.",
   "cmd.whokilled.result": "{green}{0}{default} was killed by {green}{1}{default}.",
+  "cmd.fkslay.hint": "{grey}Admins: type {green}!fkslay {0}{grey} to slay the guard and respawn the prisoner.",
+  "cmd.fkslay.done": "{green}{0}{default} slayed {lightblue}{1}{default} for freekilling {gold}{2}{default}.",
+  "cmd.fkslay.not_prisoner": "{red}{0} was not a prisoner when they died.",
+  "cmd.fkslay.no_guard": "{red}{0} was not killed by a guard (killed by {1}).",
+  "cmd.fkslay.killer_gone": "{red}{0} is no longer on the server; respawning the prisoner only.",
 
   "cmd.oneup.done": "{green}{0}{default} has been one upped by {green}{1}{default}.",
   "cmd.xup.done": "{green}{0}{default} has been X upped by {green}{1}{default}.",
