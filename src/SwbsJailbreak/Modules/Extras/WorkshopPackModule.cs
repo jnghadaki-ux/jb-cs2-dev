@@ -135,6 +135,9 @@ public sealed class WorkshopPackModule : JbModule
 
     private static readonly IReadOnlyList<string> NoModels = Array.Empty<string>();
 
+    /// <summary>True when the pack and its models are on (trail pieces, splats, props can be used).</summary>
+    internal static bool PackModelsOn => _instance?.Cfg is { Enabled: true, UseModels: true };
+
     /// <summary>The paintball splat models to use, or none (pack off, models off): callers draw beam splats instead.</summary>
     internal static IReadOnlyList<string> PaintballModels()
     {

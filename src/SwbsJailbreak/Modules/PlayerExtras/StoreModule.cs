@@ -91,7 +91,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = false;
 
-    public const int CurrentDefaultsVersion = 3;
+    public const int CurrentDefaultsVersion = 4;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -138,7 +138,23 @@ public sealed class StoreConfig
         new() { Id = "paint_purple", Name = "Purple paintballs", Type = StoreItemType.Paintball, Color = "150,60,255", Price = 100 },
         new() { Id = "paint_pink", Name = "Pink paintballs", Type = StoreItemType.Paintball, Color = "255,0,170", Price = 100 },
         new() { Id = "paint_white", Name = "White paintballs", Type = StoreItemType.Paintball, Color = "245,245,245", Price = 100 },
-        new() { Id = "paint_black", Name = "Black paintballs", Type = StoreItemType.Paintball, Color = "30,30,30", Price = 100 }
+        new() { Id = "paint_black", Name = "Black paintballs", Type = StoreItemType.Paintball, Color = "30,30,30", Price = 100 },
+        // ---- version 4: SWBS model trails (pieces from the workshop pack, StoreTrails; beam trails without it)
+        new() { Id = "trail_footprints", Name = "Footprints", Type = StoreItemType.Trail, Data = "footprints", Color = "35,35,35", Price = 500 },
+        new() { Id = "trail_footprints_paint", Name = "Paint footprints", Type = StoreItemType.Trail, Data = "footprints", Color = ClassicPaint, Price = 600 },
+        new() { Id = "trail_footprints_rainbow", Name = "Rainbow footprints", Type = StoreItemType.Trail, Data = "footprints", Color = "rainbow", Price = 800 },
+        new() { Id = "trail_stars", Name = "Gold stars", Type = StoreItemType.Trail, Data = "stars", Color = "255,200,40", Price = 700 },
+        new() { Id = "trail_hearts", Name = "Pink hearts", Type = StoreItemType.Trail, Data = "hearts", Color = "255,80,160", Price = 700 },
+        new() { Id = "trail_skulls", Name = "Skulls", Type = StoreItemType.Trail, Data = "skulls", Color = "235,235,235", Price = 700 },
+        new() { Id = "trail_lightning", Name = "Lightning bolts", Type = StoreItemType.Trail, Data = "lightning", Color = "90,170,255", Price = 700 },
+        new() { Id = "trail_snowflakes", Name = "Snowflakes", Type = StoreItemType.Trail, Data = "snowflakes", Color = "200,240,255", Price = 700 },
+        new() { Id = "trail_notes", Name = "Music notes", Type = StoreItemType.Trail, Data = "notes", Color = "rainbow", Price = 800 },
+        new() { Id = "trail_coins", Name = "Gold coins", Type = StoreItemType.Trail, Data = "coins", Color = "255,190,40", Price = 900 },
+        new() { Id = "trail_orbs", Name = "Rainbow orbs", Type = StoreItemType.Trail, Data = "orbs", Color = "rainbow", Price = 900 },
+        new() { Id = "trail_bubbles", Name = "Bubbles", Type = StoreItemType.Trail, Data = "bubbles", Color = "180,230,255", Price = 900 },
+        new() { Id = "trail_fire", Name = "Fire trail", Type = StoreItemType.Trail, Data = "fire", Price = 1200 },
+        new() { Id = "trail_ice", Name = "Ice trail", Type = StoreItemType.Trail, Data = "ice", Price = 1200 },
+        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 }
     };
 
     /// <summary>The original SWBS splat colours (splat_blue, splat_green, splat_pink).</summary>
@@ -173,7 +189,7 @@ public sealed class StoreInventory
 /// visibility settings are in !store > Settings. Player effects and hats are off during wardays and non-freeday LRs, so
 /// they never give a hiding player away.
 /// </summary>
-public sealed class StoreModule : JbModule
+public sealed partial class StoreModule : JbModule
 {
     private const string Ns = "store";
 
@@ -203,6 +219,8 @@ public sealed class StoreModule : JbModule
         {
             foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0))
                 m.AddResource(it.Data.Trim());
+            if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
+                foreach (var model in StoreTrails.AllModels()) m.AddResource(model);
         });
         JbEvents.PlayerModelsApplied += ApplyPlayerModel;
         ChatDecor.AddPrefix(Name, TitlePrefix);
@@ -269,6 +287,7 @@ public sealed class StoreModule : JbModule
         _alpha[player.Slot] = 255;
         _scale[player.Slot] = 1f;
         _trailLast[player.Slot] = null;
+        _dropLast[player.Slot] = null;
         RemoveHat(player.Slot);
     }
 
@@ -284,6 +303,7 @@ public sealed class StoreModule : JbModule
 
     private void ResetSlot(int slot)
     {
+        ClearPieces(slot);
         _trailLast[slot] = null;
         _alpha[slot] = 255;
         _scale[slot] = 1f;
@@ -354,7 +374,7 @@ public sealed class StoreModule : JbModule
         return Color.White;
     }
 
-    private static Color FromHue(double hue)
+    internal static Color FromHue(double hue)
     {
         var x = 1 - Math.Abs(hue / 60 % 2 - 1);
         (double r, double g, double b) = (int)(hue / 60) switch
@@ -807,7 +827,11 @@ public sealed class StoreModule : JbModule
             var allowed = EffectsAllowed(c);
 
             if (allowed) Trail(c, o);
-            else _trailLast[c.Slot] = null;
+            else
+            {
+                _trailLast[c.Slot] = null;
+                _dropLast[c.Slot] = null;
+            }
             if (allowed && _tick % 2 == 0 && Equipped(c.Slot, StoreItemType.Sparkles) is { } sp) Sparkle(c, o, sp);
             if (allowed && _tick % 4 == 0 && Equipped(c.Slot, StoreItemType.Halo) is { } halo) Swirl(c, o, halo);
             if (allowed && _tick % 7 == 0 && Equipped(c.Slot, StoreItemType.Aura) is { } aura)
@@ -825,14 +849,20 @@ public sealed class StoreModule : JbModule
         if (Equipped(c.Slot, StoreItemType.Trail) is not { } trail)
         {
             _trailLast[c.Slot] = null;
+            _dropLast[c.Slot] = null;
             return;
         }
+
+        // Model trails (footprints, stars, fire, ...); a beam in the trail colour when the pack's models are off.
+        var style = StoreTrails.StyleOf(trail);
+        if (style != null && ModelTrail(c, o, style, trail)) return;
 
         var here = new Vector(o.X, o.Y, o.Z + 6f);
         var last = _trailLast[c.Slot];
         _trailLast[c.Slot] = here;
         if (last == null || VectorUtil.Distance(last, here) < 12f || VectorUtil.Distance(last, here) > 300f) return;
-        Restrict(Fx.Beam(last, here, ColorOf(trail.Color, Random.Shared), 3f, Math.Max(0.2f, Cfg.TrailSeconds)), ViewFilter(c));
+        var color = style is { Tinted: false } ? ColorOf(style.FallbackColor, Random.Shared) : TrailColor(c.Slot, trail.Color);
+        Restrict(Fx.Beam(last, here, color, 3f, Math.Max(0.2f, Cfg.TrailSeconds)), ViewFilter(c));
     }
 
     private void Sparkle(CCSPlayerController c, Vector o, StoreItem item)

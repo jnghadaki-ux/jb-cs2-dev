@@ -6,7 +6,7 @@ Output (a zip and the folder it was made from):
   swbs_jailbreak/                     -> copy into  ...\\Counter-Strike Global Offensive\\content\\csgo_addons\\swbs_jailbreak\\
       sounds/swbs/...                    the original sounds, converted to 44.1 kHz 16-bit mono WAV (CS2's compiler input)
       soundevents/swbs_jailbreak.vsndevts   one sound event per sound (names used by the plugin's WorkshopPack module)
-      models/swbs/...                    the SWBS props (props.py) and paintball splats (paintballs.py)
+      models/swbs/...                    the SWBS props (props.py), paintball splats (paintballs.py), trail pieces (trails.py)
       characters/models/swbs/prisoners/  the SWBS prisoner player models on the CS2 skeleton (prisoners.py)
   compile_pack.bat + find_cs2.ps1     finds CS2, copies the addon in, compiles and checks it (or use the Asset Browser)
   preview.png                         512x512 Workshop preview image
@@ -30,6 +30,7 @@ import paintballs  # noqa: E402  (paintball splats)
 import prisoners  # noqa: E402  (CS:GO prisoner models -> CS2 player models)
 import props  # noqa: E402  (CS:GO props -> CS2 models)
 import store_models  # noqa: E402  (downloaded CS2 player models -> current CS2 skeleton)
+import trails  # noqa: E402  (SWBS trail pieces)
 
 ADDON = "swbs_jailbreak"
 EVENTS_FILE = "soundevents/swbs_jailbreak.vsndevts"
@@ -292,6 +293,10 @@ Models (the original SWBS props, converted to CS2: SMD mesh + PNG textures + .vm
 
 With WorkshopPack.Enabled and WorkshopPack.UseModels (default true) the plugin uses them instead of the beam versions.
 Paintballs (store items and the warden's) then leave a random splat, flat on the wall or floor the bullet hit.
+
+  models/swbs/trails/*.vmdl        SWBS store trails, new designs: shoe footprints (on the floor), and behind the
+                                   back: stars, hearts, skulls, lightning, snowflakes, music notes, coins, orbs,
+                                   bubbles, fire, ice crystals and a galaxy. Without them trails draw as beams.
 If compile_pack.bat reports missing prop models, send compile_log.txt and set "UseModels": false meanwhile (a missing
 model would show as the engine's error model).
 
@@ -435,6 +440,7 @@ def build_main(fork: Path, out: Path) -> int:
     print("models:")
     models = props.convert_all(fork, addon)
     splats = paintballs.convert_all(fork, addon)
+    trail_pieces = trails.convert_all(addon)
     print("player models:")
     players = prisoners.convert_all(fork, addon)
 
@@ -446,12 +452,12 @@ def build_main(fork: Path, out: Path) -> int:
          ("player materials", '-r -i "%DEST%\\characters\\models\\swbs\\*.vmat"'),
          ("models", '-r -i "%DEST%\\models\\swbs\\*.vmdl"'),
          ("player models", '-r -i "%DEST%\\characters\\models\\swbs\\*.vmdl"')],
-        models + splats + players,
+        models + splats + trail_pieces + players,
         'Until then set "UseModels": false in WorkshopPack if a prop is missing, and keep PlayerModels.ApplyModels off.')
     _tools(pack, bat, README, "JAILBREAK PACK")
     zip_path = out / "SwbsJailbreak-workshop-pack.zip"
     _zip(pack, zip_path)
-    print(f"pack: {zip_path} ({len(events)} sound events, {len(models)} models, {len(splats)} paintball splats, "
+    print(f"pack: {zip_path} ({len(events)} sound events, {len(models)} models, {len(splats)} paintball splats, {len(trail_pieces)} trail pieces, "
           f"{len(players)} player models)")
     return 0
 
