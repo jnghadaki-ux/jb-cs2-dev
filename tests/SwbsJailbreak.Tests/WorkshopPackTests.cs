@@ -64,7 +64,12 @@ public class WorkshopPackTests
         var script = File.ReadAllText(Path.Combine(RepoRoot(), "scripts", "workshop", "store_models.py"));
         var root = Regex.Match(script, @"^OUT_ROOT = ""([^""]+)""", RegexOptions.Multiline).Groups[1].Value;
         var block = script[script.IndexOf("STORE_MODELS = {", StringComparison.Ordinal)..];
+        block = block[..block.IndexOf("\n}", StringComparison.Ordinal)];
         var names = Regex.Matches(block, @"^    ""([a-z_]+)"": \{", RegexOptions.Multiline).Select(m => m.Groups[1].Value).ToList();
+        var kotor = File.ReadAllText(Path.Combine(RepoRoot(), "scripts", "workshop", "kotor_models.py"));
+        var kblock = kotor[kotor.IndexOf("KOTOR_MODELS = {", StringComparison.Ordinal)..];
+        kblock = kblock[..kblock.IndexOf("\n}", StringComparison.Ordinal)];
+        names.AddRange(Regex.Matches(kblock, @"^    ""([a-z_]+)"": \{", RegexOptions.Multiline).Select(m => m.Groups[1].Value));
         var items = WorkshopPackModule.StoreModelItems();
         Assert.NotEmpty(names);
         Assert.Equal(names.Select(n => $"{root}/{n}/{n}.vmdl"), items.Select(i => i.Data));

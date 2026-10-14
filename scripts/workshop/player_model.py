@@ -298,7 +298,8 @@ def retarget(src: SourceModel, target):
         else:
             ds = dt = None
         rot = rg
-        if ds is not None and _len(ds) > 1e-4 and _len(dt) > 1e-4:
+        # A bone shorter than ~2 units (e.g. KOTOR's pelvis -> torso, 1 cm) has no usable direction: it follows the body.
+        if ds is not None and _len(ds) * scale > 2.0 and _len(dt) > 2.0:
             rot = _mat_mul(_rotation_between(_norm(_mat_vec(rg, ds)), _norm(dt)), rg)
         deform[n] = (tpos[n], rot, spos[n])
 
@@ -342,6 +343,60 @@ def retarget(src: SourceModel, target):
         out_v.append((np_, _norm(nn), uv))
         out_w.append([(t, w / s) for t, w in top])
     return out_v, out_w
+
+
+def drape(src: SourceModel, is_cloth, flare: float = 0.25) -> SourceModel:
+    """Hangs cloth chains (capes, robes, flaps) straight down under gravity before retargeting, keeping a little of
+    their outward flare: some games store capes spread out sideways and only their animations let them fall.
+    is_cloth(bone name) picks the chain bones; the root of each chain stays where it is. Returns a new SourceModel."""
+    pos = {n: p for n, (_, p) in src.bones.items()}
+    parent = {n: par for n, (par, _) in src.bones.items()}
+    up = _norm(_sub(pos["head_0"], pos["pelvis"])) if "head_0" in pos and "pelvis" in pos else (0.0, 0.0, 1.0)
+    children = {}
+    for n, par in parent.items():
+        children.setdefault(par, []).append(n)
+
+    new_pos, rot = {}, {}
+
+    def visit(n):
+        par = parent[n]
+        if is_cloth(n) and par in pos:
+            seg = _sub(pos[n], pos[par])
+            length = _len(seg)
+            if is_cloth(par) and par in new_pos and length > 1e-6:
+                horizontal = _sub(seg, _mul(up, _dot(seg, up)))
+                hang = _norm(_sub(_mul(horizontal, flare / max(length, 1e-6)), up))
+                new_pos[n] = _add(new_pos[par], _mul(hang, length))
+                r = _rotation_between(_norm(seg), hang)
+                rot[par] = r if par not in rot else rot[par]
+            else:
+                new_pos[n] = pos[n]  # chain root: stays on the body
+        for c in children.get(n, []):
+            visit(c)
+
+    for root in [n for n, par in parent.items() if par not in parent]:
+        visit(root)
+    for n in new_pos:  # a bone's piece of cloth turns like the segment leaving it; chain ends like the one before
+        if n not in rot:
+            rot[n] = rot.get(parent[n], [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+    if not new_pos:
+        return src
+    vertices = []
+    for (p, n, uv), vw in zip(src.vertices, src.weights):
+        total = sum(w for _, w in vw) or 1.0
+        np_, nn = (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)
+        for b, w in vw:
+            w /= total
+            if b in new_pos:
+                np_ = _add(np_, _mul(_add(new_pos[b], _mat_vec(rot[b], _sub(p, pos[b]))), w))
+                nn = _add(nn, _mul(_mat_vec(rot[b], n), w))
+            else:
+                np_ = _add(np_, _mul(p, w))
+                nn = _add(nn, _mul(n, w))
+        vertices.append((np_, _norm(nn), uv))
+    bones = {n: (par, new_pos.get(n, p)) for n, (par, p) in src.bones.items()}
+    return SourceModel(bones, vertices, src.weights, src.meshes)
 
 
 # ---------------------------------------------------------------- output

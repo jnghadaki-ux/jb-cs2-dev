@@ -64,6 +64,11 @@ public sealed class WorkshopPackConfig
 
     /// <summary>Set by the plugin after it added the store pack's models to the store; set false to add them again.</summary>
     public bool StoreModelsAdded { get; set; } = false;
+
+    /// <summary>Which set of store pack models was added; newer pack models are added once when this is behind.</summary>
+    public int StoreModelsVersion { get; set; }
+
+    internal const int CurrentStoreModelsVersion = 2; // 1: Deadpool X-Force, the Flash; 2: KOTOR characters
 }
 
 /// <summary>
@@ -119,7 +124,21 @@ public sealed class WorkshopPackModule : JbModule
         new() { Id = "model_deadpool_xforce", Name = "Deadpool (X-Force)", Type = StoreItemType.PlayerModel,
             Data = "characters/models/swbs/store/deadpool_xforce/deadpool_xforce.vmdl", Price = 6000 },
         new() { Id = "model_flash", Name = "The Flash", Type = StoreItemType.PlayerModel,
-            Data = "characters/models/swbs/store/flash/flash.vmdl", Price = 6000 }
+            Data = "characters/models/swbs/store/flash/flash.vmdl", Price = 6000 },
+        // KOTOR characters (scripts/workshop/kotor_models.py, from the server owner's own game files)
+        KotorItem("kotor_malak", "Darth Malak", 7000),
+        KotorItem("kotor_revan", "Darth Revan", 7000),
+        KotorItem("kotor_sion", "Darth Sion", 7000),
+        KotorItem("kotor_traya", "Darth Traya", 7000),
+        KotorItem("kotor_nihilus", "Darth Nihilus", 7000),
+        KotorItem("kotor_sith_trooper", "Sith Trooper (silver)", 5000),
+        KotorItem("kotor_sith_trooper_red", "Sith Trooper (red)", 5000)
+    };
+
+    private static StoreItem KotorItem(string name, string title, int price) => new()
+    {
+        Id = "model_" + name, Name = title, Type = StoreItemType.PlayerModel,
+        Data = $"characters/models/swbs/store/{name}/{name}.vmdl", Price = price
     };
 
     private static WorkshopPackModule? _instance;
@@ -167,14 +186,19 @@ public sealed class WorkshopPackModule : JbModule
             foreach (var r in Cfg.ExtraResources.Where(r => !string.IsNullOrWhiteSpace(r))) manifest.AddResource(r.Trim());
         });
         if (Cfg.Enabled && !Cfg.SoundsApplied) Apply();
-        if (Cfg.StoreModels && !Cfg.StoreModelsAdded) AddStoreModels();
+        if (Cfg.StoreModels && (!Cfg.StoreModelsAdded || Cfg.StoreModelsVersion < WorkshopPackConfig.CurrentStoreModelsVersion))
+            AddStoreModels();
     }
 
     private void AddStoreModels()
     {
         var items = StoreModelItems();
         Plugin.Config.Update<StoreConfig>("Store", c => c.Items = StoreModule.Merge(c.Items, items));
-        Plugin.Config.Update<WorkshopPackConfig>("WorkshopPack", c => c.StoreModelsAdded = true);
+        Plugin.Config.Update<WorkshopPackConfig>("WorkshopPack", c =>
+        {
+            c.StoreModelsAdded = true;
+            c.StoreModelsVersion = WorkshopPackConfig.CurrentStoreModelsVersion;
+        });
         Logger.LogInformation("[WorkshopPack] added the store pack's {Count} player models to the store", items.Count);
     }
 

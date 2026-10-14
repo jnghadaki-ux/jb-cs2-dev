@@ -26,6 +26,7 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kotor_models  # noqa: E402  (KOTOR characters from the user's own game files)
 import paintballs  # noqa: E402  (paintball splats)
 import prisoners  # noqa: E402  (CS:GO prisoner models -> CS2 player models)
 import props  # noqa: E402  (CS:GO props -> CS2 models)
@@ -462,19 +463,22 @@ def build_main(fork: Path, out: Path) -> int:
     return 0
 
 
-def build_store(sources, out: Path, tool=None) -> int:
+def build_store(sources, out: Path, tool=None, kotor=None) -> int:
     pack = out / "SwbsJailbreak-store-pack"
     if pack.exists():
         shutil.rmtree(pack)
     addon = pack / "swbs_store"
     print("store player models:")
-    made = store_models.convert_all(sources, addon, tool)
+    made = store_models.convert_all(sources, addon, tool) if sources else []
+    credits = {store_models.vmdl_path(n): s["credit"] for n, s in store_models.STORE_MODELS.items()}
+    if kotor:
+        print("KOTOR player models:")
+        made += kotor_models.convert_all(kotor, addon)
+        credits.update({kotor_models.vmdl_path(n): s["credit"] for n, s in kotor_models.KOTOR_MODELS.items()})
     if not made:
         print("no store models found in the --store-source folders", file=sys.stderr)
         return 1
-    lines = "".join(f"  {m}\n      {spec['credit']}\n" for m, spec in
-                    ((store_models.vmdl_path(n), s) for n, s in store_models.STORE_MODELS.items())
-                    if m in made)
+    lines = "".join(f"  {m}\n      {credits[m]}\n" for m in made)
     bind = f"{store_models.OUT_ROOT}/cs2_bind_pose.smd".replace("/", "\\")
     bat = compile_bat(
         "SWBS store pack", "swbs_store", pack.name, bind, made[0].replace("/", "\\") + "_c",
@@ -494,6 +498,7 @@ def main() -> int:
     ap.add_argument("out", help="output folder")
     ap.add_argument("--store-source", action="append", default=[], help="folder holding characters/... (repeatable)")
     ap.add_argument("--s2tool", help="built s2tool.dll (default: scripts/workshop/s2tool)")
+    ap.add_argument("--kotor-source", help="folder with KOTOR .mdl/.mdx/.tpc files exported from your game (kotor_models.py)")
     ap.add_argument("--store-only", action="store_true", help="only build the store pack")
     a = ap.parse_args()
     out = Path(a.out).resolve()
@@ -501,8 +506,9 @@ def main() -> int:
         rc = build_main(Path(a.fork).resolve(), out)
         if rc:
             return rc
-    if a.store_source:
-        return build_store([Path(s).resolve() for s in a.store_source], out, a.s2tool)
+    if a.store_source or a.kotor_source:
+        return build_store([Path(s).resolve() for s in a.store_source], out, a.s2tool,
+                           Path(a.kotor_source).resolve() if a.kotor_source else None)
     return 0
 
 
