@@ -153,7 +153,7 @@ public sealed class GunGameDay : JbModule
         {
             if (!Active || !_running) return;
             var c = Players.Get(victimSlot).Controller;
-            if (c is { IsValid: true } && !c.IsAliveP() && c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist) c.Respawn();
+            if (c is { IsValid: true } && !c.IsAliveP() && c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist) c.RespawnSolid();
         });
         return HookResult.Continue;
     }

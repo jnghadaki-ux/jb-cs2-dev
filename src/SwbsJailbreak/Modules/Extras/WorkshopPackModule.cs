@@ -249,7 +249,7 @@ public sealed class WorkshopPackModule : JbModule
         config.Update<StoreConfig>("Store", c =>
         {
             if (!c.Items.Any(i => i.Id.Equals("killsound_cowbell", StringComparison.OrdinalIgnoreCase)))
-                c.Items.Add(new StoreItem { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = Events.Cowbell, Price = 800 });
+                c.Items.Add(new StoreItem { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = StoreConfig.PackSounds.Cowbell, Price = 800 });
         });
         config.Update<WorkshopPackConfig>("WorkshopPack", c => c.SoundsApplied = true);
         Logger.LogInformation("[WorkshopPack] sound settings now use the pack's {Count} sound events", Events.All.Length);

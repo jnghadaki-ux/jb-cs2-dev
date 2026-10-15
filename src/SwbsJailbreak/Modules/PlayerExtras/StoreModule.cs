@@ -97,7 +97,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = true;
 
-    public const int CurrentDefaultsVersion = 6;
+    public const int CurrentDefaultsVersion = 7;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -131,7 +131,7 @@ public sealed class StoreConfig
         new() { Id = "chat_purple", Name = "Purple chat", Type = StoreItemType.ChatColor, Data = "{purple}", Price = 400 },
         new() { Id = "chat_gold", Name = "Gold chat", Type = StoreItemType.ChatColor, Data = "{gold}", Price = 600 },
         new() { Id = "chat_title", Name = "Chat title (!title)", Type = StoreItemType.ChatTitle, Color = "{gold}", Price = 1500 },
-        new() { Id = "body_transparent", Name = "See-through body", Type = StoreItemType.Transparency, Data = "165", Price = 1500 },
+        new() { Id = "body_transparent", Name = "Ghost skin", Type = StoreItemType.Transparency, Color = "170,210,255", Data = "165", Price = 1500 },
         new() { Id = "body_skinny", Name = "Skinny", Type = StoreItemType.BodySize, Data = "0.85", Price = 1200 },
         new() { Id = "body_fatso", Name = "Fatso", Type = StoreItemType.BodySize, Data = "1.15", Price = 1200 },
         // ---- version 3: paintball colours (the cheapest items; splat models from the workshop pack)
@@ -165,8 +165,25 @@ public sealed class StoreConfig
         // files), wearable by both teams. More (T agents, the SWBS store pack) can be added in the config.
         Diver("a", "Diver", 3000),
         Diver("b", "Diver (red)", 3000),
-        Diver("c", "Diver (green)", 3000)
+        Diver("c", "Diver (green)", 3000),
+        // ---- version 7: more kill effects (beam-drawn, always visible) and kill sounds. The sounds are the SWBS workshop
+        // pack's own files, played straight from the .vsnd (no sound event needed); players get them with the pack.
+        new() { Id = "kill_lightning", Name = "Lightning strike", Type = StoreItemType.KillEffect, Data = "lightning", Price = 1200 },
+        new() { Id = "kill_souls", Name = "Rising souls", Type = StoreItemType.KillEffect, Data = "souls", Price = 1000 },
+        new() { Id = "kill_ring_rainbow", Name = "Rainbow kill shockwave", Type = StoreItemType.KillEffect, Color = "rainbow", Data = "ring", Price = 1100 },
+        new() { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = PackSounds.Cowbell, Price = 800 },
+        new() { Id = "killsound_slap", Name = "Slap", Type = StoreItemType.KillSound, Data = "sounds/swbs/misc/slap2.vsnd", Price = 700 },
+        new() { Id = "killsound_zap", Name = "Teleport zap", Type = StoreItemType.KillSound, Data = "sounds/swbs/misc/teleport.vsnd", Price = 800 },
+        new() { Id = "killsound_boom", Name = "Rocket boom", Type = StoreItemType.KillSound, Data = "sounds/swbs/rpg/explode1.vsnd", Price = 900 },
+        new() { Id = "killsound_scream", Name = "Death scream", Type = StoreItemType.KillSound, Data = "sounds/swbs/rpg/death.vsnd", Price = 900 },
+        new() { Id = "killsound_alarm", Name = "Freekill alarm", Type = StoreItemType.KillSound, Data = "sounds/swbs/jailbreak/freekill.vsnd", Price = 1000 }
     };
+
+    /// <summary>Workshop pack sound files used by store items (played with the client "play" command).</summary>
+    internal static class PackSounds
+    {
+        public const string Cowbell = "sounds/swbs/jailbreak/cowbell.vsnd";
+    }
 
     private static StoreItem Diver(string variant, string name, int price) => new()
     {
@@ -229,6 +246,9 @@ public sealed partial class StoreModule : JbModule
     private readonly StoreInventory?[] _inv = new StoreInventory?[Players.MaxSlots];
     private readonly double[] _nextTracer = new double[Players.MaxSlots];
     private readonly Vector?[] _trailLast = new Vector?[Players.MaxSlots];
+
+    /// <summary>Last living position per slot (kill effects fall back to it when the dead pawn has no origin).</summary>
+    private readonly Vector?[] _lastAlive = new Vector?[Players.MaxSlots];
     private readonly Queue<CEntityInstance?[]>[] _paint = Enumerable.Range(0, Players.MaxSlots).Select(_ => new Queue<CEntityInstance?[]>()).ToArray();
     private readonly int[] _alpha = new int[Players.MaxSlots];
     private readonly float[] _scale = new float[Players.MaxSlots];
@@ -239,13 +259,14 @@ public sealed partial class StoreModule : JbModule
     public override void OnLoad(bool hotReload)
     {
         MergeNewDefaults();
-        Array.Fill(_alpha, 255);
+        Array.Fill(_alpha, 0);
         Array.Fill(_scale, 1f);
         Plugin.AddTimer(0.15f, EffectsTick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(m =>
         {
             foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0))
                 m.AddResource(it.Data.Trim());
+            foreach (var particle in Particles) m.AddResource(particle); // kill effect extras: unprecached particles never show
             if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
                 foreach (var model in StoreTrails.AllModels()) m.AddResource(model);
         });
@@ -311,7 +332,7 @@ public sealed partial class StoreModule : JbModule
     public override void OnPlayerSpawn(JbPlayer player)
     {
         // A new pawn starts opaque and full size: re-apply on the next effects tick.
-        _alpha[player.Slot] = 255;
+        _alpha[player.Slot] = 0;
         _scale[player.Slot] = 1f;
         _trailLast[player.Slot] = null;
         _dropLast[player.Slot] = null;
@@ -324,7 +345,7 @@ public sealed partial class StoreModule : JbModule
     {
         foreach (var q in _paint) q.Clear();
         Array.Clear(_trailLast);
-        Array.Fill(_alpha, 255);
+        Array.Fill(_alpha, 0);
         Array.Fill(_scale, 1f);
         Array.Clear(_hat);
         Array.Clear(_hatId);
@@ -334,7 +355,7 @@ public sealed partial class StoreModule : JbModule
     {
         ClearPieces(slot);
         _trailLast[slot] = null;
-        _alpha[slot] = 255;
+        _alpha[slot] = 0;
         _scale[slot] = 1f;
         ClearPaint(slot);
         RemoveHat(slot);
@@ -542,7 +563,11 @@ public sealed partial class StoreModule : JbModule
         foreach (var type in Enum.GetValues<StoreItemType>())
         {
             var t = type;
-            if (Cfg.Items.Any(i => i.Type == t)) m.Add(Lang.T("store.cat." + t.ToString().ToLowerInvariant()), x => ShowCategory(x, t));
+            var items = Cfg.Items.Where(i => i.Type == t).ToList();
+            if (items.Count == 0) continue;
+            var inv = _inv[c.Slot];
+            var owned = inv == null ? 0 : items.Count(i => inv.Owned.Contains(i.Id, StringComparer.OrdinalIgnoreCase));
+            m.Add(Lang.T("store.cat.count", Lang.T("store.cat." + t.ToString().ToLowerInvariant()), owned, items.Count), x => ShowCategory(x, t));
         }
 
         m.Add(Lang.T("store.settings"), ShowSettings);
@@ -727,12 +752,7 @@ public sealed partial class StoreModule : JbModule
         _nextTracer[c.Slot] = now + 0.03; // one effect per shot (penetration fires several impacts)
         var impact = new Vector(ev.X, ev.Y, ev.Z);
 
-        if (Equipped(c.Slot, StoreItemType.Tracer) is { } tracer)
-        {
-            var eye = c.EyePosition();
-            var start = new Vector(eye.X, eye.Y, eye.Z - 4f);
-            Restrict(Fx.Beam(start, impact, ColorOf(tracer.Color, Random.Shared), 1f, Math.Max(0.05f, Cfg.TracerSeconds)), ViewFilter(c));
-        }
+        if (Equipped(c.Slot, StoreItemType.Tracer) is { } tracer) Tracer(c, impact, tracer);
 
         if (Equipped(c.Slot, StoreItemType.Paintball) is { } paint) Paint(c, impact, ColorOf(paint.Color, Random.Shared));
         return HookResult.Continue;
@@ -788,25 +808,11 @@ public sealed partial class StoreModule : JbModule
         _trailLast[victim.Slot] = null;
         RemoveHat(victim.Slot);
         if (attacker == null || ReferenceEquals(attacker, victim) || attacker.Controller is not { IsValid: true } ac) return;
-        var o = victim.Controller?.Origin();
+        var o = victim.Controller?.Origin() ?? _lastAlive[victim.Slot];
         if (o == null) return;
 
         if (Equipped(attacker.Slot, StoreItemType.KillEffect) is { } fx)
-        {
-            var filter = ViewFilter(ac);
-            switch (fx.Data.Trim().ToLowerInvariant())
-            {
-                case "fire":
-                    Restrict(Fx.Particle("particles/burning_fx/burning_character_b.vpcf", new Vector(o.X, o.Y, o.Z + 10f), 3f), filter);
-                    break;
-                case "explosion":
-                    Restrict(Fx.Particle("particles/explosions_fx/explosion_basic.vpcf", new Vector(o.X, o.Y, o.Z + 20f), 2f), filter);
-                    break;
-                default:
-                    Fx.PulseAt(new Vector(o.X, o.Y, o.Z + 8f), ColorOf(fx.Color, Random.Shared), 10f, 220f, 0.6f, 4f, filter);
-                    break;
-            }
-        }
+            KillEffect(fx, new Vector(o.X, o.Y, o.Z), ViewFilter(ac));
 
         if (Equipped(attacker.Slot, StoreItemType.KillSound) is { Data.Length: > 0 } ks)
             PlayNear(ac, o, ks.Data, victim.Slot);
@@ -893,6 +899,7 @@ public sealed partial class StoreModule : JbModule
             if (c.IsBot || _inv[c.Slot] == null) continue;
             var o = c.Origin();
             if (o == null) continue;
+            _lastAlive[c.Slot] = new Vector(o.X, o.Y, o.Z);
             var allowed = EffectsAllowed(c);
 
             if (allowed) Trail(c, o);
@@ -903,8 +910,7 @@ public sealed partial class StoreModule : JbModule
             }
             if (allowed && _tick % 2 == 0 && Equipped(c.Slot, StoreItemType.Sparkles) is { } sp) Sparkle(c, o, sp);
             if (allowed && _tick % 4 == 0 && Equipped(c.Slot, StoreItemType.Halo) is { } halo) Swirl(c, o, halo);
-            if (allowed && _tick % 7 == 0 && Equipped(c.Slot, StoreItemType.Aura) is { } aura)
-                Fx.PulseAt(new Vector(o.X, o.Y, o.Z + 4f), ColorOf(aura.Color, Random.Shared), 22f, 46f, 0.9f, 2f, ViewFilter(c), 12);
+            if (allowed && _tick % 7 == 0 && Equipped(c.Slot, StoreItemType.Aura) is { } aura) Aura(c, o, aura);
             if (_tick % 7 == 0)
             {
                 ApplyBody(c);
@@ -931,17 +937,10 @@ public sealed partial class StoreModule : JbModule
         _trailLast[c.Slot] = here;
         if (last == null || VectorUtil.Distance(last, here) < 12f || VectorUtil.Distance(last, here) > 300f) return;
         var color = style is { Tinted: false } ? ColorOf(style.FallbackColor, Random.Shared) : TrailColor(c.Slot, trail.Color);
-        Restrict(Fx.Beam(last, here, color, 3f, Math.Max(0.2f, Cfg.TrailSeconds)), ViewFilter(c));
-    }
-
-    private void Sparkle(CCSPlayerController c, Vector o, StoreItem item)
-    {
-        var filter = ViewFilter(c);
-        for (var i = 0; i < 2; i++)
-        {
-            var p = new Vector(o.X + Random.Shared.Next(-14, 15), o.Y + Random.Shared.Next(-14, 15), o.Z + Random.Shared.Next(8, 68));
-            Restrict(Fx.Beam(p, new Vector(p.X, p.Y, p.Z + 5f), ColorOf(item.Color, Random.Shared), 1.5f, 0.3f), filter);
-        }
+        // Tapered: wide at the player, thin at the old end, with a bright thin core on top.
+        var life = Math.Max(0.2f, Cfg.TrailSeconds);
+        Restrict(Fx.Beam(here, last, color, 5f, 2f, life), ViewFilter(c));
+        Restrict(Fx.Beam(here, last, Mix(color, Color.White, 0.45f), 1.5f, 0.5f, life * 0.7f), ViewFilter(c));
     }
 
     /// <summary>A ring that rises from the feet to the head (SMPlugins "kill swirl" / rings).</summary>
@@ -969,12 +968,25 @@ public sealed partial class StoreModule : JbModule
     private void ApplyBody(CCSPlayerController c)
     {
         var allowed = BodyAllowed(c);
-        var alpha = 255;
-        if (allowed && Equipped(c.Slot, StoreItemType.Transparency) is { } t && int.TryParse(t.Data, out var a)) alpha = Math.Clamp(a, 60, 255);
-        if (alpha != _alpha[c.Slot])
+        // "See-through" body: CS2 player models cannot be drawn half transparent (any alpha below 255 hides the whole
+        // player), so the item is a pale spectral tint at full opacity. _alpha keeps the packed tint (0 = none).
+        var tint = 0;
+        if (allowed && Equipped(c.Slot, StoreItemType.Transparency) is { } t) tint = GhostTint(t.Color).ToArgb();
+        if (tint != _alpha[c.Slot])
         {
-            c.SetAlpha(alpha);
-            _alpha[c.Slot] = alpha;
+            var pawn = c.PawnOrNull();
+            if (pawn != null)
+            {
+                var cur = pawn.Render;
+                var wasOurs = _alpha[c.Slot] != 0 && cur.ToArgb() == _alpha[c.Slot];
+                var plain = cur.R == 255 && cur.G == 255 && cur.B == 255;
+                // Never fight another tint (split teams, LRs, rebels): only paint over white or our own previous tint.
+                if (tint != 0 && (plain || wasOurs)) c.SetColor(Color.FromArgb(tint));
+                else if (tint == 0 && wasOurs) c.SetColor(Color.FromArgb(255, 255, 255, 255));
+                if (cur.A < 255) c.SetAlpha(255); // undo the old see-through alpha (it made players invisible)
+            }
+
+            _alpha[c.Slot] = tint;
         }
 
         var scale = 1f;
@@ -982,6 +994,14 @@ public sealed partial class StoreModule : JbModule
             float.TryParse(bs.Data, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var f))
             scale = Math.Clamp(f, 0.6f, 1.4f);
         if (Math.Abs(scale - _scale[c.Slot]) > 0.001f && SetScale(c, scale)) _scale[c.Slot] = scale;
+    }
+
+    /// <summary>Opaque pale tint for the ghost skin ("R,G,B", default spectral blue).</summary>
+    internal static Color GhostTint(string? spec)
+    {
+        var c = spec is { Length: > 0 } && !spec.Contains('|') && !spec.Equals("rainbow", StringComparison.OrdinalIgnoreCase) && spec != "255,255,255"
+            ? ColorOf(spec, Random.Shared) : Color.FromArgb(255, 170, 210, 255);
+        return Color.FromArgb(255, c.R, c.G, c.B);
     }
 
     /// <summary>Visual size only: CS2 does not scale the hitbox or the collision hull.</summary>

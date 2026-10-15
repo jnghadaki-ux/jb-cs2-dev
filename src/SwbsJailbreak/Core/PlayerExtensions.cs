@@ -182,8 +182,11 @@ public static class PlayerExtensions
         {
             var p = Players.Get(slot).Controller;
             if (p == null || !p.IsValid) return;
-            afterSpawn?.Invoke(p);
             p.RestoreSolid();
+            // The game's respawn spot may be in a wall / under the map. A caller that places the player itself checks its
+            // own spot (the pawn's origin may not read back the teleport on this frame).
+            if (afterSpawn != null) afterSpawn(p);
+            else SafeSpawn.Ensure(p);
         });
         // Again once the spawn has fully settled (the game and other modules touch the pawn on the spawn frames).
         JailbreakPlugin.Instance?.AddTimer(0.25f, () => Players.Get(slot).Controller?.RestoreSolid());

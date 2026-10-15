@@ -15,8 +15,11 @@ public class StorePortTests
         Assert.All(items.Where(i => i.Type == StoreItemType.ChatColor), i => Assert.Matches(@"^\{[a-z]+\}$", i.Data));
         foreach (var t in new[] { StoreItemType.ChatTitle, StoreItemType.Transparency, StoreItemType.BodySize, StoreItemType.Aura, StoreItemType.Sparkles, StoreItemType.Halo })
             Assert.Contains(items, i => i.Type == t);
-        // Kill sounds, grenade sounds and hats need workshop files: no defaults.
-        Assert.DoesNotContain(items, i => i.Type is StoreItemType.KillSound or StoreItemType.GrenadeSound or StoreItemType.Hat);
+        // Grenade sounds and hats need workshop files nobody made yet: no defaults. Kill sounds play the SWBS pack's own
+        // .vsnd files directly (no sound event needed).
+        Assert.DoesNotContain(items, i => i.Type is StoreItemType.GrenadeSound or StoreItemType.Hat);
+        Assert.All(items.Where(i => i.Type == StoreItemType.KillSound), i => Assert.Matches(@"^sounds/swbs/.+\.vsnd$", i.Data));
+        Assert.Contains(items, i => i.Type == StoreItemType.KillEffect && i.Data == "lightning");
         Assert.Contains(items, i => i.Type == StoreItemType.KillEffect && i.Data == "fire");
         Assert.Contains(items, i => i.Type == StoreItemType.KillEffect && i.Data == "explosion");
     }

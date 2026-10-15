@@ -384,7 +384,7 @@ public sealed partial class DaysModule : JbModule, IDayService
         foreach (var p in Players.Connected())
         {
             var pc = p.Controller!;
-            if (!pc.IsAliveP() && pc.Team >= CsTeam.Terrorist) pc.Respawn();
+            if (!pc.IsAliveP() && pc.Team >= CsTeam.Terrorist) pc.RespawnSolid();
             var pawn = pc.PawnOrNull();
             if (pawn != null)
             {

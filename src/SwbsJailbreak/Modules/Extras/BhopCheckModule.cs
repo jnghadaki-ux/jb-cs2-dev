@@ -28,6 +28,56 @@ public sealed class BhopCheckConfig
     public float AlertCooldownSeconds { get; set; } = 60f;
 }
 
+/// <summary>The !bhc / !bhce console table (engine-free, unit-tested): the original's columns, space-aligned.</summary>
+internal static class BhopTable
+{
+    private static string Row(params (string Text, int Width)[] cells) =>
+        "    " + string.Concat(cells.Select(c => c.Text.PadLeft(c.Width))).TrimEnd();
+
+    private static string Rule(int width) => "    " + new string('-', width);
+
+    public static List<string> Format(IReadOnlyList<BhopEntry> log, bool extended, float warnInputsPerTick, float warnPerfs)
+    {
+        var o = new List<string>();
+        static string Perf(int ground) => (ground <= 1 ? "# " : "  ") + ground;
+        if (extended)
+        {
+            o.Add("    ---------------------- Bhop Log Extended ----------------------");
+            o.Add(Row(("Inputs", 7), ("Air", 6), ("I/T", 8), ("Ground", 8), ("Speed", 9), ("Tick", 10), ("Held", 7)));
+            o.Add(Rule(62));
+            foreach (var e in log)
+                o.Add(Row((e.Inputs.ToString(), 7), (e.AirTicks.ToString(), 6),
+                    ((e.InputsPerTick >= warnInputsPerTick ? "*" : "") + e.InputsPerTick.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), 8),
+                    (Perf(e.GroundTicks), 8), (e.Speed.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), 9), (e.Tick.ToString(), 10),
+                    ((e.InputTicks <= 2 ? "N " : "A ") + e.InputTicks, 7)));
+        }
+        else
+        {
+            o.Add("    ---------------- Bhop Log ----------------");
+            o.Add(Row(("Inputs", 7), ("I/T", 8), ("Ground", 8), ("Speed", 9), ("Type", 9)));
+            o.Add(Rule(41));
+            foreach (var e in log)
+                o.Add(Row((e.Inputs.ToString(), 7), (e.InputsPerTick.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), 8),
+                    (Perf(e.GroundTicks), 8), (e.Speed.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), 9),
+                    (e.InputTicks <= 2 ? "Normal" : "Auto", 9)));
+        }
+
+        var n = (float)log.Count;
+        var air = log.Sum(e => e.AirTicks);
+        var perfs = log.Count(e => e.GroundTicks <= 1) / n;
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        o.Add("");
+        o.Add("    ----------------- Avg -------------------");
+        o.Add(Row(("Inputs", 7), ("I/T", 8), ("Ground", 8), ("Speed", 9), ("Perfs", 9)));
+        o.Add(Row(((log.Sum(e => e.Inputs) / n).ToString("0.0", ci), 7), ((air > 0 ? log.Sum(e => e.Inputs) / (float)air : 0f).ToString("0.00", ci), 8),
+            ((log.Sum(e => e.GroundTicks) / n).ToString("0.0", ci), 8), ((log.Sum(e => e.Speed) / n).ToString("0.0", ci), 9),
+            ((perfs * 100).ToString("0", ci) + "%", 9)) + (perfs >= warnPerfs ? "   << above warn threshold" : ""));
+        o.Add("");
+        o.Add("    # = perfect hop (jumped on the landing tick)   Normal / Auto = jump tapped / held");
+        return o;
+    }
+}
+
 internal struct BhopEntry
 {
     public int Inputs, AirTicks, GroundTicks, InputTicks;
@@ -106,6 +156,7 @@ public sealed class BhopCheckModule : JbModule
             var pawn = c.PawnOrNull();
             if (pawn == null) continue;
             var jumpHeld = (c.Buttons & PlayerButtons.Jump) != 0;
+            var pressed = JumpPressedThisTick(pawn, jumpHeld, s.InputTicks > 0);
             s.InputTicks = jumpHeld ? s.InputTicks + 1 : 0;
             var onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
             var wasOnGround = s.WasOnGround;
@@ -135,8 +186,33 @@ public sealed class BhopCheckModule : JbModule
                 s.AirTicks++;
             }
 
-            if (s.InputTicks == 1) s.Inputs++;
+            if (pressed) s.Inputs++;
         }
+    }
+
+    /// <summary>
+    /// A jump press this tick. CS2 runs input sub-tick: a scroll-wheel jump presses and releases inside one tick, so the
+    /// held state alone (what the log read before) never saw it and Inputs stayed 0. The movement service's button states
+    /// are [0] held, [1] changed this tick, [2] scrolled this tick; a press is "changed and now held" or "scrolled".
+    /// </summary>
+    private static bool JumpPressedThisTick(CCSPlayerPawn pawn, bool heldNow, bool heldBefore)
+    {
+        const ulong jump = (ulong)PlayerButtons.Jump;
+        try
+        {
+            var ms = pawn.MovementServices;
+            if (ms != null)
+            {
+                var st = ms.Buttons.ButtonStates;
+                if (st.Length >= 3) return (st[1] & jump) != 0 && (st[0] & jump) != 0 || (st[2] & jump) != 0;
+            }
+        }
+        catch
+        {
+            // fall back to the held state below
+        }
+
+        return heldNow && !heldBefore;
     }
 
     private void PushBhop(JbPlayer p, BhopState s)
@@ -201,38 +277,22 @@ public sealed class BhopCheckModule : JbModule
         var target = t.Players[0];
         var log = S(target.Jb()!).Log;
         void W(string line) => Chat.PrintToConsole(caller, line);
-        W($"\n\t\tBhopCheck (SWBS Jailbreak CS2)");
-        W($"\tName: {target.PlayerName}\n\tSteam ID: {target.SteamID}\n\tMap: {Server.MapName}");
-        W($"\t{DateTime.Now:yyyy-MM-dd-HH:mm:ss}");
+        // SMPlugins BhopCheck layout. CS2's console drops tab characters, so the columns are padded with spaces.
+        W("");
+        W("    BhopCheck (SWBS Jailbreak CS2)");
+        W($"    Name: {target.PlayerName}");
+        W($"    Steam ID: {target.SteamID}");
+        W($"    Map: {Server.MapName}");
+        W($"    {DateTime.Now:yyyy-MM-dd-HH:mm:ss}");
         if (log.Count == 0)
         {
-            W("\n\tNo bhops logged for this player");
+            W("");
+            W("    No bhops logged for this player");
             if (caller != null && info.CallingContext == CommandCallingContext.Chat) Chat.Tell(caller, "bhc.none", target.PlayerName);
             return;
         }
-        if (extended)
-        {
-            W("\t----------------- Bhop Log Extended -----------------");
-            W("\tInputs\tAir\tI/T\tGround\tSpeed\tTick\tHeld");
-            W("\t-----------------------------------------------------");
-            foreach (var e in log)
-                W($"\t{e.Inputs}\t{e.AirTicks}\t{(e.InputsPerTick >= Cfg.WarnInputsPerTick ? "*" : " ")}{e.InputsPerTick:0.00}\t{(e.GroundTicks <= 1 ? "# " : "  ")}{e.GroundTicks}\t{e.Speed:0.0}\t{e.Tick}\t{(e.InputTicks <= 2 ? "N " : "A ")}{e.InputTicks}");
-        }
-        else
-        {
-            W("\t------------- Bhop Log -------------");
-            W("\tInputs\tI/T\tGround\tSpeed\tType");
-            W("\t------------------------------------");
-            foreach (var e in log)
-                W($"\t{e.Inputs}\t{e.InputsPerTick:0.00}\t{(e.GroundTicks <= 1 ? "# " : "  ")}{e.GroundTicks}\t{e.Speed:0.0}\t{(e.InputTicks <= 2 ? "Normal " : "Auto ")}");
-        }
 
-        var n = (float)log.Count;
-        var air = log.Sum(e => e.AirTicks);
-        var perfs = log.Count(e => e.GroundTicks <= 1) / n;
-        W("\n\t----\t----\tAvg\t----\t----");
-        W("\tInputs\tI/T\tGround\tSpeed\tPerfs");
-        W($"\t{log.Sum(e => e.Inputs) / n:0.0}\t{(air > 0 ? log.Sum(e => e.Inputs) / (float)air : 0):0.00}\t{log.Sum(e => e.GroundTicks) / n:0.0}\t{log.Sum(e => e.Speed) / n:0.0}\t{perfs * 100:0}%{(perfs >= Cfg.WarnPerfs ? "  (above warn threshold)" : "")}");
+        foreach (var line in BhopTable.Format(log, extended, Cfg.WarnInputsPerTick, Cfg.WarnPerfs)) W(line);
         if (caller != null && info.CallingContext == CommandCallingContext.Chat) Chat.Tell(caller, "bhc.printed");
     }
 
