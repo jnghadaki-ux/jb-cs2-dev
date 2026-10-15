@@ -73,12 +73,15 @@ public class FixPassTests
 public class StoreModelTeamTests
 {
     [Fact]
-    public void Store_ShipsWorkingPlayerModels_GuardsOnly()
+    public void Store_ShipsWorkingPlayerModels_ForBothTeams()
     {
         var models = StoreConfig.DefaultItems().Where(i => i.Type == StoreItemType.PlayerModel).ToList();
         Assert.Equal(3, models.Count);
         Assert.All(models, m => Assert.StartsWith("agents/models/ctm_diver/ctm_diver_variant", m.Data));
-        Assert.All(models, m => Assert.Equal("ct", m.Team));
+        Assert.All(models, m => Assert.Equal("", m.Team));
+        Assert.True(new StoreConfig().PlayerModelsForGuards);
+        Assert.All(models, m => Assert.True(StoreModule.WearsPlayerModel(CsTeam.Terrorist, true, m.Team)
+                                            && StoreModule.WearsPlayerModel(CsTeam.CounterTerrorist, true, m.Team)));
     }
 
     [Theory]

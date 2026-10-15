@@ -230,6 +230,18 @@ public sealed class JailbreakPlugin : BasePlugin
             Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 6);
             Logger.LogInformation("Config migrated to revision 6: team models off, old-path store agents removed, deputy model = CS2 diver agent");
         }
+
+        if (Config.General.ConfigRevision < 7)
+        {
+            // 0.20.4: store player models are for both teams (owner's choice).
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            {
+                s.PlayerModelsForGuards = true;
+                foreach (var i in s.Items.Where(i => i.Id.StartsWith("model_ct_diver_", StringComparison.OrdinalIgnoreCase))) i.Team = "";
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 7);
+            Logger.LogInformation("Config migrated to revision 7: store player models can be worn by both teams");
+        }
     }
 
     public override void Unload(bool hotReload)

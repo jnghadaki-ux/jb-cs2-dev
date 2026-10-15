@@ -92,10 +92,10 @@ public sealed class StoreConfig
     public string HatAttachment { get; set; } = "facemask";
 
     /// <summary>
-    /// Player model items change prisoners only: guards keep the uniform PlayerModels.GuardModel so nobody mistakes a
-    /// guard for a prisoner. True lets guards wear them too.
+    /// Player model items can be worn by both teams (default). False keeps them for prisoners only, so guards always
+    /// look like guards. An item's own Team ("ct" / "t") still wins.
     /// </summary>
-    public bool PlayerModelsForGuards { get; set; } = false;
+    public bool PlayerModelsForGuards { get; set; } = true;
 
     public const int CurrentDefaultsVersion = 6;
 
@@ -162,15 +162,15 @@ public sealed class StoreConfig
         new() { Id = "trail_ice", Name = "Ice trail", Type = StoreItemType.Trail, Data = "ice", Price = 1200 },
         new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 },
         // ---- version 6: player models that exist on the current CS2 build (agents/models/..., checked against the game
-        // files). They are CT agents, so guards only. More (T agents, the SWBS store pack) can be added in the config.
-        Diver("a", "Diver (guards)", 3000),
-        Diver("b", "Diver, red (guards)", 3000),
-        Diver("c", "Diver, green (guards)", 3000)
+        // files), wearable by both teams. More (T agents, the SWBS store pack) can be added in the config.
+        Diver("a", "Diver", 3000),
+        Diver("b", "Diver (red)", 3000),
+        Diver("c", "Diver (green)", 3000)
     };
 
     private static StoreItem Diver(string variant, string name, int price) => new()
     {
-        Id = "model_ct_diver_" + variant, Name = name, Type = StoreItemType.PlayerModel, Team = "ct", Price = price,
+        Id = "model_ct_diver_" + variant, Name = name, Type = StoreItemType.PlayerModel, Price = price,
         Data = $"agents/models/ctm_diver/ctm_diver_variant{variant}.vmdl"
     };
 
