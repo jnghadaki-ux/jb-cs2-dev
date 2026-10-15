@@ -118,5 +118,15 @@
   "games.measure.a_set": "{green}Point A set. Ping point B.",
   "games.measure.result": "{olive}Distance {lightred}{0}{olive} u (horizontal {1}, vertical {2}).",
   "games.err.stale": "{red}That menu is out of date (the game ended or you are no longer the warden).",
-  "games.err.not_playing": "{red}That player is not in the game any more."
+  "games.err.not_playing": "{red}That player is not in the game any more.",
+  "games.duckhunt.name": "Duck Hunt",
+  "games.duckhunt.rules": "{olive}One prisoner is the duck: fast, floaty and flying (hold jump). Everyone else no-scopes it out of the sky. The hunter who drops the duck wins; the duck wins by surviving.",
+  "games.duckhunt.countdown": "{olive}The duck takes off in {green}{0}{olive} seconds. Hunters, get your guns ready - only the duck can be hurt.",
+  "games.duckhunt.duck_is": "{olive}The duck is {0}{olive}!",
+  "games.duckhunt.you_are_duck": "You are the duck! Hold jump to fly.",
+  "games.duckhunt.released": "{olive}The duck {0}{olive} is flying! Shoot it down - it wins after {green}{1}{olive} seconds.",
+  "games.duckhunt.release_now": "Release the duck now",
+  "games.duckhunt.make_duck": "Make {0} the duck",
+  "games.duckhunt.status_wait": "Duck takes off in {0}s",
+  "games.duckhunt.status_flying": "{0} HP - {1}s left"
 }
