@@ -19,6 +19,12 @@ public sealed class AdminConfig
     /// <summary>SourceMod sm_show_activity: 0 = silent, 1 = show action as "ADMIN", 2 = show admin name.</summary>
     public int ShowActivity { get; set; } = 2;
 
+    /// <summary>
+    /// Add the SWBS admin tiers (#swbs/level1, #swbs/level2, #swbs/level3, #swbs/lead) to CounterStrikeSharp's
+    /// admin_groups.json on load when they are missing. Existing groups are never changed. See !adminlevels.
+    /// </summary>
+    public bool InstallAdminLevels { get; set; } = true;
+
     public float BeaconRadius { get; set; } = 375f;          // sm_beacon_radius
     public int TimeBombTicks { get; set; } = 10;              // sm_timebomb_ticks
     public float TimeBombRadius { get; set; } = 600f;         // sm_timebomb_radius
@@ -103,6 +109,7 @@ public sealed partial class AdminModule : JbModule
     public override void OnLoad(bool hotReload)
     {
         DamageService.Register(Name, 200, OnDamage);
+        InstallAdminLevels();
         Plugin.AddCommandListener("say", OnSay);
         Plugin.AddCommandListener("say_team", OnSayTeam);
         Plugin.RegisterListener<Listeners.OnClientAuthorized>(OnClientAuthorized);

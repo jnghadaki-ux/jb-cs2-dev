@@ -62,6 +62,12 @@ public sealed class WorkshopPackConfig
     /// </summary>
     public bool StoreModels { get; set; } = false;
 
+    /// <summary>
+    /// Turn on once the pack is compiled with the store hats (models/swbs/hats, tools/workshop-hats) and updated on the
+    /// Workshop: the store's Hats category appears. Off, hat items stay hidden (missing models would show as ERROR).
+    /// </summary>
+    public bool HatModels { get; set; } = false;
+
     /// <summary>For your reference: the Steam Workshop id of the store pack.</summary>
     public string StoreWorkshopId { get; set; } = "";
 
@@ -158,6 +164,9 @@ public sealed class WorkshopPackModule : JbModule
 
     private static readonly IReadOnlyList<string> NoModels = Array.Empty<string>();
 
+    /// <summary>True when the pack's store hats are compiled in and turned on (WorkshopPack.HatModels).</summary>
+    internal static bool HatModelsOn => _instance?.Cfg is { Enabled: true, HatModels: true };
+
     /// <summary>True when the pack and its models are on (trail pieces, splats, props can be used).</summary>
     internal static bool PackModelsOn => _instance?.Cfg is { Enabled: true, UseModels: true };
 
@@ -249,7 +258,7 @@ public sealed class WorkshopPackModule : JbModule
         config.Update<StoreConfig>("Store", c =>
         {
             if (!c.Items.Any(i => i.Id.Equals("killsound_cowbell", StringComparison.OrdinalIgnoreCase)))
-                c.Items.Add(new StoreItem { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = Events.Cowbell, Price = 800 });
+                c.Items.Add(new StoreItem { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = StoreConfig.PackSounds.Cowbell, Price = 800 });
         });
         config.Update<WorkshopPackConfig>("WorkshopPack", c => c.SoundsApplied = true);
         Logger.LogInformation("[WorkshopPack] sound settings now use the pack's {Count} sound events", Events.All.Length);

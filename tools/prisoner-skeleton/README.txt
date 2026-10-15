@@ -11,3 +11,5 @@ hitboxes, ragdoll physics, bone constraints, animation skeletons and graphs. The
 2. dotnet run --project decompile -- ctm_diver_varianta.vmdl_c diver_a        (writes the .vmdl + .dmx files)
 3. python retarget.py <pack>/swbs_jailbreak diver_a out                         (needs numpy)
 4. Copy out/characters over the addon's content folder and compile the pack as usual.
+
+Store pack models: python retarget.py <swbs_store> diver_a out characters/models/swbs/store <name> [<name> ...]

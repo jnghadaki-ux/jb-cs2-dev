@@ -319,7 +319,9 @@ public sealed class CommandsModule : JbModule
         var ang = s.LastAngles;
         target.RespawnSolid(c =>
         {
-            if (pos != null) c.TeleportTo(pos, ang);
+            // Back where they died, unless that spot is in a wall / under the map (then their team's spawn).
+            if (pos != null && SafeSpawn.Fits(pos, c.PawnOrNull()!)) c.TeleportTo(pos, ang);
+            else SafeSpawn.Ensure(c);
         });
         Chat.TellAll(doneKey, target.PlayerName, admin?.PlayerName ?? "Console");
         Jb.Log.LogEvent($"{admin?.PlayerName ?? "Console"} one-upped {target.PlayerName}", admin.Jb(), p, LogType.Admin);

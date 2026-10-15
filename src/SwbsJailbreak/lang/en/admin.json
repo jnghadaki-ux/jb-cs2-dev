@@ -1,6 +1,5 @@
 {
   "admin.activity.anon": "ADMIN",
-
   "admin.act.beacon": "toggled beacon on {green}{0}",
   "admin.act.timebomb": "toggled timebomb on {green}{0}",
   "admin.act.firebomb": "toggled firebomb on {green}{0}",
@@ -47,11 +46,9 @@
   "admin.act.reloadadmins": "reloaded the admin list",
   "admin.act.rr": "restarted the round",
   "admin.act.abortlrs": "aborted all last requests",
-
   "admin.bomb.time_hud": "<font color='#FF8800'>{0}</font> will explode in <font color='#FF3333'><b>{1}</b></font> seconds",
   "admin.bomb.fire_hud": "<font color='#FF5500'>{0}</font> will burst into flames in <font color='#FF3333'><b>{1}</b></font> seconds",
   "admin.bomb.freeze_hud": "<font color='#55AAFF'>{0}</font> will freeze in <font color='#55AAFF'><b>{1}</b></font> seconds",
-
   "admin.invalid_amount": "{red}Invalid amount.",
   "admin.target_gone": "{red}That player is no longer available.",
   "admin.rename.invalid": "{red}The new name must be 1-64 characters.",
@@ -65,13 +62,11 @@
   "admin.team.ct": "{lightblue}Guards{default}",
   "admin.team.spec": "{grey}Spectators{default}",
   "admin.teamswitch.announce": "{green}{0}{default} has been moved to {1} by an admin.",
-
   "admin.time.permanent": "permanent",
   "admin.time.session": "until they disconnect",
   "admin.time.minutes": "{0} minute(s)",
   "admin.time.hours": "{0} hour(s)",
   "admin.time.days": "{0} day(s)",
-
   "admin.comm.mute.you": "{red}You have been muted{default} ({0}).",
   "admin.comm.unmute.you": "{green}You have been unmuted.",
   "admin.comm.gag.you": "{red}You have been gagged{default} ({0}).",
@@ -82,13 +77,11 @@
   "admin.comm.none": "none",
   "admin.comm.expires": "{0} minute(s) left",
   "admin.gag.blocked": "{red}You are gagged and cannot use chat.",
-
   "admin.chat.say": "{lightred}(ALL) {0}{default}: {1}",
   "admin.chat.admin": "{lightred}(ADMINS) {0}{default}: {1}",
   "admin.chat.to_admins": "{lightred}(TO ADMINS) {0}{default}: {1}",
   "admin.chat.psay_from": "{lightred}(Private: {0}){default} {1}",
   "admin.chat.psay_to": "(Private to {0}) {1}",
-
   "admin.kick.default_reason": "Kicked by an admin",
   "admin.ban.default_reason": "Banned by an admin",
   "admin.ban.menu_reason": "Banned via admin menu",
@@ -100,19 +93,16 @@
   "admin.ban.not_found": "{red}No ban found for {0}.",
   "admin.ban.none": "There are no active bans.",
   "admin.ban.list_console": "{0} active ban(s) printed to your console.",
-
   "admin.warn.default_reason": "No reason given",
   "admin.warn.menu_reason": "Warned via admin menu",
   "admin.warn.you": "{red}You have been warned by an admin:{default} {0} {grey}(warning #{1})",
   "admin.warn.none": "{0} has no warnings.",
-
   "admin.cvar.unknown": "{red}Unknown cvar \"{0}\".",
   "admin.cvar.value": "{green}{0}{default} = \"{1}\"",
   "admin.rcon.sent": "Executed: {0}",
   "admin.who.console": "Player access list printed to your console.",
   "admin.admins.none": "No admins are currently online.",
   "admin.admins.list": "Online admins: {green}{0}",
-
   "admin.menu.title": "Admin Menu",
   "admin.menu.players": "Player Commands",
   "admin.menu.jailbreak": "Jailbreak Controls",
@@ -161,5 +151,10 @@
   "admin.menu.server.reloadadmins": "Reload Admins",
   "admin.swapteams.announce": "{green}{0}{default} swapped the teams ({1} players). Restarting the round.",
   "admin.menu.jb.edit_days": "Turn Days On/Off",
-  "admin.menu.jb.edit_lrs": "Turn Last Requests On/Off"
+  "admin.menu.jb.edit_lrs": "Turn Last Requests On/Off",
+  "admin.levels.title": "{olive}SWBS admin tiers {grey}(each tier has everything of the tiers below):",
+  "admin.levels.line": "{green}{0}{default} {grey}({1}, immunity {2}){default}: {3}",
+  "admin.levels.root": "{green}Root{default} {grey}(@css/root, immunity 100){default}: everything, including rcon and server setup.",
+  "admin.levels.none": "{grey}You are not an admin.",
+  "admin.levels.mine": "{olive}Your admin tier: {green}{0}"
 }

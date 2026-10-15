@@ -18,7 +18,11 @@ public static class Fx
     // ------------------------------------------------------------------ beams
 
     /// <summary>Create a beam between two points. lifetime &lt;= 0 keeps it until removed by the caller.</summary>
-    public static CBeam? Beam(Vector start, Vector end, Color color, float width = 2f, float lifetime = 0f)
+    public static CBeam? Beam(Vector start, Vector end, Color color, float width = 2f, float lifetime = 0f) =>
+        Beam(start, end, color, width, width, lifetime);
+
+    /// <summary>A beam that tapers from <paramref name="width"/> at the start to <paramref name="endWidth"/> at the end.</summary>
+    public static CBeam? Beam(Vector start, Vector end, Color color, float width, float endWidth, float lifetime)
     {
         try
         {
@@ -27,7 +31,7 @@ public static class Fx
             beam.RenderMode = color.A < 255 ? RenderMode_t.kRenderTransAlpha : RenderMode_t.kRenderNormal;
             beam.Render = color;
             beam.Width = width;
-            beam.EndWidth = width;
+            beam.EndWidth = endWidth;
             beam.Teleport(start, new QAngle(0, 0, 0), new Vector(0, 0, 0));
             beam.EndPos.X = end.X;
             beam.EndPos.Y = end.Y;

@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.20.3"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.21.0"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -229,6 +229,46 @@ public sealed class JailbreakPlugin : BasePlugin
             });
             Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 6);
             Logger.LogInformation("Config migrated to revision 6: team models off, old-path store agents removed, deputy model = CS2 diver agent");
+        }
+
+        if (Config.General.ConfigRevision < 7)
+        {
+            // 0.20.4: store player models are for both teams (owner's choice).
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            {
+                s.PlayerModelsForGuards = true;
+                foreach (var i in s.Items.Where(i => i.Id.StartsWith("model_ct_diver_", StringComparison.OrdinalIgnoreCase))) i.Team = "";
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 7);
+            Logger.LogInformation("Config migrated to revision 7: store player models can be worn by both teams");
+        }
+
+        if (Config.General.ConfigRevision < 8)
+        {
+            // 0.21: kill sounds play the pack's .vsnd files directly; the see-through body (invisible on CS2) is a ghost tint.
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            {
+                foreach (var i in s.Items)
+                {
+                    if (i.Id.Equals("killsound_cowbell", StringComparison.OrdinalIgnoreCase) && i.Data == "swbs.cowbell")
+                        i.Data = global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig.PackSounds.Cowbell;
+                    if (i.Id.Equals("body_transparent", StringComparison.OrdinalIgnoreCase) && i.Name == "See-through body")
+                        i.Name = "Ghost skin";
+                }
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 8);
+            Logger.LogInformation("Config migrated to revision 8: kill sounds use .vsnd files, see-through body is now a ghost skin");
+        }
+
+        if (Config.General.ConfigRevision < 9)
+        {
+            // 0.21: hats parent to clip_limit (on the head bone of every CS2 agent); facemask does not exist on CS2 agents.
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            {
+                if (s.HatAttachment.Equals("facemask", StringComparison.OrdinalIgnoreCase)) s.HatAttachment = "clip_limit";
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 9);
+            Logger.LogInformation("Config migrated to revision 9: store hats attach to clip_limit");
         }
     }
 

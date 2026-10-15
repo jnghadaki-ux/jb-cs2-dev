@@ -298,7 +298,9 @@ public sealed class SettingsModule : JbModule, ISettingsService
         {
             if (s.SpawnTeam == CsTeam.None || s.SpawnPos == null)
             {
-                if (pawn.AbsOrigin is { } o && pawn.AbsRotation is { } a)
+                // Only a spot a player fits in becomes the stable spot: a respawn the game put in a wall / under the map
+                // (Respawn() on a fresh joiner or at a death spot) would otherwise send the player there all round.
+                if (pawn.AbsOrigin is { } o && pawn.AbsRotation is { } a && SafeSpawn.Ensure(c))
                 {
                     s.SpawnTeam = c.Team;
                     s.SpawnPos = new Vector(o.X, o.Y, o.Z);
@@ -309,6 +311,10 @@ public sealed class SettingsModule : JbModule, ISettingsService
             {
                 c.TeleportTo(s.SpawnPos, s.SpawnAng, new Vector(0, 0, 0));
             }
+        }
+        else
+        {
+            SafeSpawn.Ensure(c);
         }
 
         var guard = c.Team == CsTeam.CounterTerrorist;
@@ -492,7 +498,7 @@ public sealed class SettingsModule : JbModule, ISettingsService
             if (_respawnTeam == RespawnTeam.Prisoners && guard || _respawnTeam == RespawnTeam.Guards && !guard) continue;
             if (s.TimeOfDeath > 0 && now - s.TimeOfDeath < (guard ? _delayGuards : _delayPrisoners)) continue;
             if (!c.PlayerPawn.IsValid) continue; // never picked a team model yet
-            c.Respawn();
+            c.RespawnSolid();
             s.RespawnsUsed++;
             if (_respawnPerClient > 0 && s.RespawnsUsed >= _respawnPerClient) s.RespawnDenied = true;
         }

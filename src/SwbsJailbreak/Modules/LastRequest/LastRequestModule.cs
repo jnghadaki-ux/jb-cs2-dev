@@ -1052,7 +1052,7 @@ public sealed partial class LastRequestModule : JbModule, ILastRequestService
         }
         else
         {
-            if (!c.IsAliveP()) c.Respawn();
+            if (!c.IsAliveP()) c.RespawnSolid();
             s.DiedSinceStarted = true;
             s.RoundEndedSinceStarted = true;
             Chat.Tell(p, "lr.freeday.now");
