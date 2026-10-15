@@ -20,7 +20,7 @@ public sealed class RpgConfig
     public string ShootSound { get; set; } = "Weapon_Nova.Single";
     public string AirshotSound { get; set; } = "UIPanorama.round_report_round_won";
 
-    /// <summary>Played on a player hurt by a rocket / killed by one (the original's pain and death sounds; workshop pack).</summary>
+    /// <summary>Played on a player hurt by a rocket / killed by one (the original's pain and death sounds).</summary>
     public string PainSound { get; set; } = "";
     public string DeathSound { get; set; } = "";
 }
@@ -32,9 +32,6 @@ internal sealed class Rocket
     public Vector Vel = new(0, 0, 0);
     public float Born;
     public int Tick;
-
-    /// <summary>The workshop pack missile model flying along with the rocket (null = beam trail only).</summary>
-    public CBaseModelEntity? Prop;
 }
 
 internal sealed class RpgPlayer
@@ -83,7 +80,7 @@ public sealed class RpgDay : JbModule
             {
                 Name = "RPG", Type = DayType.Warday, AllowFreeForAll = true,
                 Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
-                OnStart = _ => ClearRockets(),
+                OnStart = _ => _rockets.Clear(),
                 OnFreezeEnd = () =>
                 {
                     _inProgress = true;
@@ -97,7 +94,7 @@ public sealed class RpgDay : JbModule
                 {
                     if (!_inProgress) return;
                     _inProgress = false;
-                    ClearRockets();
+                    _rockets.Clear();
                     foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
                 }
             };
@@ -124,7 +121,7 @@ public sealed class RpgDay : JbModule
                 OnEnd = (p, _) =>
                 {
                     _armed.Remove(p.Slot);
-                    if (_armed.Count == 0 && !(Active && _inProgress)) ClearRockets();
+                    if (_armed.Count == 0 && !(Active && _inProgress)) _rockets.Clear();
                     Hud.Clear(p.Controller, "days.rpg");
                     LastRequest.SimpleLastRequests.RestoreIfAlive(p);
                 }
@@ -240,34 +237,15 @@ public sealed class RpgDay : JbModule
         var aim = new Vector(eye.X + fwd.X * 8192f, eye.Y + fwd.Y * 8192f, eye.Z + fwd.Z * 8192f);
         var dir = new Vector(aim.X - spawn.X, aim.Y - spawn.Y, aim.Z - spawn.Z);
         var len = MathF.Max(0.001f, dir.Length());
-        var rocket = new Rocket
+        _rockets.Add(new Rocket
         {
             OwnerSlot = c.Slot, Pos = spawn, Born = now,
             Vel = new Vector(dir.X / len * Cfg.RocketSpeed, dir.Y / len * Cfg.RocketSpeed, dir.Z / len * Cfg.RocketSpeed)
-        };
-        if (Extras.WorkshopPackModule.Model(m => m.MissileModel) is { } missile)
-            rocket.Prop = Fx.Prop(missile, spawn, MissileAngles(rocket.Vel));
-        _rockets.Add(rocket);
+        });
         if (Cfg.ShootSound.Length > 0) Sound.PlayAt(c, Cfg.ShootSound);
         s.Clip--;
         s.NextAttack = now + 0.8f;
         s.Reloading = false;
-    }
-
-    private void ClearRockets()
-    {
-        foreach (var r in _rockets) Fx.SafeRemove(r.Prop);
-        _rockets.Clear();
-    }
-
-    /// <summary>The missile model points along +Z (nose up): angles that turn +Z onto the flight direction.</summary>
-    internal static QAngle MissileAngles(Vector vel)
-    {
-        var len = MathF.Max(0.001f, vel.Length());
-        var dz = Math.Clamp(vel.Z / len, -1f, 1f);
-        var pitch = MathF.Acos(dz) * 180f / MathF.PI;
-        var yaw = MathF.Atan2(vel.Y, vel.X) * 180f / MathF.PI;
-        return new QAngle(pitch, yaw, 0);
     }
 
     private void StepRockets(float now)
@@ -300,12 +278,10 @@ public sealed class RpgDay : JbModule
             if (impact == null)
             {
                 r.Pos = next;
-                if (r.Prop is { IsValid: true }) r.Prop.Teleport(next, null, null);
                 continue;
             }
 
             _rockets.Remove(r);
-            Fx.SafeRemove(r.Prop);
             Explode(r, impact, direct, owner);
         }
     }

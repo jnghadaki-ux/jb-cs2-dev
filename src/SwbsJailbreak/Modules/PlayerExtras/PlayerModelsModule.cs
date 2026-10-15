@@ -23,8 +23,7 @@ public sealed class PlayerModelsConfig
 
     /// <summary>
     /// Prisoner models. [0] = help 1 model (new players), [1] = help 2 model, [2..] = random pool for everyone else.
-    /// Default: the stock CS2 jumpsuit agents. Turning WorkshopPack.Enabled on switches this to the SWBS prisoners,
-    /// rebuilt for CS2 in the workshop pack (characters/models/swbs/prisoners/...).
+    /// Default: the stock CS2 jumpsuit agents. Other .vmdl paths can be used when the server mounts the addon.
     /// </summary>
     public List<string> PrisonerModels { get; set; } = new()
     {

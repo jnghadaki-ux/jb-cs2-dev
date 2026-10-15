@@ -95,8 +95,7 @@ public sealed class WardenConfig
 
     // ---- warden paintballs ----
     /// <summary>
-    /// "beam" = on: splat models from the workshop pack (WorkshopPack.PaintballModels) when it is enabled, crossed beam
-    /// splats otherwise (the CS2 substitutes for TE World Decal); "off" = no warden paintballs.
+    /// "beam" = on (crossed beam splats, the CS2 substitute for TE World Decal); "off" = no warden paintballs.
     /// </summary>
     public string PaintballMode { get; set; } = "beam";
 
@@ -124,7 +123,7 @@ public sealed class WardenMenuConfig
     public int HealingRingSegments { get; set; } = 16;
     public float HealingRingWidth { get; set; } = 2f;
 
-    /// <summary>Optional workshop .vpcf replacing the swoobles "healing_area" particle (tinted (255,r,r)). Empty = beam ring only.</summary>
+    /// <summary>Optional .vpcf replacing the swoobles "healing_area" particle (tinted (255,r,r)). Empty = beam ring only.</summary>
     public string HealingParticle { get; set; } = "";
 
     /// <summary>Original items/medshot4.wav when someone is healed. ".vsnd" path or sound event. Empty = silent.</summary>

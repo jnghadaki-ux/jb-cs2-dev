@@ -6,7 +6,6 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using SwbsJailbreak.Core;
 using Timer = CounterStrikeSharp.API.Modules.Timers.Timer;
-using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
 namespace SwbsJailbreak.Modules.Days;
 
@@ -39,7 +38,6 @@ public sealed class SpeedrunDay : JbModule
     private readonly List<int> _finished = new();
     private Timer? _countdown, _hud;
     private int _countdownLeft;
-    private readonly List<CBaseModelEntity> _finishProps = new(); // workshop pack finish line model on each finish zone
 
     private bool Active => _day != null && ReferenceEquals(Jb.Days.Current, _day);
 
@@ -79,13 +77,6 @@ public sealed class SpeedrunDay : JbModule
     private void Begin()
     {
         Stop();
-        if (Extras.WorkshopPackModule.Model(c => c.FinishLineModel) is { } model)
-            foreach (var z in Jb.Zones.OfType(FinishZoneKey))
-            {
-                var b = z.Box.BottomCenter;
-                if (Fx.Prop(model, new Vector(b.X, b.Y, b.Z), new QAngle(0, z.Angles.Y, 0)) is { } prop) _finishProps.Add(prop);
-            }
-
         _racers.Clear();
         _finished.Clear();
         foreach (var c in Players.AlivePrisoners())
@@ -131,8 +122,6 @@ public sealed class SpeedrunDay : JbModule
 
     private void Stop()
     {
-        foreach (var p in _finishProps) Fx.SafeRemove(p);
-        _finishProps.Clear();
         if (_countdown != null)
         {
             // Ended during the countdown: nobody may stay frozen.

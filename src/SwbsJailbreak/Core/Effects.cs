@@ -130,35 +130,6 @@ public static class Fx
         }
     }
 
-    /// <summary>A model prop without collision (workshop pack models), optionally tinted. Null when it cannot be created.</summary>
-    public static CBaseModelEntity? Prop(string model, Vector pos, QAngle angles, Color? tint = null)
-    {
-        if (string.IsNullOrWhiteSpace(model)) return null;
-        try
-        {
-            var prop = Utilities.CreateEntityByName<CBaseModelEntity>("prop_dynamic");
-            if (prop == null) return null;
-            prop.SetModel(model);
-            prop.Spawnflags = 256; // start with collision disabled
-            if (tint is { } c) prop.Render = c;
-            prop.DispatchSpawn();
-            prop.Teleport(pos, angles, new Vector(0, 0, 0));
-            return prop;
-        }
-        catch (Exception ex)
-        {
-            JailbreakPlugin.Instance?.Logger.LogWarning(ex, "Failed to create prop {Model}", model);
-            return null;
-        }
-    }
-
-    public static void Tint(CBaseModelEntity? prop, Color color)
-    {
-        if (prop is not { IsValid: true } || prop.Render == color) return;
-        prop.Render = color;
-        Utilities.SetStateChanged(prop, "CBaseModelEntity", "m_clrRender");
-    }
-
     public static void RemoveLater(CEntityInstance ent, float seconds)
     {
         // NativeEntity resolves its pointer from the entity handle on every access, so holding the wrapper is safe:

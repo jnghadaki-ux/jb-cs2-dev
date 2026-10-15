@@ -47,7 +47,6 @@ public class WardenToolsTests
     [InlineData("css_daysedit")]
     [InlineData("css_title")]
     [InlineData("css_cleartitle")]
-    [InlineData("css_workshoppack")]
     public void NewCommands_AreRegistered(string command)
     {
         var name = command["css_".Length..];

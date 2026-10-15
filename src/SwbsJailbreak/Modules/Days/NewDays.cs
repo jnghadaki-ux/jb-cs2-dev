@@ -42,7 +42,7 @@ public sealed class NewDaysConfig
     /// <summary>Guards can be swapped with prisoners too (never guard with guard).</summary>
     public bool TeleportIncludeGuards { get; set; } = true;
 
-    /// <summary>Played from both players of a swap (workshop pack teleport sound).</summary>
+    /// <summary>Played from both players of a swap.</summary>
     public string TeleportSound { get; set; } = "";
 
     // ---------------------------------------------------------------- Gun Game (warday)

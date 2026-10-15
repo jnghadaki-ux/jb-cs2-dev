@@ -65,7 +65,7 @@ public sealed class LrExtraConfig
     public float TeleporterCooldown { get; set; } = 5f;
     public float TeleporterRange { get; set; } = 1500f;
 
-    /// <summary>Played from the Teleporter after each jump (workshop pack teleport sound).</summary>
+    /// <summary>Played from the Teleporter after each jump.</summary>
     public string TeleporterSound { get; set; } = "";
     public bool JetpackFreedayEnabled { get; set; } = true;
 }

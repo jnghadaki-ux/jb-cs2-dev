@@ -265,7 +265,7 @@ public sealed partial class WardenModule
         if (_savedCount < 2) _savedCount++;
     }
 
-    /// <summary>Warden paintball splat: a splat model from the workshop pack (<see cref="Paint"/>), crossed beams without it.</summary>
+    /// <summary>Warden paintball splat (TE World Decal substitute: two crossed beams on the surface).</summary>
     private bool TryPaint(CCSPlayerController c, Vector impact)
     {
         // No ray trace on CSS 1.0.368, so world and props cannot be told apart; at least never paint on players.
@@ -278,14 +278,6 @@ public sealed partial class WardenModule
         }
 
         var color = PaintColors[Random.Shared.Next(PaintColors.Length)];
-        var feet = c.Origin();
-        if (Paint.Splat(impact, c.EyePosition(), feet?.Z ?? float.NaN, color, Extras.WorkshopPackModule.PaintballModels()) is { } splat)
-        {
-            KeepSplat(new CEntityInstance?[] { splat });
-            return true;
-        }
-
-        // No splat models (workshop pack off): two crossed beams on the surface.
         var normal = TowardEye(c, impact);
 
         var p = new Vector(impact.X + normal.X, impact.Y + normal.Y, impact.Z + normal.Z);

@@ -8,7 +8,6 @@ using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
 using SwbsJailbreak.Core;
-using SwbsJailbreak.Modules.Extras;
 using Timer = CounterStrikeSharp.API.Modules.Timers.Timer;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
@@ -71,7 +70,6 @@ public sealed class CaptureTheFlagDay : JbModule
     private readonly List<CBeam> _flagBeams = new();
     private List<CBeam> _flagRing = new();
     private List<CBeam> _captureRing = new();
-    private CBaseModelEntity? _flagProp, _captureProp; // workshop pack models (WorkshopPack.UseModels)
 
     private bool Active => _day != null && ReferenceEquals(Jb.Days.Current, _day);
 
@@ -236,8 +234,6 @@ public sealed class CaptureTheFlagDay : JbModule
         RemoveFlagVisuals();
         foreach (var b in _captureRing) Fx.SafeRemove(b);
         _captureRing.Clear();
-        Fx.SafeRemove(_captureProp);
-        _captureProp = null;
         if (wasStarted)
         {
             Jb.Settings.StopAutoRespawning();
@@ -508,25 +504,6 @@ public sealed class CaptureTheFlagDay : JbModule
     private void DrawFlag(Vector at, CsTeam team)
     {
         var color = team == CsTeam.CounterTerrorist ? Color.FromArgb(255, 37, 126, 221) : Color.FromArgb(255, 221, 175, 37);
-        if (WorkshopPackModule.Model(c => c.FlagModel) is { } flagModel)
-        {
-            // The original SWBS flag model, tinted in the team colour, with the ground ring.
-            var ring = new Vector(at.X, at.Y, at.Z + 2f);
-            if (_flagProp is not { IsValid: true })
-            {
-                RemoveFlagVisuals();
-                var yaw = _points.Flag is { Length: >= 4 } f ? f[3] : 0f;
-                _flagProp = Fx.Prop(flagModel, at, new QAngle(0, yaw, 0), color);
-                _flagRing = Fx.Ring(ring, 24f, color, 2f, 0f, 12);
-                return;
-            }
-
-            _flagProp.Teleport(at, null, new Vector(0, 0, 0));
-            Fx.Tint(_flagProp, color);
-            Fx.MoveRing(_flagRing, ring, 24f);
-            return;
-        }
-
         var bottom = new Vector(at.X, at.Y, at.Z);
         var top = new Vector(at.X, at.Y, at.Z + 64f);
         var b1 = new Vector(at.X + 24f, at.Y, at.Z + 56f);
@@ -553,18 +530,12 @@ public sealed class CaptureTheFlagDay : JbModule
         _flagBeams.Clear();
         foreach (var b in _flagRing) Fx.SafeRemove(b);
         _flagRing.Clear();
-        Fx.SafeRemove(_flagProp);
-        _flagProp = null;
     }
 
     private void DrawCaptureRing()
     {
         foreach (var b in _captureRing) Fx.SafeRemove(b);
-        Fx.SafeRemove(_captureProp);
-        _captureProp = null;
         var cap = ToVector(_points.Capture);
         _captureRing = cap == null ? new List<CBeam>() : Fx.Ring(new Vector(cap.X, cap.Y, cap.Z + 4f), 40f, Color.Lime, 4f, 0f, 20);
-        if (cap != null && WorkshopPackModule.Model(c => c.CapturePointModel) is { } pad)
-            _captureProp = Fx.Prop(pad, new Vector(cap.X, cap.Y, cap.Z + 1f), new QAngle(0, _points.Capture is { Length: >= 4 } p ? p[3] : 0f, 0), Color.Lime);
     }
 }

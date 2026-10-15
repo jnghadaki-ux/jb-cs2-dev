@@ -34,7 +34,7 @@ public sealed class JihadConfig
     public string SoundActivate { get; set; } = "c4.plant";
     public string SoundExplode { get; set; } = "c4.explode";
 
-    /// <summary>The original "akbar" mp3 needs a custom workshop soundevent in CS2; empty = none.</summary>
+    /// <summary>The original "akbar" mp3 needs a custom soundevent in CS2; empty = none.</summary>
     public string SoundAkbar { get; set; } = "";
 }
 

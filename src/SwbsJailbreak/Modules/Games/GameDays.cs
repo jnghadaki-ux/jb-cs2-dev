@@ -23,7 +23,7 @@ public sealed class GameDaysConfig
     /// <summary>Fuel seconds regained per second on the ground.</summary>
     public float JetpackRegen { get; set; } = 1f;
 
-    /// <summary>Played from a flying player about once a second (the original jetpack sound; workshop pack).</summary>
+    /// <summary>Played from a flying player about once a second (the original jetpack sound).</summary>
     public string JetpackSound { get; set; } = "";
 
     /// <summary>NoScopeRounds noscope_chance: % chance (0–100) that a normal round is no-scope only. 0 = off.</summary>

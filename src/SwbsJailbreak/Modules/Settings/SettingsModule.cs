@@ -68,7 +68,7 @@ public sealed class SettingsConfig
     public string GuardsWinText { get; set; } = "<font class='fontSize-xl' color='#3FA9F5'>GUARDS WIN!</font>";
     public string PrisonersWinText { get; set; } = "<font class='fontSize-xl' color='#FF4D00'>PRISONERS WIN!</font>";
 
-    /// <summary>Optional sound event names played to everyone (original: custom mp3s which CS2 cannot play without a workshop addon).</summary>
+    /// <summary>Optional sound event names played to everyone (original: custom mp3s which CS2 cannot play without an addon).</summary>
     public string GuardsWinSound { get; set; } = "";
     public string PrisonersWinSound { get; set; } = "";
     public string DrawSound { get; set; } = "";

@@ -26,8 +26,7 @@ public enum StoreItemType
     BodySize,
     KillSound,
     GrenadeSound,
-    Hat,
-    PlayerModel
+    Hat
 }
 
 public sealed class StoreItem
@@ -45,7 +44,7 @@ public sealed class StoreItem
     /// <summary>
     /// Per type: KillEffect "ring" / "fire" / "explosion"; ChatColor a chat colour tag ("{red}"); BodySize a scale
     /// ("0.85"); Transparency an alpha 0-255; KillSound a sound event; GrenadeSound "bounce event|explode event"; Hat a
-    /// .vmdl path from your workshop pack; PlayerModel a player .vmdl path (the store pack, see WorkshopPack.StoreModels).
+    /// .vmdl path.
     /// </summary>
     public string Data { get; set; } = "";
 
@@ -85,13 +84,7 @@ public sealed class StoreConfig
     /// <summary>Player model attachment hats are parented to.</summary>
     public string HatAttachment { get; set; } = "facemask";
 
-    /// <summary>
-    /// Player model items change prisoners only: guards keep the uniform PlayerModels.GuardModel so nobody mistakes a
-    /// guard for a prisoner. True lets guards wear them too.
-    /// </summary>
-    public bool PlayerModelsForGuards { get; set; } = false;
-
-    public const int CurrentDefaultsVersion = 4;
+    public const int CurrentDefaultsVersion = 3;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -128,7 +121,7 @@ public sealed class StoreConfig
         new() { Id = "body_transparent", Name = "See-through body", Type = StoreItemType.Transparency, Data = "165", Price = 1500 },
         new() { Id = "body_skinny", Name = "Skinny", Type = StoreItemType.BodySize, Data = "0.85", Price = 1200 },
         new() { Id = "body_fatso", Name = "Fatso", Type = StoreItemType.BodySize, Data = "1.15", Price = 1200 },
-        // ---- version 3: paintball colours (the cheapest items; splat models from the workshop pack)
+        // ---- version 3: paintball colours (the cheapest items)
         new() { Id = "paint_classic", Name = "Classic paintballs", Type = StoreItemType.Paintball, Color = ClassicPaint, Price = 150 },
         new() { Id = "paint_red", Name = "Red paintballs", Type = StoreItemType.Paintball, Color = "230,25,25", Price = 100 },
         new() { Id = "paint_orange", Name = "Orange paintballs", Type = StoreItemType.Paintball, Color = "255,130,0", Price = 100 },
@@ -138,26 +131,10 @@ public sealed class StoreConfig
         new() { Id = "paint_purple", Name = "Purple paintballs", Type = StoreItemType.Paintball, Color = "150,60,255", Price = 100 },
         new() { Id = "paint_pink", Name = "Pink paintballs", Type = StoreItemType.Paintball, Color = "255,0,170", Price = 100 },
         new() { Id = "paint_white", Name = "White paintballs", Type = StoreItemType.Paintball, Color = "245,245,245", Price = 100 },
-        new() { Id = "paint_black", Name = "Black paintballs", Type = StoreItemType.Paintball, Color = "30,30,30", Price = 100 },
-        // ---- version 4: SWBS model trails (pieces from the workshop pack, StoreTrails; beam trails without it)
-        new() { Id = "trail_footprints", Name = "Footprints", Type = StoreItemType.Trail, Data = "footprints", Color = "35,35,35", Price = 500 },
-        new() { Id = "trail_footprints_paint", Name = "Paint footprints", Type = StoreItemType.Trail, Data = "footprints", Color = ClassicPaint, Price = 600 },
-        new() { Id = "trail_footprints_rainbow", Name = "Rainbow footprints", Type = StoreItemType.Trail, Data = "footprints", Color = "rainbow", Price = 800 },
-        new() { Id = "trail_stars", Name = "Gold stars", Type = StoreItemType.Trail, Data = "stars", Color = "255,200,40", Price = 700 },
-        new() { Id = "trail_hearts", Name = "Pink hearts", Type = StoreItemType.Trail, Data = "hearts", Color = "255,80,160", Price = 700 },
-        new() { Id = "trail_skulls", Name = "Skulls", Type = StoreItemType.Trail, Data = "skulls", Color = "235,235,235", Price = 700 },
-        new() { Id = "trail_lightning", Name = "Lightning bolts", Type = StoreItemType.Trail, Data = "lightning", Color = "90,170,255", Price = 700 },
-        new() { Id = "trail_snowflakes", Name = "Snowflakes", Type = StoreItemType.Trail, Data = "snowflakes", Color = "200,240,255", Price = 700 },
-        new() { Id = "trail_notes", Name = "Music notes", Type = StoreItemType.Trail, Data = "notes", Color = "rainbow", Price = 800 },
-        new() { Id = "trail_coins", Name = "Gold coins", Type = StoreItemType.Trail, Data = "coins", Color = "255,190,40", Price = 900 },
-        new() { Id = "trail_orbs", Name = "Rainbow orbs", Type = StoreItemType.Trail, Data = "orbs", Color = "rainbow", Price = 900 },
-        new() { Id = "trail_bubbles", Name = "Bubbles", Type = StoreItemType.Trail, Data = "bubbles", Color = "180,230,255", Price = 900 },
-        new() { Id = "trail_fire", Name = "Fire trail", Type = StoreItemType.Trail, Data = "fire", Price = 1200 },
-        new() { Id = "trail_ice", Name = "Ice trail", Type = StoreItemType.Trail, Data = "ice", Price = 1200 },
-        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 }
+        new() { Id = "paint_black", Name = "Black paintballs", Type = StoreItemType.Paintball, Color = "30,30,30", Price = 100 }
     };
 
-    /// <summary>The original SWBS splat colours (splat_blue, splat_green, splat_pink).</summary>
+    /// <summary>The original SWBS splat colours (blue, green, pink).</summary>
     public const string ClassicPaint = "0,128,255|0,220,0|255,0,170";
 
     internal const int PaintRainbowPrice = 200;
@@ -184,12 +161,12 @@ public sealed class StoreInventory
 /// from !store / !shop and kept forever (one item per kind equipped):
 /// bullet tracers, paintballs, kill effects (shockwave / fire / explosion; the original's ragdoll "force" cannot be done
 /// on CS2's client-side ragdolls), trails, auras, sparkles, swirls, chat colours, a chat title (!title), see-through body
-/// and body size (fair-play limited, see <see cref="StoreConfig.BodyItemsAnytime"/>), and - once your workshop pack has
+/// and body size (fair-play limited, see <see cref="StoreConfig.BodyItemsAnytime"/>), and - once you add the files for them,
 /// the files - kill sounds, grenade sounds and hats (EquipmentColors = the hat tint). The original's per-player
 /// visibility settings are in !store > Settings. Player effects and hats are off during wardays and non-freeday LRs, so
 /// they never give a hiding player away.
 /// </summary>
-public sealed partial class StoreModule : JbModule
+public sealed class StoreModule : JbModule
 {
     private const string Ns = "store";
 
@@ -217,19 +194,14 @@ public sealed partial class StoreModule : JbModule
         Plugin.AddTimer(0.15f, EffectsTick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(m =>
         {
-            foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0))
-                m.AddResource(it.Data.Trim());
-            if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
-                foreach (var model in StoreTrails.AllModels()) m.AddResource(model);
+            foreach (var hat in Cfg.Items.Where(i => i.Type == StoreItemType.Hat && i.Data.Length > 0)) m.AddResource(hat.Data.Trim());
         });
-        JbEvents.PlayerModelsApplied += ApplyPlayerModel;
         ChatDecor.AddPrefix(Name, TitlePrefix);
         ChatDecor.AddColor(Name, ChatColor);
     }
 
     public override void OnUnload(bool hotReload)
     {
-        JbEvents.PlayerModelsApplied -= ApplyPlayerModel;
         ChatDecor.Remove(Name);
         for (var i = 0; i < Players.MaxSlots; i++) RemoveHat(i);
     }
@@ -287,7 +259,6 @@ public sealed partial class StoreModule : JbModule
         _alpha[player.Slot] = 255;
         _scale[player.Slot] = 1f;
         _trailLast[player.Slot] = null;
-        _dropLast[player.Slot] = null;
         RemoveHat(player.Slot);
     }
 
@@ -303,31 +274,12 @@ public sealed partial class StoreModule : JbModule
 
     private void ResetSlot(int slot)
     {
-        ClearPieces(slot);
         _trailLast[slot] = null;
         _alpha[slot] = 255;
         _scale[slot] = 1f;
         ClearPaint(slot);
         RemoveHat(slot);
     }
-
-    /// <summary>After PlayerModels gave the player their team model: the equipped store player model replaces it.</summary>
-    private void ApplyPlayerModel(JbPlayer player)
-    {
-        if (player.Controller is not { } c || Equipped(c.Slot, StoreItemType.PlayerModel) is not { Data.Length: > 0 } item) return;
-        if (!WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards)) return;
-        var model = item.Data.Trim();
-        // Next frame: the team model (or the game's own agent) is set during this same spawn.
-        Server.NextFrame(() =>
-        {
-            if (player.Controller is not { } ctrl || !ctrl.IsAliveP() || ctrl.PawnOrNull() is not { } pawn) return;
-            try { pawn.SetModel(model); }
-            catch (Exception ex) { Logger.LogWarning(ex, "[Store] player model {Model} could not be applied", model); }
-        });
-    }
-
-    internal static bool WearsPlayerModel(CsTeam team, bool guardsToo) =>
-        team == CsTeam.Terrorist || guardsToo && team == CsTeam.CounterTerrorist;
 
     // ================================================================= rules (engine-free, unit-tested)
 
@@ -544,7 +496,6 @@ public sealed partial class StoreModule : JbModule
                     Jb.Log.LogEvent($"{c.PlayerName} bought {item.Name} for {item.Price} points", p, null, LogType.Item);
                     if (item.Type == StoreItemType.ChatTitle) Chat.Tell(c, "store.title.how", Cfg.TitleMaxLength);
                     if (item.Type is StoreItemType.Transparency or StoreItemType.BodySize && !Cfg.BodyItemsAnytime) Chat.Tell(c, "store.body.when");
-                    if (item.Type == StoreItemType.PlayerModel) Chat.Tell(c, Cfg.PlayerModelsForGuards ? "store.model.when" : "store.model.when_prisoner");
                     break;
             }
         }
@@ -677,25 +628,14 @@ public sealed partial class StoreModule : JbModule
             if (o != null && VectorUtil.Distance2D(o, impact) <= 24f && impact.Z >= o.Z - 4f && impact.Z <= o.Z + 76f) return; // not on players
         }
 
+        // No decals on CS2 servers: a small crossed-beam splat.
         var filter = ViewFilter(c);
-        CEntityInstance?[] parts;
-        var feet = c.Origin();
-        if (Core.Paint.Splat(impact, c.EyePosition(), feet?.Z ?? float.NaN, color, Extras.WorkshopPackModule.PaintballModels()) is { } splat)
-        {
-            Restrict(splat, filter);
-            Fx.RemoveLater(splat, Math.Max(1f, Cfg.PaintSeconds));
-            parts = new CEntityInstance?[] { splat };
-        }
-        else
-        {
-            // No splat models (workshop pack off): a small crossed-beam splat.
-            const float half = 3f;
-            var b1 = Fx.Beam(new Vector(impact.X - half, impact.Y, impact.Z), new Vector(impact.X + half, impact.Y, impact.Z), color, 4f, Cfg.PaintSeconds);
-            var b2 = Fx.Beam(new Vector(impact.X, impact.Y - half, impact.Z), new Vector(impact.X, impact.Y + half, impact.Z), color, 4f, Cfg.PaintSeconds);
-            Restrict(b1, filter);
-            Restrict(b2, filter);
-            parts = new CEntityInstance?[] { b1, b2 };
-        }
+        const float half = 3f;
+        var b1 = Fx.Beam(new Vector(impact.X - half, impact.Y, impact.Z), new Vector(impact.X + half, impact.Y, impact.Z), color, 4f, Cfg.PaintSeconds);
+        var b2 = Fx.Beam(new Vector(impact.X, impact.Y - half, impact.Z), new Vector(impact.X, impact.Y + half, impact.Z), color, 4f, Cfg.PaintSeconds);
+        Restrict(b1, filter);
+        Restrict(b2, filter);
+        var parts = new CEntityInstance?[] { b1, b2 };
 
         var q = _paint[c.Slot];
         q.Enqueue(parts);
@@ -827,11 +767,7 @@ public sealed partial class StoreModule : JbModule
             var allowed = EffectsAllowed(c);
 
             if (allowed) Trail(c, o);
-            else
-            {
-                _trailLast[c.Slot] = null;
-                _dropLast[c.Slot] = null;
-            }
+            else _trailLast[c.Slot] = null;
             if (allowed && _tick % 2 == 0 && Equipped(c.Slot, StoreItemType.Sparkles) is { } sp) Sparkle(c, o, sp);
             if (allowed && _tick % 4 == 0 && Equipped(c.Slot, StoreItemType.Halo) is { } halo) Swirl(c, o, halo);
             if (allowed && _tick % 7 == 0 && Equipped(c.Slot, StoreItemType.Aura) is { } aura)
@@ -849,20 +785,14 @@ public sealed partial class StoreModule : JbModule
         if (Equipped(c.Slot, StoreItemType.Trail) is not { } trail)
         {
             _trailLast[c.Slot] = null;
-            _dropLast[c.Slot] = null;
             return;
         }
-
-        // Model trails (footprints, stars, fire, ...); a beam in the trail colour when the pack's models are off.
-        var style = StoreTrails.StyleOf(trail);
-        if (style != null && ModelTrail(c, o, style, trail)) return;
 
         var here = new Vector(o.X, o.Y, o.Z + 6f);
         var last = _trailLast[c.Slot];
         _trailLast[c.Slot] = here;
         if (last == null || VectorUtil.Distance(last, here) < 12f || VectorUtil.Distance(last, here) > 300f) return;
-        var color = style is { Tinted: false } ? ColorOf(style.FallbackColor, Random.Shared) : TrailColor(c.Slot, trail.Color);
-        Restrict(Fx.Beam(last, here, color, 3f, Math.Max(0.2f, Cfg.TrailSeconds)), ViewFilter(c));
+        Restrict(Fx.Beam(last, here, ColorOf(trail.Color, Random.Shared), 3f, Math.Max(0.2f, Cfg.TrailSeconds)), ViewFilter(c));
     }
 
     private void Sparkle(CCSPlayerController c, Vector o, StoreItem item)
@@ -933,7 +863,7 @@ public sealed partial class StoreModule : JbModule
         }
     }
 
-    // ================================================================= hats (workshop models)
+    // ================================================================= hats
 
     private void UpdateHat(CCSPlayerController c, bool allowed)
     {
