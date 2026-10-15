@@ -94,6 +94,9 @@ public sealed class WardenToolsModule : JbModule
     /// <summary>!split team index per prisoner slot.</summary>
     private readonly Dictionary<int, int> _splitTeam = new();
 
+    /// <summary>Slots whose pawn still carries a !split tint (kept after death / round end until it is washed off).</summary>
+    private readonly HashSet<int> _splitTinted = new();
+
     private static readonly Color[] SplitColors =
     {
         Color.FromArgb(255, 255, 60, 60), Color.FromArgb(255, 70, 120, 255), Color.FromArgb(255, 60, 220, 90), Color.FromArgb(255, 255, 220, 40)
@@ -140,19 +143,33 @@ public sealed class WardenToolsModule : JbModule
         Array.Clear(_nextRepeat);
         _wardenVotes.Clear();
         _splitTeam.Clear();
+        _splitTinted.Clear();
         _spotlights.Clear(); // the glow entities went with the old map
         _blindfolds.Clear();
         _nextSpotlight = 0;
     }
 
-    public override void OnRoundStart() => _extendsThisRound = 0;
+    public override void OnRoundStart()
+    {
+        _extendsThisRound = 0;
+        // Pawns are reused across rounds, so a !split tint would otherwise survive into the next round.
+        _splitTeam.Clear();
+        WashSplitTints();
+    }
+
+    public override void OnPlayerSpawn(JbPlayer player)
+    {
+        if (_splitTeam.ContainsKey(player.Slot) || !_splitTinted.Remove(player.Slot)) return;
+        var c = player.Controller;
+        if (c != null && c.IsValid) ClearTint(c);
+    }
 
     public override void OnRoundEnd(CsTeam winner, int reason)
     {
         SetFriendlyFire(false, null);
         ClearDeputy(false);
         _wardenVotes.Clear();
-        _splitTeam.Clear();
+        ClearSplit(true);
         ClearSpotlights();
         ClearBlindfolds();
     }
@@ -171,6 +188,7 @@ public sealed class WardenToolsModule : JbModule
         _nextRepeat[player.Slot] = 0;
         _wardenVotes.Remove(player.Slot);
         _splitTeam.Remove(player.Slot);
+        _splitTinted.Remove(player.Slot);
         RemoveSpotlight(player.Slot);
         _blindfolds.Remove(player.Slot);
     }
@@ -179,7 +197,7 @@ public sealed class WardenToolsModule : JbModule
     {
         if (IsDeputy(player) && newTeam != CsTeam.CounterTerrorist) ClearDeputy(!disconnect);
         if (newTeam is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) _wardenVotes.Remove(player.Slot);
-        _splitTeam.Remove(player.Slot);
+        if (_splitTeam.Remove(player.Slot) && !disconnect && player.Controller is { IsValid: true } c) ClearTint(c);
     }
 
     private void OnLastRequestInitialized(JbPlayer prisoner)
@@ -444,13 +462,22 @@ public sealed class WardenToolsModule : JbModule
     [ConsoleCommand("css_teams", "sm_teams [2-4|off] - (warden/deputy) split the alive prisoners into colour teams")]
     public void CmdSplit(CCSPlayerController? caller, CommandInfo info)
     {
+        var arg = info.ArgCount > 1 ? info.GetArg(1).Trim() : "2";
+        Split(caller, info, arg);
+    }
+
+    [ConsoleCommand("css_splitun", "sm_splitun - (warden/deputy) remove the !split colour teams")]
+    [ConsoleCommand("css_unsplit", "sm_unsplit - (warden/deputy) remove the !split colour teams")]
+    public void CmdUnsplit(CCSPlayerController? caller, CommandInfo info) => Split(caller, info, "off");
+
+    private void Split(CCSPlayerController? caller, CommandInfo info, string arg)
+    {
         if (!Cfg.SplitEnabled) { Chat.ReplyT(caller, info, "wt.disabled"); return; }
         if (!CanCommand(caller, true)) { Chat.ReplyT(caller, info, "wt.not_warden"); return; }
 
-        var arg = info.ArgCount > 1 ? info.GetArg(1).Trim() : "2";
         if (arg.Equals("off", StringComparison.OrdinalIgnoreCase) || arg == "0")
         {
-            if (_splitTeam.Count == 0) { Chat.ReplyT(caller, info, "wt.split.none"); return; }
+            if (_splitTeam.Count == 0 && _splitTinted.Count == 0) { Chat.ReplyT(caller, info, "wt.split.none"); return; }
             ClearSplit(true);
             Chat.TellAll("wt.split.cleared", caller?.PlayerName ?? "Console");
             return;
@@ -481,6 +508,7 @@ public sealed class WardenToolsModule : JbModule
         {
             var t = _splitTeam[c.Slot];
             c.SetColor(SplitColors[t]);
+            _splitTinted.Add(c.Slot);
             Hud.Set(c, "wt.split", Lang.T("wt.split.hud", SplitHex[t], Colors.Strip(Lang.T("wt.split.color" + t))), 60, Math.Max(1f, Cfg.SplitHudSeconds));
         }
 
@@ -504,15 +532,29 @@ public sealed class WardenToolsModule : JbModule
 
     private void ClearSplit(bool resetColors)
     {
-        if (_splitTeam.Count == 0) return;
-        var slots = _splitTeam.Keys.ToList();
         _splitTeam.Clear();
-        if (!resetColors) return;
-        foreach (var slot in slots)
+        if (resetColors) WashSplitTints();
+    }
+
+    /// <summary>Remove the !split tint from every pawn that still has one (alive or dead; dead ones are retried on spawn).</summary>
+    private void WashSplitTints()
+    {
+        foreach (var slot in _splitTinted.ToList())
         {
             var c = Players.Get(slot).Controller;
-            if (c != null && c.IsValid && c.IsAliveP() && c.Team == CsTeam.Terrorist) c.ResetColor();
+            if (c == null || !c.IsValid) { _splitTinted.Remove(slot); continue; }
+            if (c.PawnOrNull() == null) continue;
+            ClearTint(c);
+            if (c.IsAliveP()) _splitTinted.Remove(slot);
         }
+    }
+
+    /// <summary>White tint, alpha untouched (store transparency / invisibility keep working).</summary>
+    private static void ClearTint(CCSPlayerController c)
+    {
+        var pawn = c.PawnOrNull();
+        if (pawn == null || !pawn.IsValid) return;
+        c.SetColor(Color.FromArgb(pawn.Render.A, 255, 255, 255));
     }
 
     /// <summary>Back to the !split team colour if the prisoner has one, otherwise no tint.</summary>

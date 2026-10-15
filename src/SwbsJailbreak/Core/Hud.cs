@@ -147,24 +147,39 @@ public static class Hud
     // ---------------- flashing fix ----------------
 
     private static CCSGameRulesProxy? _rulesProxy;
+    private static float _nextRulesLookup;
 
     /// <summary>
     /// CS2 re-fades the centre HTML panel about once a second, so menus and HUD text flash. Holding
     /// CCSGameRules.GameRestart true while no restart is pending keeps the panel steady (workaround found by Poggu, as
     /// used by CS2FlashingHtmlHudFix and eGo). A real restart (mp_restartgame) still clears it until it has run.
     /// Call every tick; General.FixHudFlashing turns it off.
+    /// The game rules entity is looked up again every few seconds: a cached proxy could outlive its entity (crash
+    /// recovery, hot reload, map change before OnMapStart ran), which silently disabled the fix until a restart.
     /// </summary>
     internal static void KeepPanelSteady()
     {
         if (!(JailbreakPlugin.Instance?.Config.General.FixHudFlashing ?? true)) return;
         try
         {
-            if (_rulesProxy == null || !_rulesProxy.IsValid)
+            var now = Server.CurrentTime;
+            if (_rulesProxy == null || !_rulesProxy.IsValid || now >= _nextRulesLookup || now < _nextRulesLookup - 10f)
+            {
                 _rulesProxy = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
+                _nextRulesLookup = now + 5f;
+            }
+
             var rules = _rulesProxy?.GameRules;
-            if (rules == null) return;
-            var steady = rules.RestartRoundTime < Server.CurrentTime;
-            if (rules.GameRestart != steady) rules.GameRestart = steady;
+            if (rules == null)
+            {
+                _rulesProxy = null;
+                return;
+            }
+
+            var steady = rules.RestartRoundTime < now;
+            if (rules.GameRestart == steady) return;
+            rules.GameRestart = steady;
+            Utilities.SetStateChanged(_rulesProxy!, "CCSGameRulesProxy", "m_pGameRules");
         }
         catch
         {
@@ -172,7 +187,11 @@ public static class Hud
         }
     }
 
-    internal static void ForgetGameRules() => _rulesProxy = null;
+    internal static void ForgetGameRules()
+    {
+        _rulesProxy = null;
+        _nextRulesLookup = 0;
+    }
 
     // ---------------- small HTML helpers ----------------
 

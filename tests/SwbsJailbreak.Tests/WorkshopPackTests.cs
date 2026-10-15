@@ -25,10 +25,12 @@ public class WorkshopPackTests
     }
 
     [Fact]
-    public void Pack_IsOffUntilEnabled()
+    public void Pack_IsOnByDefault_SoundsAppliedOnce()
     {
+        // The pack is published: on by default so trails / paintballs use its models instead of beams.
         var c = new WorkshopPackConfig();
-        Assert.False(c.Enabled);
+        Assert.True(c.Enabled);
+        Assert.True(c.UseModels);
         Assert.False(c.SoundsApplied);
         Assert.Equal("soundevents/swbs_jailbreak.vsndevts", c.SoundEventsFile);
     }

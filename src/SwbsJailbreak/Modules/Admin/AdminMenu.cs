@@ -88,7 +88,7 @@ public sealed partial class AdminModule
         Act("respawn", "admin.menu.act.respawn", (a, t) =>
         {
             if (t.IsAliveP() || t.Team is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) { Chat.Tell(a, "admin.respawn.none"); return; }
-            t.Respawn();
+            t.RespawnSolid();
             Activity(a, "admin.act.respawn", t.PlayerName);
         });
         Act("slay", "admin.menu.act.bring", (a, t) =>
@@ -120,10 +120,8 @@ public sealed partial class AdminModule
         });
         Act("teams", "admin.menu.act.warn", (a, t) =>
         {
-            var list = Storage.Get<List<WarnRecord>>(WarnNs, t.SteamID.ToString()) ?? new List<WarnRecord>();
             var reason = Lang.T("admin.warn.menu_reason");
-            list.Add(new WarnRecord { Reason = reason, Admin = AdminName(a), Time = Now });
-            Storage.Set(WarnNs, t.SteamID.ToString(), list);
+            var list = AddWarning(t, reason, a);
             Chat.Tell(t, "admin.warn.you", reason, list.Count);
             Activity(a, "admin.act.warn", t.PlayerName, reason, list.Count);
         });

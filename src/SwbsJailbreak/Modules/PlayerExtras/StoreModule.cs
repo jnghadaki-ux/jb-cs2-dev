@@ -91,7 +91,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = false;
 
-    public const int CurrentDefaultsVersion = 4;
+    public const int CurrentDefaultsVersion = 5;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -154,7 +154,25 @@ public sealed class StoreConfig
         new() { Id = "trail_bubbles", Name = "Bubbles", Type = StoreItemType.Trail, Data = "bubbles", Color = "180,230,255", Price = 900 },
         new() { Id = "trail_fire", Name = "Fire trail", Type = StoreItemType.Trail, Data = "fire", Price = 1200 },
         new() { Id = "trail_ice", Name = "Ice trail", Type = StoreItemType.Trail, Data = "ice", Price = 1200 },
-        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 }
+        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 },
+        // ---- version 5: player models. Stock CS2 agents, so they work without any workshop download (prisoners wear
+        // them; guards keep their uniform unless PlayerModelsForGuards). The SWBS store pack adds its own on top.
+        Agent("phoenix_soldier", "Phoenix soldier", "tm_phoenix/tm_phoenix_varianth", 2500),
+        Agent("phoenix_slingshot", "Phoenix slingshot", "tm_phoenix/tm_phoenix_variantg", 2500),
+        Agent("leet_muhlik", "Elite Crew: Mr. Muhlik", "tm_leet/tm_leet_variantf", 3000),
+        Agent("leet_shahmat", "Elite Crew: Prof. Shahmat", "tm_leet/tm_leet_varianth", 3000),
+        Agent("balkan_dragomir", "Sabre: Dragomir", "tm_balkan/tm_balkan_variantf", 3000),
+        Agent("balkan_maximus", "Sabre: Maximus", "tm_balkan/tm_balkan_varianth", 3000),
+        Agent("pro_darryl", "The Professionals: Sir Bloody Darryl", "tm_professional/tm_professional_varf", 4000),
+        Agent("pro_vypa", "The Professionals: Vypa Sista", "tm_professional/tm_professional_varh", 4000),
+        Agent("guerrilla_solman", "Guerrilla: Elite Trapper Solman", "tm_jungle_raider/tm_jungle_raider_varianta", 4000),
+        Agent("guerrilla_elite", "Guerrilla: Crasswater", "tm_jungle_raider/tm_jungle_raider_variantd", 4000)
+    };
+
+    /// <summary>A stock CS2 agent (characters/models/&lt;path&gt;.vmdl) as a player model item.</summary>
+    private static StoreItem Agent(string id, string name, string path, int price) => new()
+    {
+        Id = "model_" + id, Name = name, Type = StoreItemType.PlayerModel, Data = $"characters/models/{path}.vmdl", Price = price
     };
 
     /// <summary>The original SWBS splat colours (splat_blue, splat_green, splat_pink).</summary>
@@ -289,6 +307,8 @@ public sealed partial class StoreModule : JbModule
         _trailLast[player.Slot] = null;
         _dropLast[player.Slot] = null;
         RemoveHat(player.Slot);
+        // Without the PlayerModels module nobody raises PlayerModelsApplied: apply the store model from here.
+        if (Jb.Models is NullServices) SchedulePlayerModel(player.Slot);
     }
 
     public override void OnMapStart(string mapName)
@@ -312,18 +332,34 @@ public sealed partial class StoreModule : JbModule
     }
 
     /// <summary>After PlayerModels gave the player their team model: the equipped store player model replaces it.</summary>
-    private void ApplyPlayerModel(JbPlayer player)
+    private void ApplyPlayerModel(JbPlayer player) => SchedulePlayerModel(player.Slot);
+
+    /// <summary>
+    /// Set the equipped store model next frame and once more a moment later: the game (agent loadout) and other modules
+    /// set the model during the spawn frames and could overwrite a model set only once.
+    /// </summary>
+    private void SchedulePlayerModel(int slot)
     {
-        if (player.Controller is not { } c || Equipped(c.Slot, StoreItemType.PlayerModel) is not { Data.Length: > 0 } item) return;
+        Server.NextFrame(() => SetPlayerModelNow(slot));
+        Plugin.AddTimer(0.3f, () => SetPlayerModelNow(slot));
+    }
+
+    private void SetPlayerModelNow(int slot)
+    {
+        var c = Players.Get(slot).Controller;
+        if (c == null || !c.IsValid || !c.IsAliveP() || c.PawnOrNull() is not { } pawn) return;
         if (!WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards)) return;
+        if (Equipped(slot, StoreItemType.PlayerModel) is not { Data.Length: > 0 } item) return;
         var model = item.Data.Trim();
-        // Next frame: the team model (or the game's own agent) is set during this same spawn.
-        Server.NextFrame(() =>
+        try
         {
-            if (player.Controller is not { } ctrl || !ctrl.IsAliveP() || ctrl.PawnOrNull() is not { } pawn) return;
-            try { pawn.SetModel(model); }
-            catch (Exception ex) { Logger.LogWarning(ex, "[Store] player model {Model} could not be applied", model); }
-        });
+            if (pawn.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName == model) return;
+            pawn.SetModel(model);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[Store] player model {Model} could not be applied", model);
+        }
     }
 
     internal static bool WearsPlayerModel(CsTeam team, bool guardsToo) =>
@@ -544,7 +580,7 @@ public sealed partial class StoreModule : JbModule
                     Jb.Log.LogEvent($"{c.PlayerName} bought {item.Name} for {item.Price} points", p, null, LogType.Item);
                     if (item.Type == StoreItemType.ChatTitle) Chat.Tell(c, "store.title.how", Cfg.TitleMaxLength);
                     if (item.Type is StoreItemType.Transparency or StoreItemType.BodySize && !Cfg.BodyItemsAnytime) Chat.Tell(c, "store.body.when");
-                    if (item.Type == StoreItemType.PlayerModel) Chat.Tell(c, Cfg.PlayerModelsForGuards ? "store.model.when" : "store.model.when_prisoner");
+                    if (item.Type == StoreItemType.PlayerModel) TellModel(c);
                     break;
             }
         }
@@ -553,9 +589,23 @@ public sealed partial class StoreModule : JbModule
             var on = ToggleEquip(inv, item);
             Save(c);
             Chat.Tell(c, on ? "store.equipped" : "store.unequipped", item.Name);
+            if (on && item.Type == StoreItemType.PlayerModel) TellModel(c);
         }
 
         ShowCategory(c, item.Type);
+    }
+
+    /// <summary>A newly equipped model is put on right away when the player can wear it now, else from the next spawn.</summary>
+    private void TellModel(CCSPlayerController c)
+    {
+        if (c.IsAliveP() && WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards))
+        {
+            SchedulePlayerModel(c.Slot);
+            Chat.Tell(c, "store.model.now");
+            return;
+        }
+
+        Chat.Tell(c, Cfg.PlayerModelsForGuards ? "store.model.when" : "store.model.when_prisoner");
     }
 
     private void ShowSettings(CCSPlayerController c)

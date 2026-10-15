@@ -1,6 +1,8 @@
 {
   "bhc.console_only": "Bhopcheck is a console only command. Please use {0} in console to see Bhopcheck stats.",
-  "bhc.printed": "Bhop log printed to your console.",
+  "bhc.printed": "Bhop log printed to your console (open it with ~).",
+  "bhc.none": "No bhops logged for {0} yet.",
+  "bhc.alert": "{red}[BhopCheck]{default} {green}{0}{default}: {red}{1}%{default} perfect hops in the last {2}. Check with {green}!bhc {0}",
   "bhc.perfsound.disabled": "Server does not allow perf sounds.",
   "bhc.perfsound.on": "You will now hear sounds on perfect jumps. Type !perfsound to toggle.",
   "bhc.perfsound.off": "You will no longer hear sounds on perfect jumps. Type !perfsound to toggle."

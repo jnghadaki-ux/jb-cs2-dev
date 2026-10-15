@@ -28,6 +28,7 @@ public sealed partial class ZonesModule
         RegisterType(new NamedZone());
         RegisterType(new NotifyZone(this));
         RegisterType(new CellBlockZone());
+        RegisterType(new SpawnZone());
     }
 }
 
@@ -464,4 +465,46 @@ internal sealed class CellBlockZone : ZoneType
 
     public override IReadOnlyList<ZoneField> Fields { get; } = new[] { new ZoneField("Block name", ZoneFieldKind.Text, 1, "(e.g. A, B, Upper)") };
     public override string Summary(Zone zone) => zone.Name.Length > 0 ? "block " + zone.Name : "unnamed block";
+}
+
+/// <summary>
+/// ADDITION: a custom spawn area. At round start every player of the zone's team is moved to a random spot inside one
+/// of their team's spawn zones (feet on the zone floor, facing the zone's angles). Maps with bad or too few spawns can
+/// be fixed with the zone editor (!zones, or !spawnzone to add one at your feet).
+/// </summary>
+internal sealed class SpawnZone : ZoneType
+{
+    internal const int Prisoners = 0, Guards = 1, Everyone = 2;
+
+    public override string Key => ZoneTypeKeys.Spawn;
+    public override string DisplayName => "Spawn";
+    public override string Description => "Round-start spawn area: players of the chosen team spawn at a random spot inside it (facing the zone's angles).";
+
+    public override IReadOnlyList<ZoneField> Fields { get; } = new[]
+    {
+        new ZoneField("Team", ZoneFieldKind.Choice, 1) { Options = new[] { ("Prisoners", Prisoners), ("Guards", Guards), ("Everyone", Everyone) } }
+    };
+
+    internal static bool ForTeam(Zone zone, CsTeam team) => zone.GetInt(1) switch
+    {
+        Prisoners => team == CsTeam.Terrorist,
+        Guards => team == CsTeam.CounterTerrorist,
+        _ => team is CsTeam.Terrorist or CsTeam.CounterTerrorist
+    };
+
+    /// <summary>A random feet position inside the box, kept a player's width away from its sides (engine-free).</summary>
+    internal static Vector3 RandomSpot(ZoneBox box, Random rng)
+    {
+        var a = box.WorldMins;
+        var b = box.WorldMaxs;
+        float Pick(float lo, float hi) => hi - lo > 32f ? lo + 16f + (float)rng.NextDouble() * (hi - lo - 32f) : (lo + hi) * 0.5f;
+        return new Vector3(Pick(a.X, b.X), Pick(a.Y, b.Y), a.Z);
+    }
+
+    public override string Summary(Zone zone) => zone.GetInt(1) switch
+    {
+        Prisoners => "prisoners",
+        Guards => "guards",
+        _ => "everyone"
+    };
 }

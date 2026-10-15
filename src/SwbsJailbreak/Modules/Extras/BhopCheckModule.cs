@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.Extensions.Logging;
 using SwbsJailbreak.Core;
 
 namespace SwbsJailbreak.Modules.Extras;
@@ -16,6 +17,15 @@ public sealed class BhopCheckConfig
     public int MaxBhops { get; set; } = 20;               // bhc_max_bhops
     public bool AllowPerfSounds { get; set; } = false;    // bhc_allow_perf_sounds
     public string PerfSound { get; set; } = "UIPanorama.generic_button_press";
+
+    /// <summary>Tell online admins (chat) and the jail log when a player's recent hops look scripted.</summary>
+    public bool AlertAdmins { get; set; } = true;
+
+    /// <summary>Hops looked at for the alert (the last N); alert when at least WarnPerfs of them are perfect.</summary>
+    public int AlertSampleSize { get; set; } = 15;
+
+    /// <summary>Seconds between two alerts about the same player.</summary>
+    public float AlertCooldownSeconds { get; set; } = 60f;
 }
 
 internal struct BhopEntry
@@ -32,6 +42,9 @@ internal sealed class BhopState
     public int AirTicks, Inputs, GroundTicks;
     public int InputTicks;
     public bool PerfSound;
+    public bool WasOnGround;
+    public int LastJumpTick = -100;
+    public float NextAlert;
 }
 
 /// <summary>
@@ -39,6 +52,8 @@ internal sealed class BhopState
 /// ground ticks before the next jump, speed, perfect hops) for admins to inspect from console (!bhc / !bhce).
 /// CS2 note: input counting samples the networked button state every server tick; CS2 sub-tick input means very fast
 /// scroll-wheel presses inside one tick can be undercounted, so inputs are a lower bound (perf/ground-tick data is exact).
+/// Jumps are detected from the ground -> air transition every tick (player_jump alone is not fired reliably on current
+/// CS2 builds, which left the log empty); the event is still used and de-duplicated.
 /// </summary>
 public sealed class BhopCheckModule : JbModule
 {
@@ -65,13 +80,20 @@ public sealed class BhopCheckModule : JbModule
     {
         var p = Players.Get(ev.Userid);
         if (p == null || p.IsBot) return HookResult.Continue;
-        var s = S(p);
+        Jumped(p, S(p));
+        return HookResult.Continue;
+    }
+
+    private void Jumped(JbPlayer p, BhopState s)
+    {
+        var tick = Server.TickCount;
+        if (tick - s.LastJumpTick <= 2) return; // event and tick detection saw the same jump
+        s.LastJumpTick = tick;
         if (s.InJump) PushBhop(p, s);
         s.InJump = true;
         s.AirTicks = 0;
         s.Inputs = 0;
         s.GroundTicks = 0;
-        return HookResult.Continue;
     }
 
     private void OnTick()
@@ -85,6 +107,17 @@ public sealed class BhopCheckModule : JbModule
             if (pawn == null) continue;
             var jumpHeld = (c.Buttons & PlayerButtons.Jump) != 0;
             s.InputTicks = jumpHeld ? s.InputTicks + 1 : 0;
+            var onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
+            var wasOnGround = s.WasOnGround;
+            s.WasOnGround = onGround;
+            // Left the ground moving up fast: a jump (walking off a ledge or being pushed has no upward speed).
+            if (wasOnGround && !onGround && pawn.MoveType == MoveType_t.MOVETYPE_WALK && (pawn.AbsVelocity?.Z ?? 0) > 200f)
+            {
+                Jumped(p, s);
+                s.AirTicks++;
+                continue;
+            }
+
             if (!s.InJump) continue;
             if (!c.IsAliveP() || pawn.MoveType is MoveType_t.MOVETYPE_NOCLIP or MoveType_t.MOVETYPE_LADDER)
             {
@@ -119,6 +152,38 @@ public sealed class BhopCheckModule : JbModule
         if (Cfg.AllowPerfSounds && s.PerfSound && e.GroundTicks == 1 && e.InputTicks == 1) Sound.Play(c, Cfg.PerfSound);
         s.Log.Insert(0, e);
         if (s.Log.Count > Math.Clamp(Cfg.MaxBhops, 20, 100)) s.Log.RemoveAt(s.Log.Count - 1);
+        CheckAlert(p, s);
+    }
+
+    /// <summary>Engine-free: share of perfect hops (landed and jumped on the same tick) in the newest <paramref name="sample"/> entries.</summary>
+    internal static float PerfRatio(IReadOnlyList<BhopEntry> log, int sample)
+    {
+        var n = Math.Min(log.Count, sample);
+        if (n == 0) return 0f;
+        var perfs = 0;
+        for (var i = 0; i < n; i++) if (log[i].GroundTicks <= 1) perfs++;
+        return (float)perfs / n;
+    }
+
+    private void CheckAlert(JbPlayer p, BhopState s)
+    {
+        if (!Cfg.AlertAdmins) return;
+        var sample = Math.Clamp(Cfg.AlertSampleSize, 5, 100);
+        if (s.Log.Count < sample) return;
+        var c = p.Controller;
+        if (c == null || Movement.HasAutoBhop(c)) return;
+        var auto = Cvars.Get("sv_autobunnyhopping");
+        if (auto is "1" or "true") return; // auto bhop day: every hop is perfect by design
+        var now = Server.CurrentTime;
+        if (now < s.NextAlert) return;
+        var ratio = PerfRatio(s.Log, sample);
+        if (ratio < Cfg.WarnPerfs) return;
+        s.NextAlert = now + Math.Max(5f, Cfg.AlertCooldownSeconds);
+        var pct = (int)MathF.Round(ratio * 100);
+        var line = Lang.T("bhc.alert", c.PlayerName, pct, sample);
+        foreach (var admin in Players.Humans().Where(x => Perms.IsAdmin(x))) Chat.Print(admin, line);
+        Logger.LogWarning("[BhopCheck] {Name} ({SteamId}): {Pct}% perfect hops in the last {Sample}", c.PlayerName, p.SteamId64, pct, sample);
+        Jb.Log.LogEvent($"BhopCheck: {c.PlayerName} hit {pct}% perfect bhops over the last {sample} hops", p, null, LogType.Admin);
     }
 
     [ConsoleCommand("css_bhopcheck", "sm_bhopcheck <#userid|name> - bhop log (console)")]
@@ -130,12 +195,6 @@ public sealed class BhopCheckModule : JbModule
 
     private void Print(CCSPlayerController? caller, CommandInfo info, bool extended)
     {
-        if (caller != null && info.CallingContext == CommandCallingContext.Chat)
-        {
-            Chat.Tell(caller, "bhc.console_only", extended ? "css_bhce" : "css_bhc");
-            return;
-        }
-
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", (extended ? "css_bhce" : "css_bhc") + " <#userid|name>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true, respectImmunity: false);
         if (t == null) return;
@@ -145,7 +204,12 @@ public sealed class BhopCheckModule : JbModule
         W($"\n\t\tBhopCheck (SWBS Jailbreak CS2)");
         W($"\tName: {target.PlayerName}\n\tSteam ID: {target.SteamID}\n\tMap: {Server.MapName}");
         W($"\t{DateTime.Now:yyyy-MM-dd-HH:mm:ss}");
-        if (log.Count == 0) { W("\n\tNo bhops logged for this player"); return; }
+        if (log.Count == 0)
+        {
+            W("\n\tNo bhops logged for this player");
+            if (caller != null && info.CallingContext == CommandCallingContext.Chat) Chat.Tell(caller, "bhc.none", target.PlayerName);
+            return;
+        }
         if (extended)
         {
             W("\t----------------- Bhop Log Extended -----------------");
@@ -169,7 +233,7 @@ public sealed class BhopCheckModule : JbModule
         W("\n\t----\t----\tAvg\t----\t----");
         W("\tInputs\tI/T\tGround\tSpeed\tPerfs");
         W($"\t{log.Sum(e => e.Inputs) / n:0.0}\t{(air > 0 ? log.Sum(e => e.Inputs) / (float)air : 0):0.00}\t{log.Sum(e => e.GroundTicks) / n:0.0}\t{log.Sum(e => e.Speed) / n:0.0}\t{perfs * 100:0}%{(perfs >= Cfg.WarnPerfs ? "  (above warn threshold)" : "")}");
-        if (caller != null) Chat.Tell(caller, "bhc.printed");
+        if (caller != null && info.CallingContext == CommandCallingContext.Chat) Chat.Tell(caller, "bhc.printed");
     }
 
     [ConsoleCommand("css_perfsound", "sm_perfsound - toggle the perfect-jump sound")]
