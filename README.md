@@ -2,7 +2,7 @@
 
 A full Jailbreak game mode for **Counter-Strike 2**, written as a [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) plugin (C# / .NET 10).
 
-**Created by Gdaki.** Designed after the classic SWBS / Ultimate Jailbreak mod for CS:GO, by HlStriker (SMPlugins) and the SWBS admins, and rebuilt from the ground up for CS2.
+**Created by Gdaki.** Inspired by the SMPlugins fork.
 
 > **Status:** test build. It compiles cleanly and passes its unit tests; keep it on a test server until you've checked it on your own setup.
 
@@ -103,5 +103,5 @@ dotnet test         # unit tests
 ## Credits
 
 - **Gdaki**: creator and maintainer of this CS2 version.
-- Original SWBS Jailbreak design: **HlStriker** (SMPlugins) and the SWBS development and lead admins.
+- Inspired by the SMPlugins fork.
 - Built on [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) by roflmuffin and contributors, and [Metamod:Source](https://www.sourcemm.net/).
