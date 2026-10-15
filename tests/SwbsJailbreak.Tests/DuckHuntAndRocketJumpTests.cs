@@ -45,7 +45,7 @@ public class DuckHuntAndRocketJumpTests
 
     [Fact]
     public void Deputy_HasAStockModelByDefault() =>
-        Assert.Matches(@"^characters/models/ctm_[a-z_]+/ctm_[a-z_]+\.vmdl$", new WardenToolsConfig().DeputyModel);
+        Assert.Equal("agents/models/ctm_diver/ctm_diver_varianta.vmdl", new WardenToolsConfig().DeputyModel);
 }
 
 public class PackPrisonerModelTests

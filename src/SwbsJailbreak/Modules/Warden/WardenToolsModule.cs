@@ -33,10 +33,10 @@ public sealed class WardenToolsConfig
     public string DeputyColor { get; set; } = "120,180,255";
 
     /// <summary>
-    /// Player model the deputy wears while deputy (their own model comes back afterwards). Default: the stock CS2 FBI
-    /// agent, so the deputy stands out from the guard uniform without any download. Empty = keep the model.
+    /// Player model the deputy wears while deputy (their own model comes back afterwards). Default: CS2's diver agent
+    /// (agents/models/..., checked against the game files), so the deputy stands out without any download. Empty = keep.
     /// </summary>
-    public string DeputyModel { get; set; } = "characters/models/ctm_fbi/ctm_fbi_variantb.vmdl";
+    public string DeputyModel { get; set; } = "agents/models/ctm_diver/ctm_diver_varianta.vmdl";
 
     /// <summary>!repeat: per-prisoner cooldown and a global cooldown so the warden is not spammed.</summary>
     public float RepeatCooldown { get; set; } = 30f;
@@ -414,6 +414,7 @@ public sealed class WardenToolsModule : JbModule
     {
         var model = Cfg.DeputyModel?.Trim() ?? "";
         if (model.Length == 0 || !c.IsAliveP() || c.PawnOrNull() is not { } pawn || ModelOf(c) == model) return;
+        if (!ModelPaths.UsableOnPlayer(model, "WardenTools.DeputyModel")) return;
         try { pawn.SetModel(model); }
         catch (Exception ex) { Logger.LogWarning(ex, "[WardenTools] deputy model {Model} could not be applied", model); }
     }

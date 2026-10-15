@@ -13,10 +13,11 @@ public sealed class PlayerModelsConfig
 
     /// <summary>
     /// Give every guard GuardModel and every prisoner one of PrisonerModels on spawn (and to everyone already in game
-    /// when the plugin loads). The defaults are stock CS2 agents, so nothing has to be downloaded. Only use full player
-    /// agents: a missing model or a non-agent (e.g. ctm_heavy) leaves players as small boxes.
+    /// when the plugin loads). Off by default: a model that is missing on the current CS2 build (Valve moved its agents
+    /// to agents/models/...) or not a full player agent leaves players as small boxes with a huge first-person gun.
+    /// Turn on only with models you have checked in game.
     /// </summary>
-    public bool ApplyModels { get; set; } = true;
+    public bool ApplyModels { get; set; } = false;
 
     /// <summary>All guards look the same (original: stock ctm_swat). Empty = keep the player's own agent.</summary>
     public string GuardModel { get; set; } = "characters/models/ctm_sas/ctm_sas.vmdl";
@@ -184,6 +185,7 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
         model = model.Trim();
         try
         {
+            if (!ModelPaths.UsableOnPlayer(model, "PlayerModels")) return false;
             if (CurrentModel(player) == model) return true;
             pawn.SetModel(model);
             return true;
