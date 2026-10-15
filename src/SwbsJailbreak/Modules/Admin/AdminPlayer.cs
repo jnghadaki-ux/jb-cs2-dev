@@ -74,7 +74,7 @@ public sealed partial class AdminModule
         var n = 0;
         foreach (var c in t.Players.Where(c => c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist))
         {
-            c.Respawn();
+            c.RespawnSolid();
             n++;
         }
 
@@ -95,7 +95,7 @@ public sealed partial class AdminModule
             {
                 var target = Players.Get(slot).Controller;
                 if (target == null || target.IsAliveP()) { Chat.Tell(admin, "admin.target_gone"); return; }
-                target.Respawn();
+                target.RespawnSolid();
                 Activity(admin, "admin.act.respawn", target.PlayerName);
             });
         }
@@ -239,16 +239,14 @@ public sealed partial class AdminModule
         Activity(caller, "admin.act.team", t.Description, TeamName(team));
     }
 
-    [ConsoleCommand("css_teamswitch", "Switch a player's team now: !ts <target> [t|ct|spec]; !ts alone swaps both teams")]
-    [ConsoleCommand("css_ts", "!ts swaps both teams (and restarts the round); !ts <target> [t|ct|spec] switches one player")]
+    [ConsoleCommand("css_teamswitch", "Switch a player's team now: !ts <target> [t|ct|spec] (both teams: !swapteams)")]
+    [ConsoleCommand("css_ts", "Switch a player's team now: !ts <target> [t|ct|spec] (both teams: !swapteams)")]
     public void CmdTeamswitch(CCSPlayerController? caller, CommandInfo info)
     {
         if (!Require(caller, info, "teams")) return;
-        if (info.ArgCount < 2)
-        {
-            SwapTeams(caller);
-            return;
-        }
+        // !ts used to swap both teams when the target was left out, which turned a typo into a full team swap.
+        // Swapping everyone is only done by the explicit !swapteams now.
+        if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!ts <target> [t|ct|spec]  (swap both teams: !swapteams)"); return; }
 
         var t = Targets.FindOrReply(caller, info, info.GetArg(1));
         if (t == null) return;

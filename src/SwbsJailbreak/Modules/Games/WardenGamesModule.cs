@@ -35,6 +35,25 @@ public sealed class GamesConfig
     public string MusicStartSound { get; set; } = "";
     public string MusicStopSound { get; set; } = "";
     public string LightSound { get; set; } = "";
+
+    // ---- Duck Hunt
+    /// <summary>Seconds after the start before the duck flies and the hunters may shoot (the warden can release it sooner).</summary>
+    public float DuckReleaseSeconds { get; set; } = 5f;
+    /// <summary>The duck wins by staying alive this long after release.</summary>
+    public float DuckSurviveSeconds { get; set; } = 60f;
+    public float DuckSpeed { get; set; } = 1.8f;
+    public float DuckGravity { get; set; } = 0.35f;
+    /// <summary>Holding jump in the air climbs like a jetpack (units/s added per tick, capped at DuckMaxUp).</summary>
+    public float DuckFlyThrust { get; set; } = 30f;
+    public float DuckMaxUp { get; set; } = 420f;
+    /// <summary>A duck that stays on the ground this long is launched back into the air (it may not hide on the floor).</summary>
+    public float DuckGroundSeconds { get; set; } = 1f;
+    public float DuckLaunchSpeed { get; set; } = 650f;
+    /// <summary>Duck health: base plus this much per hunter, so more hunters means a tougher duck.</summary>
+    public int DuckBaseHealth { get; set; } = 100;
+    public int DuckHealthPerHunter { get; set; } = 25;
+    /// <summary>"both" (no-scope scout + deagle), "scout" or "deagle".</summary>
+    public string HunterWeapons { get; set; } = "both";
 }
 
 /// <summary>A running game: participants, area, reward. Owned by <see cref="WardenGamesModule"/>.</summary>
@@ -76,6 +95,8 @@ internal abstract class WardenGame
     public virtual void OnOut(GameSession s, int slot) { }
     public virtual void End(GameSession s) { }
     public virtual string Status(GameSession s) => "";
+    /// <summary>Damage while this game runs (only called for the running game). Handled = blocked.</summary>
+    public virtual HookResult OnDamage(GameSession s, DamageContext ctx) => HookResult.Continue;
 }
 
 /// <summary>
@@ -111,8 +132,10 @@ public sealed partial class WardenGamesModule : JbModule
     {
         _games.AddRange(new WardenGame[]
         {
-            new WinZoneGame(), new LastStandingGame(), new SimonSaysGame(), new RedLightGame(), new MusicalZonesGame(), new MapGame()
+            new WinZoneGame(), new LastStandingGame(), new SimonSaysGame(), new RedLightGame(), new MusicalZonesGame(), new MapGame(),
+            new DuckHuntGame()
         });
+        DamageService.Register(Name, 94, OnDamage);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
         LoadButtons();
         foreach (var c in Players.Prisoners()) _queue.Add(c.Slot);
@@ -123,6 +146,7 @@ public sealed partial class WardenGamesModule : JbModule
     public override void OnUnload(bool hotReload)
     {
         Jb.Zones.Entered -= OnZoneEntered;
+        DamageService.Unregister(OnDamage);
         EndGame(GameEndReason.Unloaded);
         CancelPick();
     }
@@ -474,6 +498,15 @@ public sealed partial class WardenGamesModule : JbModule
                    Hud.Small(Hud.Escape(Lang.T("games.menu.players_left", s.Players.Count)) + (status.Length > 0 ? "<br>" + status : ""));
         var players = s.Players;
         Hud.SetGlobal("games", html, 30, 1.2f, v => players.Contains(v.Slot) || v.Team == CsTeam.CounterTerrorist || !v.IsAliveP());
+    }
+
+    private HookResult OnDamage(DamageContext ctx)
+    {
+        var s = _session;
+        if (s == null || s.Over) return HookResult.Continue;
+        var result = HookResult.Continue;
+        SafeCall(() => result = s.Game.OnDamage(s, ctx));
+        return result;
     }
 
     private void OnZoneEntered(Zone zone, CCSPlayerController c)

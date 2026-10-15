@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.Extensions.Logging;
 using SwbsJailbreak.Core;
 
 namespace SwbsJailbreak.Modules.Warden;
@@ -30,6 +31,12 @@ public sealed class WardenToolsConfig
     public bool DeputyEnabled { get; set; } = true;
     public bool DeputySucceedsWarden { get; set; } = true;
     public string DeputyColor { get; set; } = "120,180,255";
+
+    /// <summary>
+    /// Player model the deputy wears while deputy (their own model comes back afterwards). Default: the stock CS2 FBI
+    /// agent, so the deputy stands out from the guard uniform without any download. Empty = keep the model.
+    /// </summary>
+    public string DeputyModel { get; set; } = "characters/models/ctm_fbi/ctm_fbi_variantb.vmdl";
 
     /// <summary>!repeat: per-prisoner cooldown and a global cooldown so the warden is not spammed.</summary>
     public float RepeatCooldown { get; set; } = 30f;
@@ -81,6 +88,7 @@ public sealed class WardenToolsModule : JbModule
     private readonly float[] _nextRepeat = new float[Players.MaxSlots];
     private JbPlayer? _deputy;
     private Color? _deputySavedColor;
+    private string? _deputySavedModel;
 
     private readonly HashSet<int> _wardenVotes = new();
     private float _wardenSince;
@@ -94,6 +102,9 @@ public sealed class WardenToolsModule : JbModule
     /// <summary>!split team index per prisoner slot.</summary>
     private readonly Dictionary<int, int> _splitTeam = new();
 
+    /// <summary>Slots whose pawn still carries a !split tint (kept after death / round end until it is washed off).</summary>
+    private readonly HashSet<int> _splitTinted = new();
+
     private static readonly Color[] SplitColors =
     {
         Color.FromArgb(255, 255, 60, 60), Color.FromArgb(255, 70, 120, 255), Color.FromArgb(255, 60, 220, 90), Color.FromArgb(255, 255, 220, 40)
@@ -104,6 +115,10 @@ public sealed class WardenToolsModule : JbModule
     public override void OnLoad(bool hotReload)
     {
         DamageService.Register(Name, 40, OnDamage);
+        Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(m =>
+        {
+            if (!string.IsNullOrWhiteSpace(Cfg.DeputyModel)) m.AddResource(Cfg.DeputyModel.Trim());
+        });
     }
 
     public override void OnAllModulesLoaded(bool hotReload)
@@ -113,6 +128,7 @@ public sealed class WardenToolsModule : JbModule
         JbEvents.DayStarted += OnDayStarted;
         JbEvents.WardenSelected += OnWardenSelected;
         JbEvents.WardenRemoved += OnWardenRemoved;
+        JbEvents.PlayerModelsApplied += OnModelsApplied;
     }
 
     public override void OnUnload(bool hotReload)
@@ -122,6 +138,7 @@ public sealed class WardenToolsModule : JbModule
         JbEvents.DayStarted -= OnDayStarted;
         JbEvents.WardenSelected -= OnWardenSelected;
         JbEvents.WardenRemoved -= OnWardenRemoved;
+        JbEvents.PlayerModelsApplied -= OnModelsApplied;
         DamageService.Unregister(OnDamage);
         SetFriendlyFire(false, null);
         ClearDeputy(false);
@@ -136,23 +153,38 @@ public sealed class WardenToolsModule : JbModule
         _ffOn = false;
         _deputy = null;
         _deputySavedColor = null;
+        _deputySavedModel = null;
         _nextRand = _nextRepeatGlobal = 0;
         Array.Clear(_nextRepeat);
         _wardenVotes.Clear();
         _splitTeam.Clear();
+        _splitTinted.Clear();
         _spotlights.Clear(); // the glow entities went with the old map
         _blindfolds.Clear();
         _nextSpotlight = 0;
     }
 
-    public override void OnRoundStart() => _extendsThisRound = 0;
+    public override void OnRoundStart()
+    {
+        _extendsThisRound = 0;
+        // Pawns are reused across rounds, so a !split tint would otherwise survive into the next round.
+        _splitTeam.Clear();
+        WashSplitTints();
+    }
+
+    public override void OnPlayerSpawn(JbPlayer player)
+    {
+        if (_splitTeam.ContainsKey(player.Slot) || !_splitTinted.Remove(player.Slot)) return;
+        var c = player.Controller;
+        if (c != null && c.IsValid) ClearTint(c);
+    }
 
     public override void OnRoundEnd(CsTeam winner, int reason)
     {
         SetFriendlyFire(false, null);
         ClearDeputy(false);
         _wardenVotes.Clear();
-        _splitTeam.Clear();
+        ClearSplit(true);
         ClearSpotlights();
         ClearBlindfolds();
     }
@@ -171,6 +203,7 @@ public sealed class WardenToolsModule : JbModule
         _nextRepeat[player.Slot] = 0;
         _wardenVotes.Remove(player.Slot);
         _splitTeam.Remove(player.Slot);
+        _splitTinted.Remove(player.Slot);
         RemoveSpotlight(player.Slot);
         _blindfolds.Remove(player.Slot);
     }
@@ -179,7 +212,7 @@ public sealed class WardenToolsModule : JbModule
     {
         if (IsDeputy(player) && newTeam != CsTeam.CounterTerrorist) ClearDeputy(!disconnect);
         if (newTeam is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) _wardenVotes.Remove(player.Slot);
-        _splitTeam.Remove(player.Slot);
+        if (_splitTeam.Remove(player.Slot) && !disconnect && player.Controller is { IsValid: true } c) ClearTint(c);
     }
 
     private void OnLastRequestInitialized(JbPlayer prisoner)
@@ -343,6 +376,9 @@ public sealed class WardenToolsModule : JbModule
             target.SetColor(color);
         }
 
+        _deputySavedModel = ModelOf(target);
+        ApplyDeputyModel(target);
+
         Chat.TellAll("wt.deputy.set", caller?.PlayerName ?? "Console", target.PlayerName);
         Chat.Tell(target, "wt.deputy.you");
         Jb.Log.LogEvent($"{caller?.PlayerName ?? "Console"} made {target.PlayerName} deputy", caller.Jb(), p, LogType.Warden);
@@ -356,7 +392,45 @@ public sealed class WardenToolsModule : JbModule
         var c = d.Controller;
         if (_deputySavedColor != null && c != null && c.IsValid && c.IsAliveP()) c.ResetColor();
         _deputySavedColor = null;
+        var saved = _deputySavedModel;
+        _deputySavedModel = null;
+        // Back to the model they had before (a guard who is promoted to warden gets the warden model from there).
+        if (!string.IsNullOrEmpty(saved) && !string.IsNullOrWhiteSpace(Cfg.DeputyModel) && c != null && c.IsValid && c.IsAliveP() &&
+            c.Team == CsTeam.CounterTerrorist && c.PawnOrNull() is { } pawn)
+        {
+            try { pawn.SetModel(saved); }
+            catch (Exception ex) { Logger.LogDebug(ex, "[WardenTools] deputy model restore failed"); }
+        }
         if (announceDeath) Chat.TellAll("wt.deputy.died", d.Name);
+    }
+
+    private static string? ModelOf(CCSPlayerController c)
+    {
+        try { return c.PawnOrNull()?.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName; }
+        catch { return null; }
+    }
+
+    private void ApplyDeputyModel(CCSPlayerController c)
+    {
+        var model = Cfg.DeputyModel?.Trim() ?? "";
+        if (model.Length == 0 || !c.IsAliveP() || c.PawnOrNull() is not { } pawn || ModelOf(c) == model) return;
+        try { pawn.SetModel(model); }
+        catch (Exception ex) { Logger.LogWarning(ex, "[WardenTools] deputy model {Model} could not be applied", model); }
+    }
+
+    /// <summary>A team / store model refresh (spawn, freeze end) would replace the deputy model: put it back.</summary>
+    private void OnModelsApplied(JbPlayer player)
+    {
+        if (!IsDeputy(player)) return;
+        var slot = player.Slot;
+        Server.NextFrame(() =>
+        {
+            if (_deputy is { } d && d.Slot == slot && d.Controller is { } c) ApplyDeputyModel(c);
+        });
+        Plugin.AddTimer(0.35f, () =>
+        {
+            if (_deputy is { } d && d.Slot == slot && d.Controller is { } c) ApplyDeputyModel(c);
+        });
     }
 
     private void OnWardenDeath(JbPlayer warden)
@@ -444,13 +518,22 @@ public sealed class WardenToolsModule : JbModule
     [ConsoleCommand("css_teams", "sm_teams [2-4|off] - (warden/deputy) split the alive prisoners into colour teams")]
     public void CmdSplit(CCSPlayerController? caller, CommandInfo info)
     {
+        var arg = info.ArgCount > 1 ? info.GetArg(1).Trim() : "2";
+        Split(caller, info, arg);
+    }
+
+    [ConsoleCommand("css_splitun", "sm_splitun - (warden/deputy) remove the !split colour teams")]
+    [ConsoleCommand("css_unsplit", "sm_unsplit - (warden/deputy) remove the !split colour teams")]
+    public void CmdUnsplit(CCSPlayerController? caller, CommandInfo info) => Split(caller, info, "off");
+
+    private void Split(CCSPlayerController? caller, CommandInfo info, string arg)
+    {
         if (!Cfg.SplitEnabled) { Chat.ReplyT(caller, info, "wt.disabled"); return; }
         if (!CanCommand(caller, true)) { Chat.ReplyT(caller, info, "wt.not_warden"); return; }
 
-        var arg = info.ArgCount > 1 ? info.GetArg(1).Trim() : "2";
         if (arg.Equals("off", StringComparison.OrdinalIgnoreCase) || arg == "0")
         {
-            if (_splitTeam.Count == 0) { Chat.ReplyT(caller, info, "wt.split.none"); return; }
+            if (_splitTeam.Count == 0 && _splitTinted.Count == 0) { Chat.ReplyT(caller, info, "wt.split.none"); return; }
             ClearSplit(true);
             Chat.TellAll("wt.split.cleared", caller?.PlayerName ?? "Console");
             return;
@@ -481,6 +564,7 @@ public sealed class WardenToolsModule : JbModule
         {
             var t = _splitTeam[c.Slot];
             c.SetColor(SplitColors[t]);
+            _splitTinted.Add(c.Slot);
             Hud.Set(c, "wt.split", Lang.T("wt.split.hud", SplitHex[t], Colors.Strip(Lang.T("wt.split.color" + t))), 60, Math.Max(1f, Cfg.SplitHudSeconds));
         }
 
@@ -504,15 +588,29 @@ public sealed class WardenToolsModule : JbModule
 
     private void ClearSplit(bool resetColors)
     {
-        if (_splitTeam.Count == 0) return;
-        var slots = _splitTeam.Keys.ToList();
         _splitTeam.Clear();
-        if (!resetColors) return;
-        foreach (var slot in slots)
+        if (resetColors) WashSplitTints();
+    }
+
+    /// <summary>Remove the !split tint from every pawn that still has one (alive or dead; dead ones are retried on spawn).</summary>
+    private void WashSplitTints()
+    {
+        foreach (var slot in _splitTinted.ToList())
         {
             var c = Players.Get(slot).Controller;
-            if (c != null && c.IsValid && c.IsAliveP() && c.Team == CsTeam.Terrorist) c.ResetColor();
+            if (c == null || !c.IsValid) { _splitTinted.Remove(slot); continue; }
+            if (c.PawnOrNull() == null) continue;
+            ClearTint(c);
+            if (c.IsAliveP()) _splitTinted.Remove(slot);
         }
+    }
+
+    /// <summary>White tint, alpha untouched (store transparency / invisibility keep working).</summary>
+    private static void ClearTint(CCSPlayerController c)
+    {
+        var pawn = c.PawnOrNull();
+        if (pawn == null || !pawn.IsValid) return;
+        c.SetColor(Color.FromArgb(pawn.Render.A, 255, 255, 255));
     }
 
     /// <summary>Back to the !split team colour if the prisoner has one, otherwise no tint.</summary>

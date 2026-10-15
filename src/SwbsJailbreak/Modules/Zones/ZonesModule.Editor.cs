@@ -59,6 +59,39 @@ public sealed partial class ZonesModule
         ShowMain(caller);
     }
 
+    [ConsoleCommand("css_spawnzone", "sm_spawnzone [t|ct|all] - add a round-start spawn zone at your feet and edit it")]
+    [ConsoleCommand("css_addspawn", "sm_addspawn [t|ct|all] - add a round-start spawn zone at your feet and edit it")]
+    public void CmdSpawnZone(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null || !caller.IsValid) { info.ReplyToCommand("[Zones] in-game only."); return; }
+        if (!Perms.Has(caller, "zones")) { Chat.Tell(caller, "core.no_access"); return; }
+        var arg = info.ArgCount > 1 ? info.GetArg(1).Trim().ToLowerInvariant() : "t";
+        int team;
+        switch (arg)
+        {
+            case "t" or "prisoners" or "prisoner": team = SpawnZone.Prisoners; break;
+            case "ct" or "guards" or "guard": team = SpawnZone.Guards; break;
+            case "all" or "both" or "everyone": team = SpawnZone.Everyone; break;
+            default: Chat.ReplyT(caller, info, "core.usage", "!spawnzone [t|ct|all]"); return;
+        }
+
+        var feet = Feet(caller);
+        var pawn = caller.PawnOrNull();
+        if (feet == null || pawn == null) { Chat.Tell(caller, "zones.must_be_alive"); return; }
+        if (!_types.TryGetValue(ZoneTypeKeys.Spawn, out var type)) return;
+        var a = pawn.EyeAngles;
+        // Smaller than a default zone: a spawn area is usually a room corner or a corridor.
+        var z = Create(feet.Value, new Vector3(-64f, -64f, 2f), new Vector3(64f, 64f, 72f), new Vector3(0f, a.Y, 0f));
+        if (z == null) { Chat.Tell(caller, "zones.max_zones"); return; }
+        SetType(z, type);
+        z.SetInt(1, team);
+        MarkDirty(z);
+        LogChange(caller, "create spawn", z);
+        Chat.Tell(caller, "zones.spawn.added", z.Id, type.Summary(z));
+        Editor(caller).SelectedId = z.Id;
+        ShowEdit(caller);
+    }
+
     [ConsoleCommand("css_showtriggernames", "sm_showtriggernames - show trigger names in console as you touch them")]
     public void CmdShowTriggerNames(CCSPlayerController? caller, CommandInfo info)
     {

@@ -93,10 +93,17 @@ public sealed partial class AdminModule
     private static void ApplyVoice(JbPlayer p)
     {
         var c = p.Controller;
-        if (c == null) return;
-        if (p.AdminVoiceMuted) c.VoiceFlags = CounterStrikeSharp.API.VoiceFlags.Muted;
-        else if (c.VoiceFlags.HasFlag(CounterStrikeSharp.API.VoiceFlags.Muted)) c.VoiceFlags = CounterStrikeSharp.API.VoiceFlags.Normal;
-        Jb.Mute.Refresh(p); // let the jailbreak voice rules re-evaluate (they keep AdminVoiceMuted players muted)
+        if (c == null || !c.IsValid) return;
+        if (Jb.Mute is Mute.MuteModule)
+        {
+            // The voice module owns the Muted flag and counts AdminVoiceMuted as one of its mute reasons, so a later
+            // round-end / timer unmute can no longer wipe an admin mute (mute -> unmute -> mute works every time).
+            Jb.Mute.Refresh(p);
+            return;
+        }
+
+        if (p.AdminVoiceMuted) c.VoiceFlags |= CounterStrikeSharp.API.VoiceFlags.Muted;
+        else c.VoiceFlags &= ~CounterStrikeSharp.API.VoiceFlags.Muted;
     }
 
     private static void StoreComm(JbPlayer p, bool voice, bool chat, bool apply, int minutes, string reason, string admin)

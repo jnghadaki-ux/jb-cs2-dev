@@ -230,11 +230,25 @@ public sealed partial class AdminModule
         var target = t.Players[0];
         var reason = ArgsFrom(info, 2);
         if (reason.Length == 0) reason = Lang.T("admin.warn.default_reason");
-        var list = Storage.Get<List<WarnRecord>>(WarnNs, target.SteamID.ToString()) ?? new List<WarnRecord>();
-        list.Add(new WarnRecord { Reason = reason, Admin = AdminName(caller), Time = Now });
-        Storage.Set(WarnNs, target.SteamID.ToString(), list);
+        var list = AddWarning(target, reason, caller);
         Chat.Tell(target, "admin.warn.you", reason, list.Count);
         Activity(caller, "admin.act.warn", target.PlayerName, reason, list.Count);
+    }
+
+    /// <summary>
+    /// Warnings are counted per warned player. Bots and players without a verified SteamID (insecure / LAN servers) all
+    /// report SteamID 0, which made every one of them share a single warning list, so those fall back to their name.
+    /// </summary>
+    internal static string WarnKey(CCSPlayerController c) => c.SteamID != 0 ? c.SteamID.ToString() : "name:" + c.PlayerName;
+
+    internal List<WarnRecord> AddWarning(CCSPlayerController target, string reason, CCSPlayerController? admin)
+    {
+        var key = WarnKey(target);
+        var list = Storage.Get<List<WarnRecord>>(WarnNs, key) ?? new List<WarnRecord>();
+        list.Add(new WarnRecord { Reason = reason, Admin = AdminName(admin), Time = Now });
+        Storage.Set(WarnNs, key, list);
+        Storage.Flush();
+        return list;
     }
 
     [ConsoleCommand("css_warns", "Show a player's warnings: !warns <target>")]
@@ -245,7 +259,7 @@ public sealed partial class AdminModule
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true, respectImmunity: false);
         if (t == null) return;
         var target = t.Players[0];
-        var list = Storage.Get<List<WarnRecord>>(WarnNs, target.SteamID.ToString()) ?? new List<WarnRecord>();
+        var list = Storage.Get<List<WarnRecord>>(WarnNs, WarnKey(target)) ?? new List<WarnRecord>();
         if (list.Count == 0) { Chat.ReplyT(caller, info, "admin.warn.none", target.PlayerName); return; }
         for (var i = 0; i < list.Count; i++)
             Chat.Reply(caller, info, $"{{grey}}#{i + 1}{{default}} {DateTimeOffset.FromUnixTimeSeconds(list[i].Time):yyyy-MM-dd} {{lightred}}{list[i].Admin}{{default}}: {list[i].Reason}");
@@ -258,7 +272,7 @@ public sealed partial class AdminModule
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!unwarn <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true);
         if (t == null) return;
-        Storage.Delete(WarnNs, t.Players[0].SteamID.ToString());
+        Storage.Delete(WarnNs, WarnKey(t.Players[0]));
         Activity(caller, "admin.act.unwarn", t.Players[0].PlayerName);
     }
 }

@@ -144,6 +144,51 @@ public static class PlayerExtensions
     public static bool IsFrozen(this CCSPlayerController c) =>
         c.PawnOrNull()?.MoveType is MoveType_t.MOVETYPE_OBSOLETE or MoveType_t.MOVETYPE_NONE;
 
+    /// <summary>
+    /// Make a freshly respawned pawn solid again. A pawn respawned straight out of its death state (admin !1up / !xup,
+    /// !respawn) can keep the dead body's movement and collision state: non-solid, debris collision group or noclip,
+    /// which lets the player walk through props, doors and other players. Player-vs-player noblock
+    /// (COLLISION_GROUP_DISSOLVING) is kept.
+    /// </summary>
+    public static void RestoreSolid(this CCSPlayerController c)
+    {
+        var pawn = c.PawnOrNull();
+        if (pawn == null || !pawn.IsValid || !c.IsAliveP()) return;
+        if (pawn.MoveType != MoveType_t.MOVETYPE_WALK) c.SetMoveType(MoveType_t.MOVETYPE_WALK);
+        var col = pawn.Collision;
+        if (col == null) return;
+        const byte notSolid = 0x04; // FSOLID_NOT_SOLID
+        col.SolidType = SolidType_t.SOLID_BBOX;
+        col.SolidFlags = (byte)(col.SolidFlags & ~notSolid);
+        var group = (CollisionGroup)col.CollisionGroup;
+        if (group is not (CollisionGroup.COLLISION_GROUP_PLAYER or CollisionGroup.COLLISION_GROUP_DISSOLVING))
+        {
+            col.CollisionGroup = (byte)CollisionGroup.COLLISION_GROUP_PLAYER;
+            col.CollisionAttribute.CollisionGroup = (byte)CollisionGroup.COLLISION_GROUP_PLAYER;
+        }
+
+        Utilities.SetStateChanged(pawn, "CCollisionProperty", "m_nSolidType");
+        Utilities.SetStateChanged(pawn, "CCollisionProperty", "m_usSolidFlags");
+        Utilities.SetStateChanged(pawn, "CCollisionProperty", "m_CollisionGroup");
+        Utilities.SetStateChanged(pawn, "CCollisionProperty", "m_collisionAttribute");
+    }
+
+    /// <summary>Respawn a dead player and make sure the new pawn is solid (see <see cref="RestoreSolid"/>).</summary>
+    public static void RespawnSolid(this CCSPlayerController c, Action<CCSPlayerController>? afterSpawn = null)
+    {
+        c.Respawn();
+        var slot = c.Slot;
+        Server.NextFrame(() =>
+        {
+            var p = Players.Get(slot).Controller;
+            if (p == null || !p.IsValid) return;
+            afterSpawn?.Invoke(p);
+            p.RestoreSolid();
+        });
+        // Again once the spawn has fully settled (the game and other modules touch the pawn on the spawn frames).
+        JailbreakPlugin.Instance?.AddTimer(0.25f, () => Players.Get(slot).Controller?.RestoreSolid());
+    }
+
     public static bool IsNoclip(this CCSPlayerController c) => c.PawnOrNull()?.MoveType == MoveType_t.MOVETYPE_NOCLIP;
 
     public static void SetNoclip(this CCSPlayerController c, bool on) =>

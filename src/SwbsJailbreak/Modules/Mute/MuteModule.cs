@@ -104,6 +104,7 @@ public sealed class MuteModule : JbModule, IMuteService
         Jb.Mute = this;
         Plugin.RegisterListener<Listeners.OnClientVoice>(OnClientVoice);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        Plugin.AddTimer(1f, ReassertMutes, TimerFlags.REPEAT);
         if (hotReload) _stoppedSpeakingTime = Server.CurrentTime; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         if (hotReload)
         {
@@ -147,7 +148,7 @@ public sealed class MuteModule : JbModule, IMuteService
     public bool IsMuted(JbPlayer player)
     {
         if (player.Slot is < 0 or >= Players.MaxSlots) return false;
-        if (_reasons[player.Slot] != MuteReason.None) return true;
+        if (WantsMute(player)) return true;
         var c = player.Controller;
         // A mute set by something else (another plugin / admin tool writing VoiceFlags) also counts.
         return c != null && (c.VoiceFlags & VoiceFlags.Muted) != 0;
@@ -179,17 +180,25 @@ public sealed class MuteModule : JbModule, IMuteService
     public MuteReason GetReasons(JbPlayer player) =>
         player.Slot is >= 0 and < Players.MaxSlots ? _reasons[player.Slot] : MuteReason.None;
 
-    /// <summary>Write the Muted voice flag. Only clears the flag if this module set it, so foreign mutes survive.</summary>
+    /// <summary>Every reason that should keep this player muted, including an admin !mute / !silence.</summary>
+    private bool WantsMute(JbPlayer player) =>
+        player.Slot is >= 0 and < Players.MaxSlots && (_reasons[player.Slot] != MuteReason.None || player.AdminVoiceMuted);
+
+    /// <summary>
+    /// Write the Muted voice flag. Only clears the flag if this module set it, so foreign mutes survive.
+    /// Admin mutes (JbPlayer.AdminVoiceMuted) count as a reason here: before, the jailbreak voice rules lifted their own
+    /// mute (round end, prisoner timer, respawn) by clearing the flag, which also lifted an admin's !mute / !silence.
+    /// </summary>
     private void Apply(JbPlayer player)
     {
         var slot = player.Slot;
         if (slot is < 0 or >= Players.MaxSlots) return;
         var c = player.Controller;
-        if (c == null || c.IsBot) return;
+        if (c == null || !c.IsValid || c.IsBot) return;
         try
         {
             var flags = c.VoiceFlags;
-            if (_reasons[slot] != MuteReason.None)
+            if (WantsMute(player))
             {
                 if ((flags & VoiceFlags.Muted) == 0) c.VoiceFlags = flags | VoiceFlags.Muted;
                 _appliedMute[slot] = true;
@@ -204,6 +213,14 @@ public sealed class MuteModule : JbModule, IMuteService
         {
             Logger.LogDebug(ex, "[Mute] VoiceFlags write failed");
         }
+    }
+
+    /// <summary>CS2 resets voice flags on some respawns / team changes: re-assert every mute once a second.</summary>
+    private void ReassertMutes()
+    {
+        foreach (var p in Players.Connected())
+            if (!p.IsBot && WantsMute(p))
+                Apply(p);
     }
 
     private void MutePlayer(JbPlayer p)

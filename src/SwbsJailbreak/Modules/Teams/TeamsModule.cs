@@ -17,8 +17,8 @@ public sealed class TeamsConfig
 {
     public bool Enabled { get; set; } = true;
 
-    /// <summary>ultjb_prisoners_per_guard (min 1).</summary>
-    public float PrisonersPerGuard { get; set; } = 2f;
+    /// <summary>ultjb_prisoners_per_guard (min 1): 5 = one guard for every five prisoners.</summary>
+    public float PrisonersPerGuard { get; set; } = 5f;
 
     /// <summary>ultjb_pre_guard_queue_time (min 1): seconds of the opening guard queue when the CT team is empty.</summary>
     public int PreGuardQueueSeconds { get; set; } = 30;
@@ -343,6 +343,26 @@ public sealed class TeamsModule : JbModule, ITeamService
         }
 
         if (!Players.All().Any(c => c.Team == CsTeam.Terrorist)) return; // empty server
+        StartPreQueue();
+    }
+
+    /// <summary>
+    /// The first player(s) on an empty server join T mid-round, after round_start already saw an empty server, so the
+    /// opening guard pick never ran and nobody could join CT ("not yet") until something else ended the round. Start the
+    /// pick as soon as prisoners exist without any guard.
+    /// </summary>
+    private void CheckNeedFirstGuard()
+    {
+        if (_preQueueTimer != null) return;
+        var all = Players.All().ToList();
+        if (all.Any(c => c.Team == CsTeam.CounterTerrorist || PendingTeam(c) == CsTeam.CounterTerrorist)) return;
+        if (!all.Any(c => c.Team == CsTeam.Terrorist)) return;
+        _preQueueFinished = false;
+        StartPreQueue();
+    }
+
+    private void StartPreQueue()
+    {
         if (Cfg.PreQueueOpensCells) Jb.Cells.ForceOpen();
         _countdown = 0;
         _preQueueFinished = false;
@@ -419,6 +439,7 @@ public sealed class TeamsModule : JbModule, ITeamService
     public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
     {
         if (newTeam != CsTeam.Terrorist) _queue.Remove(player.Slot);
+        if (!disconnect && newTeam == CsTeam.Terrorist && !_preQueueFinished) Server.NextFrame(CheckNeedFirstGuard);
         if (disconnect || newTeam != CsTeam.CounterTerrorist || !IsCtBanned(player.SteamId64)) return;
         // A CT banned player ended up on CT (admin move, auto-assign): put them back on T next frame.
         var slot = player.Slot;

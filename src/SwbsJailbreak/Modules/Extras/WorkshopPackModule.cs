@@ -13,8 +13,11 @@ namespace SwbsJailbreak.Modules.Extras;
 /// </summary>
 public sealed class WorkshopPackConfig
 {
-    /// <summary>Turn on once the addon is uploaded and MultiAddonManager mounts it (mm_extra_addons &lt;id&gt;).</summary>
-    public bool Enabled { get; set; } = false;
+    /// <summary>
+    /// Use the SWBS workshop addon (needs MultiAddonManager mounting it: mm_extra_addons &lt;WorkshopId&gt;). Off, store
+    /// trails and paintballs fall back to plain beam lines and the pack's sounds and models are not used.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
 
     /// <summary>For your reference: the Steam Workshop id of the uploaded pack (MultiAddonManager needs it, not the plugin).</summary>
     public string WorkshopId { get; set; } = "";
@@ -186,6 +189,10 @@ public sealed class WorkshopPackModule : JbModule
             foreach (var r in Cfg.ExtraResources.Where(r => !string.IsNullOrWhiteSpace(r))) manifest.AddResource(r.Trim());
         });
         if (Cfg.Enabled && !Cfg.SoundsApplied) Apply();
+        if (Cfg.Enabled && string.IsNullOrWhiteSpace(Cfg.WorkshopId))
+            Logger.LogWarning("[WorkshopPack] Enabled, but WorkshopPack.WorkshopId is empty. Set it to the pack's Workshop id and " +
+                              "add the same id to MultiAddonManager (mm_extra_addons), or players see missing models, beam-only " +
+                              "trails / paintballs and hear no pack sounds.");
         if (Cfg.StoreModels && (!Cfg.StoreModelsAdded || Cfg.StoreModelsVersion < WorkshopPackConfig.CurrentStoreModelsVersion))
             AddStoreModels();
     }

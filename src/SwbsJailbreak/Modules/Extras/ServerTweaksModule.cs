@@ -34,6 +34,43 @@ public sealed class ServerTweaksConfig
 
     /// <summary>DisableKillFeed (not every SWBS server used it): hide the kill feed.</summary>
     public bool DisableKillFeed { get; set; } = false;
+
+    /// <summary>
+    /// Enforce <see cref="MovementCvars"/> at map start and every round start (game mode configs and server.cfg can
+    /// reset them on map load). Stock CS2 has sv_airaccelerate 12 and stamina, which makes surf impossible and manual
+    /// bhop lose speed on every hop.
+    /// </summary>
+    public bool ForceMovementCvars { get; set; } = true;
+
+    /// <summary>
+    /// Surf / bhop movement (values used by CS2 surf and bhop servers). CS2 always runs at 64 tick with sub-tick input:
+    /// there is no 128 tick, these values are what makes movement feel like the old 128 tick servers.
+    /// sv_autobunnyhopping is left out on purpose: the Auto Bhop day turns it on and off itself.
+    /// </summary>
+    public Dictionary<string, string> MovementCvars { get; set; } = DefaultMovementCvars();
+
+    /// <summary>
+    /// SMPlugins BhopCap, reworked for CS2: bunny hopping is on, but a jump taken straight off a landing cannot carry more
+    /// horizontal speed than BhopCapSpeed (the rest is scaled away on the jump tick). Only that tick is touched, so
+    /// surf ramps, air strafing and falling keep their speed. Not applied while auto bhop is on (Auto Bhop day / LR).
+    /// </summary>
+    public bool BhopCap { get; set; } = true;
+
+    /// <summary>Maximum horizontal speed (units/s) a bunny hop leaves the ground with. Knife running speed is 250.</summary>
+    public float BhopCapSpeed { get; set; } = 400f;
+
+    internal static Dictionary<string, string> DefaultMovementCvars() => new()
+    {
+        ["sv_airaccelerate"] = "150",          // surf needs 100+; strafing in the air keeps speed
+        ["sv_enablebunnyhopping"] = "1",       // no speed cap on landing
+        ["sv_staminamax"] = "0",               // no stamina: consecutive jumps keep full height / speed
+        ["sv_staminajumpcost"] = "0",
+        ["sv_staminalandcost"] = "0",
+        ["sv_staminarecoveryrate"] = "0",
+        ["sv_maxvelocity"] = "3500",           // surf ramps go past the default cap
+        ["sv_air_max_wishspeed"] = "30",
+        ["sv_accelerate_use_weapon_speed"] = "0" // knife-out and rifle air strafes accelerate the same
+    };
 }
 
 internal sealed class TagState
@@ -56,12 +93,76 @@ public sealed class ServerTweaksModule : JbModule
     public override void OnLoad(bool hotReload)
     {
         Plugin.RegisterListener<Listeners.OnEntitySpawned>(OnEntitySpawned);
+        Plugin.RegisterListener<Listeners.OnTick>(BhopCapTick);
         Plugin.RegisterEventHandler<EventPlayerDeath>(OnDeathPre, HookMode.Pre);
         Plugin.AddTimer(10f, EnforceTags, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
-        if (hotReload) HookTextMsg();
+        if (hotReload)
+        {
+            HookTextMsg();
+            Server.NextFrame(ApplyMovementCvars);
+        }
     }
 
-    public override void OnMapStart(string mapName) => Server.NextFrame(HookTextMsg);
+    public override void OnMapStart(string mapName)
+    {
+        Server.NextFrame(HookTextMsg);
+        Server.NextFrame(ApplyMovementCvars);
+    }
+
+    public override void OnRoundStart() => ApplyMovementCvars();
+
+    // ------------------------------------------------------------------ bhop cap
+
+    private readonly bool[] _wasOnGround = new bool[Players.MaxSlots];
+
+    /// <summary>Engine-free: the horizontal velocity after the cap (unchanged when at or under it).</summary>
+    internal static (float X, float Y) CapHorizontal(float x, float y, float cap)
+    {
+        var speed = MathF.Sqrt(x * x + y * y);
+        if (cap <= 0 || speed <= cap) return (x, y);
+        var k = cap / speed;
+        return (x * k, y * k);
+    }
+
+    private void BhopCapTick()
+    {
+        if (!Cfg.BhopCap) return;
+        var auto = Cvars.Get("sv_autobunnyhopping");
+        var autoOn = auto is "1" or "true";
+        foreach (var c in Players.All())
+        {
+            var slot = c.Slot;
+            if (slot is < 0 or >= Players.MaxSlots) continue;
+            var pawn = c.PawnOrNull();
+            if (pawn == null || !c.IsAliveP())
+            {
+                _wasOnGround[slot] = false;
+                continue;
+            }
+
+            var onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
+            var was = _wasOnGround[slot];
+            _wasOnGround[slot] = onGround;
+            if (!was || onGround || autoOn || pawn.MoveType != MoveType_t.MOVETYPE_WALK) continue;
+            var v = pawn.AbsVelocity;
+            if (v == null || v.Z < 200f) continue; // left the ground without jumping (ledge, push, ramp)
+            if (Movement.HasAutoBhop(c)) continue;
+            var (x, y) = CapHorizontal(v.X, v.Y, Cfg.BhopCapSpeed);
+            if (x == v.X && y == v.Y) continue;
+            pawn.Teleport(null, null, new Vector(x, y, v.Z));
+        }
+    }
+
+    private void ApplyMovementCvars()
+    {
+        if (!Cfg.ForceMovementCvars) return;
+        foreach (var (name, value) in Cfg.MovementCvars)
+        {
+            if (string.IsNullOrWhiteSpace(name) || value == null) continue;
+            if (Cvars.Get(name.Trim()) == value.Trim()) continue;
+            Cvars.Set(name.Trim(), value.Trim());
+        }
+    }
 
     // ------------------------------------------------------------------ noblock
 

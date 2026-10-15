@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.18.3"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.20.0"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -167,6 +167,39 @@ public sealed class JailbreakPlugin : BasePlugin
             Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 1);
             Logger.LogInformation("Config migrated to revision 1: warden / last guard model swaps turned off (PlayerModels.ApplyModels is off by default)");
         }
+
+        if (Config.General.ConfigRevision < 2)
+        {
+            // 0.19: guard ratio is one guard per five prisoners (the old default was one per two).
+            Config.Update<Modules.Teams.TeamsConfig>("Teams", t => { if (Math.Abs(t.PrisonersPerGuard - 2f) < 0.01f) t.PrisonersPerGuard = 5f; });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 2);
+            Logger.LogInformation("Config migrated to revision 2: Teams.PrisonersPerGuard 2 -> 5 (one guard per five prisoners)");
+        }
+
+        if (Config.General.ConfigRevision < 3)
+        {
+            // 0.19: team models are assigned by default. Workshop-pack prisoner models are only kept while the pack is on
+            // (without it they show as missing models), otherwise the stock CS2 jumpsuits are used.
+            var packOn = Config.Section<Modules.Extras.WorkshopPackConfig>("WorkshopPack").Enabled;
+            Config.Update<Modules.PlayerExtras.PlayerModelsConfig>("PlayerModels", m =>
+            {
+                m.ApplyModels = true;
+                if (string.IsNullOrWhiteSpace(m.GuardModel)) m.GuardModel = new Modules.PlayerExtras.PlayerModelsConfig().GuardModel;
+                if (!packOn && m.PrisonerModels.Any(x => x.Contains("/swbs/", StringComparison.OrdinalIgnoreCase)))
+                    m.PrisonerModels = new Modules.PlayerExtras.PlayerModelsConfig().PrisonerModels;
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 3);
+            Logger.LogInformation("Config migrated to revision 3: PlayerModels.ApplyModels on (guards and prisoners get their team model)");
+        }
+
+        if (Config.General.ConfigRevision < 4)
+        {
+            // 0.19: the workshop pack is published, so its models (trail pieces, paintball splats, props) and sounds are
+            // used by default; with it off every trail and paintball was drawn as plain beams.
+            Config.Update<Modules.Extras.WorkshopPackConfig>("WorkshopPack", w => { w.Enabled = true; w.UseModels = true; });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 4);
+            Logger.LogInformation("Config migrated to revision 4: WorkshopPack.Enabled on (model trails, paintball splats, pack sounds)");
+        }
     }
 
     public override void Unload(bool hotReload)
@@ -262,15 +295,46 @@ public sealed class JailbreakPlugin : BasePlugin
     private void OnTick()
     {
         _tick++;
-        Movement.Tick();
-        Hud.KeepPanelSteady();
+        // Each step is isolated: one exception (e.g. a stale pawn after a crash or reload) used to abort the whole tick,
+        // which stopped the flashing fix and the menu/HUD refresh and made menus flash until the server restarted.
+        TickStep(Movement.Tick, "Movement");
+        TickStep(Hud.KeepPanelSteady, "HUD fix");
         if (_tick % 4 != 0) return; // 16 Hz HUD upkeep
-        MenuService.Tick();
+        TickStep(MenuService.Tick, "Menus");
         foreach (var c in Players.Humans())
         {
-            if (MenuService.HasMenu(c)) continue;
-            Hud.Send(c, Hud.Compose(c));
+            try
+            {
+                if (MenuService.HasMenu(c)) continue;
+                Hud.Send(c, Hud.Compose(c));
+            }
+            catch (Exception ex)
+            {
+                LogTickError("HUD", ex);
+            }
         }
+    }
+
+    private float _nextTickErrorLog;
+
+    private void TickStep(Action step, string what)
+    {
+        try
+        {
+            step();
+        }
+        catch (Exception ex)
+        {
+            LogTickError(what, ex);
+        }
+    }
+
+    private void LogTickError(string what, Exception ex)
+    {
+        var now = Server.CurrentTime;
+        if (now < _nextTickErrorLog && now > _nextTickErrorLog - 30f) return; // at most one per 10 s
+        _nextTickErrorLog = now + 10f;
+        Logger.LogError(ex, "OnTick {What} failed", what);
     }
 
     private void OnPlayerButtonsChanged(CCSPlayerController player, PlayerButtons pressed, PlayerButtons released)

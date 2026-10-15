@@ -90,5 +90,6 @@
   "zones.import_map.done": "{olive}Imported {0} zones from {1}.",
   "zones.teleport.no_destination": "{red}Teleport's destination not set.",
   "zones.teleport.missing": "{red}Teleport's destination doesn't exist.",
-  "zones.notify.entered": "{lightred}{0} {olive}entered {lightred}{1}{olive}."
+  "zones.notify.entered": "{lightred}{0} {olive}entered {lightred}{1}{olive}.",
+  "zones.spawn.added": "{olive}Spawn zone {green}#{0}{olive} added for {green}{1}{olive}. Resize it in the editor; players spawn inside it from the next round."
 }

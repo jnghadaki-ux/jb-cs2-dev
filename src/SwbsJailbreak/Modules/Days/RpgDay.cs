@@ -23,7 +23,19 @@ public sealed class RpgConfig
     /// <summary>Played on a player hurt by a rocket / killed by one (the original's pain and death sounds; workshop pack).</summary>
     public string PainSound { get; set; } = "";
     public string DeathSound { get; set; } = "";
+
+    /// <summary>Rocket Jump freeday: everyone gets the launcher, rockets only push (nobody is hurt), fast reload.</summary>
+    public bool RocketJumpFreedayEnabled { get; set; } = true;
+
+    /// <summary>Rocket Jump warday: only players in the air can be hurt, a direct hit in the air kills, no self damage.</summary>
+    public bool RocketJumpWardayEnabled { get; set; } = true;
+
+    /// <summary>Seconds per reloaded rocket in both Rocket Jump days (the RPG warday keeps the original 1.25 s).</summary>
+    public float RocketJumpReloadSeconds { get; set; } = 0.6f;
 }
+
+/// <summary>Which rocket day is running: the RPG warday or one of the Rocket Jump days built on it.</summary>
+public enum RocketMode { Rpg, JumpFreeday, JumpWarday }
 
 internal sealed class Rocket
 {
@@ -63,45 +75,56 @@ public sealed class RpgDay : JbModule
     private const float PushForceBase = 102f, PushRadius = 115f, PushMultiplier = 6f, PushFalloff = 0.55f, PushMinDistance = 32f;
     private const int MaxClip = 4;
 
-    private DayDefinition? _day;
+    private readonly Dictionary<DayDefinition, RocketMode> _days = new();
     private bool _inProgress;
     private readonly List<Rocket> _rockets = new();
 
-    private bool Active => _day != null && ReferenceEquals(Jb.Days.Current, _day);
+    private bool Active => Jb.Days.Current is { } d && _days.ContainsKey(d);
+    private RocketMode Mode => Jb.Days.Current is { } d && _days.TryGetValue(d, out var m) ? m : RocketMode.Rpg;
     private static RpgPlayer S(JbPlayer p) => p.Data<RpgPlayer>();
 
     public override void OnLoad(bool hotReload)
     {
         _instance = this;
-        var dayOn = Jb.Days is DaysModule && Cfg.Enabled;
+        var dayOn = Jb.Days is DaysModule && (Cfg.Enabled || Cfg.RocketJumpFreedayEnabled || Cfg.RocketJumpWardayEnabled);
         var lrOn = Jb.LastRequests is LastRequest.LastRequestModule && Section<LastRequest.LrExtraConfig>("LastRequestsExtra").RocketeerEnabled;
         if (!dayOn && !lrOn) return;
 
         if (dayOn)
         {
-            _day = new DayDefinition
+            if (Cfg.Enabled) RegisterRocketWarday("RPG", RocketMode.Rpg, "");
+            if (Cfg.RocketJumpWardayEnabled)
+                RegisterRocketWarday("Rocket Jump", RocketMode.JumpWarday,
+                    "Rocket launchers for everyone. Only players in the air can be hurt and a direct hit in the air kills: keep rocket jumping.");
+            if (Cfg.RocketJumpFreedayEnabled)
             {
-                Name = "RPG", Type = DayType.Warday, AllowFreeForAll = true,
-                Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
-                OnStart = _ => ClearRockets(),
-                OnFreezeEnd = () =>
+                var free = new DayDefinition
                 {
-                    _inProgress = true;
-                    foreach (var p in DayUtil.AliveAll())
+                    Name = "Rocket Jump", Type = DayType.Freeday,
+                    Description = "Everyone gets a rocket launcher (knife slot) that only pushes: rocket jump around the map. No fall damage.",
+                    OnStart = _ =>
                     {
-                        if ((Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0) DayUtil.Give(p, "weapon_knife");
-                        else Prepare(p);
+                        ClearRockets();
+                        _inProgress = true;
+                        foreach (var p in DayUtil.AliveAll()) Prepare(p);
+                    },
+                    OnEnd = _ =>
+                    {
+                        if (!_inProgress) return;
+                        _inProgress = false;
+                        ClearRockets();
+                        // The launcher is the knife with its attacks blocked: hand back a working knife.
+                        foreach (var p in DayUtil.AliveAll())
+                        {
+                            DayUtil.Give(p, "weapon_knife", true);
+                            Hud.Clear(p.Controller, "days.rpg");
+                        }
                     }
-                },
-                OnEnd = _ =>
-                {
-                    if (!_inProgress) return;
-                    _inProgress = false;
-                    ClearRockets();
-                    foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
-                }
-            };
-            Jb.Days.Register(_day);
+                };
+                _days[free] = RocketMode.JumpFreeday;
+                Jb.Days.Register(free);
+            }
+
             JbEvents.DaySpawnPost += OnDaySpawn;
         }
 
@@ -144,6 +167,42 @@ public sealed class RpgDay : JbModule
     }
 
     public override void OnPlayerDisconnect(JbPlayer player) => _armed.Remove(player.Slot);
+
+    private void RegisterRocketWarday(string name, RocketMode mode, string description)
+    {
+        var day = new DayDefinition
+        {
+            Name = name, Type = DayType.Warday, AllowFreeForAll = true, Description = description,
+            Flags = DayFlags.StripPrisonersWeapons | DayFlags.StripGuardsWeapons | DayFlags.KillWorldWeapons,
+            OnStart = _ => ClearRockets(),
+            OnFreezeEnd = () =>
+            {
+                _inProgress = true;
+                foreach (var p in DayUtil.AliveAll())
+                {
+                    if ((Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0) DayUtil.Give(p, "weapon_knife");
+                    else Prepare(p);
+                }
+            },
+            OnEnd = _ =>
+            {
+                if (!_inProgress) return;
+                _inProgress = false;
+                ClearRockets();
+                foreach (var p in DayUtil.AliveAll()) Jb.LastRequests.StripWeapons(p);
+            }
+        };
+        _days[day] = mode;
+        Jb.Days.Register(day);
+    }
+
+    /// <summary>Engine-free: does a rocket hurt this player in this mode? (Pushes always apply.)</summary>
+    internal static bool RocketHurts(RocketMode mode, bool self, bool victimAirborne) => mode switch
+    {
+        RocketMode.JumpFreeday => false,
+        RocketMode.JumpWarday => !self && victimAirborne,
+        _ => true
+    };
 
     private static RpgDay? _instance;
 
@@ -219,7 +278,7 @@ public sealed class RpgDay : JbModule
             else if (s.Clip < MaxClip)
             {
                 s.Reloading = true;
-                s.ReloadEnd = now + 1.25f;
+                s.ReloadEnd = now + (DayRunning && Mode != RocketMode.Rpg ? Math.Max(0.1f, Cfg.RocketJumpReloadSeconds) : 1.25f);
             }
         }
 
@@ -374,6 +433,9 @@ public sealed class RpgDay : JbModule
         if (owner == null || !owner.IsValid) return;
         var pawn = victim.PawnOrNull();
         if (pawn == null) return;
+        var airborneNow = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) == 0;
+        // The Rocketeer LR (armed outside a day) always plays by the RPG rules.
+        if (DayRunning && !RocketHurts(Mode, owner.Slot == victim.Slot, airborneNow)) return;
         var dmg = Cfg.MaxDamage * (1f - dist / PushRadius);
         var ffa = Jb.Days.IsFreeForAll;
         if (owner.Slot == victim.Slot)

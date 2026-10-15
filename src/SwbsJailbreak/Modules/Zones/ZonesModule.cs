@@ -83,8 +83,11 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         _roundStart = Server.CurrentTime;
     }
 
+    public override void OnAllModulesLoaded(bool hotReload) => JbEvents.SettingsSpawnPost += PlaceAtSpawnZone;
+
     public override void OnUnload(bool hotReload)
     {
+        JbEvents.SettingsSpawnPost -= PlaceAtSpawnZone;
         if (_dirty) Save();
         EndAllEditors();
         foreach (var t in _typeList)
@@ -125,6 +128,23 @@ public sealed partial class ZonesModule : JbModule, IZoneService
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
     {
         if (victim.Controller is { IsValid: true } c) ExitAll(c);
+    }
+
+    /// <summary>
+    /// Spawn zones: a round-start spawn (after the Settings module placed the player) moves the player into a random
+    /// spawn zone of their team. Respawns later in the round (days, !respawn, !1up) keep their own position.
+    /// </summary>
+    private void PlaceAtSpawnZone(JbPlayer player)
+    {
+        var c = player.Controller;
+        if (c == null || !c.IsValid || !c.IsAliveP()) return;
+        if (Server.CurrentTime - _roundStart > 3f) return;
+        var team = c.Team;
+        var zones = _zones.Where(z => z.TypeKey == ZoneTypeKeys.Spawn && SpawnZone.ForTeam(z, team)).ToList();
+        if (zones.Count == 0) return;
+        var zone = zones[Random.Shared.Next(zones.Count)];
+        var spot = SpawnZone.RandomSpot(zone.Box, Random.Shared);
+        c.TeleportTo(new CounterStrikeSharp.API.Modules.Utils.Vector(spot.X, spot.Y, spot.Z + 1f), new QAngle(0, zone.Angles.Y, 0));
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)

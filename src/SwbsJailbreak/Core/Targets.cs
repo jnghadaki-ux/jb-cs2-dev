@@ -6,7 +6,7 @@ namespace SwbsJailbreak.Core;
 
 /// <summary>
 /// SourceMod-style target resolution (ProcessTargetString). Supports everything CSS's Target supports
-/// (@all @bots @human @alive @dead @me @!me @aim @ct @t @spec #userid #steamid64 name) plus "magic" filters
+/// (@all @bots @human @alive @dead @me @!me @aim @ct @t @spec #userid #steamid64 name), "@!<target>" (everyone except <target>) plus "magic" filters
 /// registered by modules (SMPlugins MagicTargetFilter equivalents such as @warden, @rebels, @freedays).
 /// </summary>
 public static class Targets
@@ -22,6 +22,12 @@ public static class Targets
             ["@deadt"] = ("dead prisoners", c => c.Team == CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist && !c.IsAliveP()),
             ["@deadct"] = ("dead guards", c => c.Team == CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist && !c.IsAliveP()),
         };
+
+    /// <summary>CSS's own group targets (usable after "@!" too).</summary>
+    private static readonly HashSet<string> GroupTokens = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "@all", "@bots", "@human", "@alive", "@dead", "@me", "@aim", "@ct", "@t", "@spec"
+    };
 
     public static void RegisterMagic(string token, string description, Func<CCSPlayerController, bool> filter) =>
         Magic[token] = (description, filter);
@@ -53,7 +59,27 @@ public static class Targets
         }
 
         List<CCSPlayerController> found;
-        if (Magic.TryGetValue(pattern, out var magic))
+        if (pattern.Length > 2 && pattern.StartsWith("@!") && !pattern.Equals("@!me", StringComparison.OrdinalIgnoreCase))
+        {
+            // "@!<target>": everyone except whoever <target> resolves to (a name, #userid, steamid or another @group).
+            // "@!ct" / "@!t" / "@!warden" exclude a group; anything else is a player (name, #userid, steamid).
+            var inner = pattern[2..];
+            var asGroup = "@" + inner.TrimStart('@');
+            var excluded = GroupTokens.Contains(asGroup) || Magic.ContainsKey(asGroup)
+                ? Find(caller, asGroup, respectImmunity: false)
+                : Find(caller, inner, respectImmunity: false);
+            if (!excluded.Ok)
+            {
+                res.Error = excluded.Error ?? Lang.T("core.target.none");
+                return res;
+            }
+
+            var skip = excluded.Players.Select(c => c.Slot).ToHashSet();
+            found = Players.All().Where(c => !skip.Contains(c.Slot)).ToList();
+            res.IsGroup = true;
+            res.Description = "everyone but " + (excluded.IsGroup ? excluded.Description : excluded.Players[0].PlayerName);
+        }
+        else if (Magic.TryGetValue(pattern, out var magic))
         {
             found = Players.All().Where(magic.Filter).ToList();
             res.Description = magic.Description;

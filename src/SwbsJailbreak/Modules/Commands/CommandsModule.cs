@@ -314,13 +314,13 @@ public sealed class CommandsModule : JbModule
         if (p == null) return false;
         var s = S(p);
         if (!s.DiedThisRound || target.IsAliveP() || target.Team is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) return false;
-        target.Respawn();
         s.DiedThisRound = false;
         var pos = s.LastPos;
         var ang = s.LastAngles;
-        var slot = target.Slot;
-        if (pos != null)
-            Server.NextFrame(() => Players.Get(slot).Controller?.TeleportTo(pos, ang));
+        target.RespawnSolid(c =>
+        {
+            if (pos != null) c.TeleportTo(pos, ang);
+        });
         Chat.TellAll(doneKey, target.PlayerName, admin?.PlayerName ?? "Console");
         Jb.Log.LogEvent($"{admin?.PlayerName ?? "Console"} one-upped {target.PlayerName}", admin.Jb(), p, LogType.Admin);
         return true;

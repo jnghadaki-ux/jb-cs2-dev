@@ -12,11 +12,11 @@ public sealed class PlayerModelsConfig
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Replace player models (GuardModel / PrisonerModels). Off by default, like other CS2 jailbreaks: a model that is
-    /// missing or not a full player agent on the current CS2 build leaves players as small boxes and the first-person
-    /// gun oversized. Turn on only with models you have checked in game.
+    /// Give every guard GuardModel and every prisoner one of PrisonerModels on spawn (and to everyone already in game
+    /// when the plugin loads). The defaults are stock CS2 agents, so nothing has to be downloaded. Only use full player
+    /// agents: a missing model or a non-agent (e.g. ctm_heavy) leaves players as small boxes.
     /// </summary>
-    public bool ApplyModels { get; set; } = false;
+    public bool ApplyModels { get; set; } = true;
 
     /// <summary>All guards look the same (original: stock ctm_swat). Empty = keep the player's own agent.</summary>
     public string GuardModel { get; set; } = "characters/models/ctm_sas/ctm_sas.vmdl";
@@ -59,6 +59,36 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
 
     public override void OnUnload(bool hotReload) => JbEvents.SettingsSpawnPost -= OnSpawnPost;
 
+    /// <summary>Plugin (re)load: players already alive keep the engine's agent until they respawn unless we set it now.</summary>
+    public override void OnAllModulesLoaded(bool hotReload)
+    {
+        if (!hotReload || !Cfg.ApplyModels) return;
+        Server.NextFrame(ApplyAll);
+    }
+
+    public override void OnRoundFreezeEnd()
+    {
+        // Safety net: a model the game or a late module reset during the spawn frames is put back once players can move.
+        if (Cfg.ApplyModels) ApplyAll();
+    }
+
+    /// <summary>The team model for every alive player (then the store model on top through PlayerModelsApplied).</summary>
+    private void ApplyAll()
+    {
+        foreach (var c in Players.Alive().ToList())
+            if (c.Jb() is { } p && ApplyTeamModel(p))
+                JbEvents.RaisePlayerModelsApplied(p);
+    }
+
+    private bool ApplyTeamModel(JbPlayer player)
+    {
+        var ctrl = player.Controller;
+        if (ctrl == null || !ctrl.IsAliveP()) return false;
+        if (ctrl.Team == CsTeam.Terrorist) return ApplyPrisonerModel(player);
+        if (ctrl.Team == CsTeam.CounterTerrorist) return ApplyGuardModel(player);
+        return false;
+    }
+
     private void OnPrecache(ResourceManifest manifest)
     {
         if (!Cfg.ApplyModels) return;
@@ -83,15 +113,22 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
             return;
         }
 
-        // Next frame: a model set during the spawn itself can be overwritten by the agent the game assigns.
+        // Next frame: a model set during the spawn itself can be overwritten by the agent the game assigns. Once more a
+        // moment later for the same reason (the agent loadout can land after the first frame); the store model is
+        // re-applied on top each time through PlayerModelsApplied.
+        var slot = player.Slot;
         Server.NextFrame(() =>
         {
-            var ctrl = player.Controller;
-            if (ctrl == null || !ctrl.IsAliveP()) return;
-            if (ctrl.Team == CsTeam.Terrorist) ApplyPrisonerModel(player);
-            else if (ctrl.Team == CsTeam.CounterTerrorist) ApplyGuardModel(player);
+            var p = Players.Get(slot);
+            if (p.Controller is not { } ctrl || !ctrl.IsAliveP()) return;
+            ApplyTeamModel(p);
             // Deviation from the original: always raised (it skipped donator models, leaving Xray glows stale).
-            JbEvents.RaisePlayerModelsApplied(player);
+            JbEvents.RaisePlayerModelsApplied(p);
+        });
+        Plugin.AddTimer(0.2f, () =>
+        {
+            var p = Players.Get(slot);
+            if (ApplyTeamModel(p)) JbEvents.RaisePlayerModelsApplied(p);
         });
     }
 
@@ -105,16 +142,28 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
         var help = Jb.Settings.GetHelpNumber(player) - 1;
         string model;
         if (help >= 0 && help < list.Count && list.Count > 2) model = list[help];
+        else if (_lastPrisonerModel[player.Slot] is { } kept && list.Contains(kept) && CurrentModel(player) == kept) model = kept;
         else model = list.Count > 2 ? list[Random.Shared.Next(2, list.Count)] : list[Random.Shared.Next(list.Count)];
+        _lastPrisonerModel[player.Slot] = model;
         return SetModel(player, model);
+    }
+
+    private readonly string?[] _lastPrisonerModel = new string?[Players.MaxSlots];
+
+    private static string? CurrentModel(JbPlayer player)
+    {
+        try { return player.Controller?.PawnOrNull()?.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName; }
+        catch { return null; }
     }
 
     private bool SetModel(JbPlayer player, string model)
     {
         var pawn = player.Controller?.PawnOrNull();
         if (pawn == null || string.IsNullOrWhiteSpace(model)) return false;
+        model = model.Trim();
         try
         {
+            if (CurrentModel(player) == model) return true;
             pawn.SetModel(model);
             return true;
         }
