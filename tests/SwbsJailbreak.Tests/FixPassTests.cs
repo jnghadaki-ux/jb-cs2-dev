@@ -69,3 +69,25 @@ public class FixPassTests
     [InlineData("characters/models/swbs/store/flash/flash.vmdl", false)]
     public void LegacyAgentPaths_AreDetected(string path, bool legacy) => Assert.Equal(legacy, ModelPaths.IsLegacyAgentPath(path));
 }
+
+public class StoreModelTeamTests
+{
+    [Fact]
+    public void Store_ShipsWorkingPlayerModels_GuardsOnly()
+    {
+        var models = StoreConfig.DefaultItems().Where(i => i.Type == StoreItemType.PlayerModel).ToList();
+        Assert.Equal(3, models.Count);
+        Assert.All(models, m => Assert.StartsWith("agents/models/ctm_diver/ctm_diver_variant", m.Data));
+        Assert.All(models, m => Assert.Equal("ct", m.Team));
+    }
+
+    [Theory]
+    [InlineData(CsTeam.CounterTerrorist, false, "ct", true)]   // CT agent: guards wear it even with PlayerModelsForGuards off
+    [InlineData(CsTeam.Terrorist, true, "ct", false)]          // never on a prisoner
+    [InlineData(CsTeam.Terrorist, false, "t", true)]
+    [InlineData(CsTeam.CounterTerrorist, true, "t", false)]
+    [InlineData(CsTeam.Terrorist, false, "", true)]            // no lock: the old rule
+    [InlineData(CsTeam.CounterTerrorist, false, "", false)]
+    public void TeamLock(CsTeam team, bool guardsToo, string itemTeam, bool wears) =>
+        Assert.Equal(wears, StoreModule.WearsPlayerModel(team, guardsToo, itemTeam));
+}

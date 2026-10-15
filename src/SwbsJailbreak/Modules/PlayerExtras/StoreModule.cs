@@ -50,6 +50,12 @@ public sealed class StoreItem
     public string Data { get; set; } = "";
 
     public int Price { get; set; }
+
+    /// <summary>
+    /// Player models only: who may wear it. "ct" = guards only (a CT agent on a prisoner would pass as a guard),
+    /// "t" = prisoners only, empty = the PlayerModelsForGuards rule.
+    /// </summary>
+    public string Team { get; set; } = "";
 }
 
 /// <summary>
@@ -91,7 +97,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = false;
 
-    public const int CurrentDefaultsVersion = 5;
+    public const int CurrentDefaultsVersion = 6;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -154,7 +160,18 @@ public sealed class StoreConfig
         new() { Id = "trail_bubbles", Name = "Bubbles", Type = StoreItemType.Trail, Data = "bubbles", Color = "180,230,255", Price = 900 },
         new() { Id = "trail_fire", Name = "Fire trail", Type = StoreItemType.Trail, Data = "fire", Price = 1200 },
         new() { Id = "trail_ice", Name = "Ice trail", Type = StoreItemType.Trail, Data = "ice", Price = 1200 },
-        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 }
+        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 },
+        // ---- version 6: player models that exist on the current CS2 build (agents/models/..., checked against the game
+        // files). They are CT agents, so guards only. More (T agents, the SWBS store pack) can be added in the config.
+        Diver("a", "Diver (guards)", 3000),
+        Diver("b", "Diver, red (guards)", 3000),
+        Diver("c", "Diver, green (guards)", 3000)
+    };
+
+    private static StoreItem Diver(string variant, string name, int price) => new()
+    {
+        Id = "model_ct_diver_" + variant, Name = name, Type = StoreItemType.PlayerModel, Team = "ct", Price = price,
+        Data = $"agents/models/ctm_diver/ctm_diver_variant{variant}.vmdl"
     };
 
     /// <summary>
@@ -340,8 +357,8 @@ public sealed partial class StoreModule : JbModule
     {
         var c = Players.Get(slot).Controller;
         if (c == null || !c.IsValid || !c.IsAliveP() || c.PawnOrNull() is not { } pawn) return;
-        if (!WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards)) return;
         if (Equipped(slot, StoreItemType.PlayerModel) is not { Data.Length: > 0 } item) return;
+        if (!WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards, item.Team)) return;
         var model = item.Data.Trim();
         try
         {
@@ -354,6 +371,14 @@ public sealed partial class StoreModule : JbModule
             Logger.LogWarning(ex, "[Store] player model {Model} could not be applied", model);
         }
     }
+
+    /// <summary>Engine-free: may a player on this team wear a model item locked to <paramref name="itemTeam"/>?</summary>
+    internal static bool WearsPlayerModel(CsTeam team, bool guardsToo, string? itemTeam) => (itemTeam ?? "").Trim().ToLowerInvariant() switch
+    {
+        "ct" => team == CsTeam.CounterTerrorist,
+        "t" => team == CsTeam.Terrorist,
+        _ => WearsPlayerModel(team, guardsToo)
+    };
 
     internal static bool WearsPlayerModel(CsTeam team, bool guardsToo) =>
         team == CsTeam.Terrorist || guardsToo && team == CsTeam.CounterTerrorist;
@@ -591,14 +616,15 @@ public sealed partial class StoreModule : JbModule
     /// <summary>A newly equipped model is put on right away when the player can wear it now, else from the next spawn.</summary>
     private void TellModel(CCSPlayerController c)
     {
-        if (c.IsAliveP() && WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards))
+        var itemTeam = (Equipped(c.Slot, StoreItemType.PlayerModel)?.Team ?? "").Trim().ToLowerInvariant();
+        if (c.IsAliveP() && WearsPlayerModel(c.Team, Cfg.PlayerModelsForGuards, itemTeam))
         {
             SchedulePlayerModel(c.Slot);
             Chat.Tell(c, "store.model.now");
             return;
         }
 
-        Chat.Tell(c, Cfg.PlayerModelsForGuards ? "store.model.when" : "store.model.when_prisoner");
+        Chat.Tell(c, itemTeam == "ct" ? "store.model.when_guard" : Cfg.PlayerModelsForGuards ? "store.model.when" : "store.model.when_prisoner");
     }
 
     private void ShowSettings(CCSPlayerController c)
