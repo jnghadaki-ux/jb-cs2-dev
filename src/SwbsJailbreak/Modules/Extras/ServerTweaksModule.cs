@@ -59,6 +59,13 @@ public sealed class ServerTweaksConfig
     /// <summary>Maximum horizontal speed (units/s) a bunny hop leaves the ground with. Knife running speed is 250.</summary>
     public float BhopCapSpeed { get; set; } = 400f;
 
+    /// <summary>
+    /// Other server cvars the jailbreak needs, enforced like MovementCvars. mp_autokick 0: CS2 counts the plugin's
+    /// credited kills (throwing knives, rockets, admin slay - the victim is slain and the kill feed rewritten) as
+    /// suicides and auto-kicked players "for suiciding too many times".
+    /// </summary>
+    public Dictionary<string, string> ServerCvars { get; set; } = new() { ["mp_autokick"] = "0" };
+
     internal static Dictionary<string, string> DefaultMovementCvars() => new()
     {
         ["sv_airaccelerate"] = "150",          // surf needs 100+; strafing in the air keeps speed
@@ -155,12 +162,24 @@ public sealed class ServerTweaksModule : JbModule
 
     private void ApplyMovementCvars()
     {
-        if (!Cfg.ForceMovementCvars) return;
-        foreach (var (name, value) in Cfg.MovementCvars)
+        var changed = new List<string>();
+        if (Cfg.ForceMovementCvars) ApplyCvars(Cfg.MovementCvars, changed);
+        ApplyCvars(Cfg.ServerCvars, changed);
+        // Logged so an owner can see in the server console that surf / bhop settings really are in effect.
+        if (changed.Count > 0) Logger.LogInformation("[ServerTweaks] cvars set: {Cvars}", string.Join(", ", changed));
+    }
+
+    private static void ApplyCvars(Dictionary<string, string> cvars, List<string> changed)
+    {
+        foreach (var (rawName, rawValue) in cvars)
         {
-            if (string.IsNullOrWhiteSpace(name) || value == null) continue;
-            if (Cvars.Get(name.Trim()) == value.Trim()) continue;
-            Cvars.Set(name.Trim(), value.Trim());
+            if (string.IsNullOrWhiteSpace(rawName) || rawValue == null) continue;
+            var name = rawName.Trim();
+            var value = rawValue.Trim();
+            var cur = Cvars.Get(name);
+            if (cur == value || cur != null && float.TryParse(cur, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var a) && float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var b) && Math.Abs(a - b) < 0.0001f) continue;
+            Cvars.Set(name, value);
+            changed.Add($"{name} {value}");
         }
     }
 

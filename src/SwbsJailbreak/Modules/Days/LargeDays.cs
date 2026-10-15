@@ -23,6 +23,12 @@ public sealed class DaysLargeConfig
     /// <summary>Throwing Knives: model of the thrown knife (physics prop). Verify on your build.</summary>
     public string ThrowingKnifeModel { get; set; } = "weapons/models/knife/knife_default_ct/weapon_knife_default_ct.vmdl";
     public float ThrowingKnifeSpeed { get; set; } = 2250f;
+
+    /// <summary>How much the thrown knife drops (fraction of sv_gravity 800); 0 = flies dead straight.</summary>
+    public float ThrowingKnifeGravity { get; set; } = 0.4f;
+
+    /// <summary>Seconds a knife flies before it is removed (it is removed earlier when it hits a wall or a player).</summary>
+    public float ThrowingKnifeLifetime { get; set; } = 3f;
     public float ThrowingKnifeDamage { get; set; } = 100f;
     public string KnifeHitPlayerSound { get; set; } = "Weapon_Knife.Hit";
     public string KnifeHitWorldSound { get; set; } = "Weapon_Knife.HitWall";
@@ -40,6 +46,10 @@ internal sealed class ThrownKnife
     public float Born;
     public Vector? LastPos;
     public int Tick;
+
+    /// <summary>Flight state simulated by the plugin (the prop is a non-physics model moved every tick).</summary>
+    public Vector Pos = new(0, 0, 0);
+    public Vector Vel = new(0, 0, 0);
 }
 
 /// <summary>
@@ -442,17 +452,20 @@ public sealed class LargeDays : JbModule
         if (pawn == null || string.IsNullOrWhiteSpace(Cfg.ThrowingKnifeModel)) return false;
         try
         {
-            var prop = Utilities.CreateEntityByName<CPhysicsProp>("prop_physics_override");
-            if (prop == null) return false;
-            prop.SetModel(Cfg.ThrowingKnifeModel);
-            prop.Collision.CollisionGroup = (byte)CollisionGroup.COLLISION_GROUP_DEBRIS;
-            prop.DispatchSpawn();
+            // A non-physics model moved by the plugin, like the RPG rockets. The old physics prop was removed after
+            // ~0.1 s: CS2 does not keep a physics prop's AbsVelocity up to date, so its "slowed down = hit a wall" check
+            // fired straight away and knives only flew a couple of metres.
             var eye = c.EyePosition();
             var fwd = VectorUtil.Forward(pawn.EyeAngles);
-            var start = new Vector(eye.X + fwd.X * 24f, eye.Y + fwd.Y * 24f, eye.Z + fwd.Z * 24f);
+            var start = new Vector(eye.X + fwd.X * 16f, eye.Y + fwd.Y * 16f, eye.Z + fwd.Z * 16f);
             var vel = new Vector(fwd.X * Cfg.ThrowingKnifeSpeed, fwd.Y * Cfg.ThrowingKnifeSpeed, fwd.Z * Cfg.ThrowingKnifeSpeed);
-            prop.Teleport(start, pawn.EyeAngles, vel);
-            _thrown.Add(new ThrownKnife { Prop = prop.EntityHandle.Raw, OwnerSlot = c.Slot, Born = (float)Server.EngineTime, LastPos = start });
+            var a = pawn.EyeAngles;
+            var prop = Fx.Prop(Cfg.ThrowingKnifeModel, start, new QAngle(a.X, a.Y, 0));
+            if (prop == null) return false;
+            _thrown.Add(new ThrownKnife
+            {
+                Prop = prop.EntityHandle.Raw, OwnerSlot = c.Slot, Born = (float)Server.EngineTime, LastPos = start, Pos = start, Vel = vel
+            });
             return true;
         }
         catch (Exception ex)
@@ -475,8 +488,18 @@ public sealed class LargeDays : JbModule
                 continue;
             }
 
-            var pos = new Vector(prop.AbsOrigin.X, prop.AbsOrigin.Y, prop.AbsOrigin.Z);
             var owner = Players.Get(k.OwnerSlot).Controller;
+            // Fly one tick: slight drop, spin, and a world trace along the segment so walls stop it where it hits.
+            var dt = Server.TickInterval;
+            k.Vel = new Vector(k.Vel.X, k.Vel.Y, k.Vel.Z - 800f * Math.Max(0f, Cfg.ThrowingKnifeGravity) * dt);
+            var from = k.Pos;
+            var pos = new Vector(from.X + k.Vel.X * dt, from.Y + k.Vel.Y * dt, from.Z + k.Vel.Z * dt);
+            var ownerPawn = owner is { IsValid: true } ? owner.PawnOrNull() : null;
+            var wall = ownerPawn != null ? Aim.WorldHit(from, pos, ownerPawn) : null;
+            if (wall != null) pos = wall;
+            k.Pos = pos;
+            var yaw = MathF.Atan2(k.Vel.Y, k.Vel.X) * 180f / MathF.PI;
+            prop.Teleport(pos, new QAngle((k.Tick * 40f) % 360f, yaw, 0), null);
 
             // Trail: a short real beam along the flight path every few ticks.
             if (++k.Tick % 4 == 0 && k.LastPos != null)
@@ -518,9 +541,8 @@ public sealed class LargeDays : JbModule
                 continue;
             }
 
-            // World hit: the knife slowed down hard (bounced) or flew too long.
-            var speed = prop.AbsVelocity.Length();
-            if (now - k.Born > 3f || now - k.Born > 0.1f && speed < Cfg.ThrowingKnifeSpeed * 0.5f)
+            // World hit (traced above) or flew too long.
+            if (wall != null || now - k.Born > Math.Max(0.5f, Cfg.ThrowingKnifeLifetime))
             {
                 if (Cfg.KnifeHitWorldSound.Length > 0) prop.EmitSound(Cfg.KnifeHitWorldSound);
                 Fx.Particle("particles/impact_fx/impact_spark.vpcf", pos, 1f);
