@@ -154,25 +154,17 @@ public sealed class StoreConfig
         new() { Id = "trail_bubbles", Name = "Bubbles", Type = StoreItemType.Trail, Data = "bubbles", Color = "180,230,255", Price = 900 },
         new() { Id = "trail_fire", Name = "Fire trail", Type = StoreItemType.Trail, Data = "fire", Price = 1200 },
         new() { Id = "trail_ice", Name = "Ice trail", Type = StoreItemType.Trail, Data = "ice", Price = 1200 },
-        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 },
-        // ---- version 5: player models. Stock CS2 agents, so they work without any workshop download (prisoners wear
-        // them; guards keep their uniform unless PlayerModelsForGuards). The SWBS store pack adds its own on top.
-        Agent("phoenix_soldier", "Phoenix soldier", "tm_phoenix/tm_phoenix_varianth", 2500),
-        Agent("phoenix_slingshot", "Phoenix slingshot", "tm_phoenix/tm_phoenix_variantg", 2500),
-        Agent("leet_muhlik", "Elite Crew: Mr. Muhlik", "tm_leet/tm_leet_variantf", 3000),
-        Agent("leet_shahmat", "Elite Crew: Prof. Shahmat", "tm_leet/tm_leet_varianth", 3000),
-        Agent("balkan_dragomir", "Sabre: Dragomir", "tm_balkan/tm_balkan_variantf", 3000),
-        Agent("balkan_maximus", "Sabre: Maximus", "tm_balkan/tm_balkan_varianth", 3000),
-        Agent("pro_darryl", "The Professionals: Sir Bloody Darryl", "tm_professional/tm_professional_varf", 4000),
-        Agent("pro_vypa", "The Professionals: Vypa Sista", "tm_professional/tm_professional_varh", 4000),
-        Agent("guerrilla_solman", "Guerrilla: Elite Trapper Solman", "tm_jungle_raider/tm_jungle_raider_varianta", 4000),
-        Agent("guerrilla_elite", "Guerrilla: Crasswater", "tm_jungle_raider/tm_jungle_raider_variantd", 4000)
+        new() { Id = "trail_galaxy", Name = "Galaxy trail", Type = StoreItemType.Trail, Data = "galaxy", Price = 1500 }
     };
 
-    /// <summary>A stock CS2 agent (characters/models/&lt;path&gt;.vmdl) as a player model item.</summary>
-    private static StoreItem Agent(string id, string name, string path, int price) => new()
+    /// <summary>
+    /// Ids of the stock agent player models 0.19 added with characters/models/tm_* paths. Those paths no longer exist on
+    /// CS2 (agents moved to agents/models/...), so config migration 6 removes them again.
+    /// </summary>
+    internal static readonly string[] RemovedAgentIds =
     {
-        Id = "model_" + id, Name = name, Type = StoreItemType.PlayerModel, Data = $"characters/models/{path}.vmdl", Price = price
+        "model_phoenix_soldier", "model_phoenix_slingshot", "model_leet_muhlik", "model_leet_shahmat", "model_balkan_dragomir",
+        "model_balkan_maximus", "model_pro_darryl", "model_pro_vypa", "model_guerrilla_solman", "model_guerrilla_elite"
     };
 
     /// <summary>The original SWBS splat colours (splat_blue, splat_green, splat_pink).</summary>
@@ -353,6 +345,7 @@ public sealed partial class StoreModule : JbModule
         var model = item.Data.Trim();
         try
         {
+            if (!ModelPaths.UsableOnPlayer(model, "Store item " + item.Id)) return;
             if (pawn.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName == model) return;
             pawn.SetModel(model);
         }

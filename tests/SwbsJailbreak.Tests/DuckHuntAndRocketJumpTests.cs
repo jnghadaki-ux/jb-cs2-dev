@@ -45,5 +45,19 @@ public class DuckHuntAndRocketJumpTests
 
     [Fact]
     public void Deputy_HasAStockModelByDefault() =>
-        Assert.Matches(@"^characters/models/ctm_[a-z_]+/ctm_[a-z_]+\.vmdl$", new WardenToolsConfig().DeputyModel);
+        Assert.Equal("agents/models/ctm_diver/ctm_diver_varianta.vmdl", new WardenToolsConfig().DeputyModel);
+}
+
+public class PackPrisonerModelTests
+{
+    private const string Pack = "characters/models/swbs/prisoners/male_black_big/male_black_big.vmdl";
+
+    [Fact]
+    public void PackPrisoners_AreSkippedByDefault()
+    {
+        var stock = new SwbsJailbreak.Modules.PlayerExtras.PlayerModelsConfig().PrisonerModels;
+        Assert.Equal(stock, SwbsJailbreak.Modules.PlayerExtras.PlayerModelsModule.Usable(new[] { Pack }, false));
+        Assert.Equal(new[] { Pack }, SwbsJailbreak.Modules.PlayerExtras.PlayerModelsModule.Usable(new[] { Pack }, true));
+        Assert.DoesNotContain(stock, SwbsJailbreak.Modules.PlayerExtras.PlayerModelsModule.IsPackPrisoner);
+    }
 }

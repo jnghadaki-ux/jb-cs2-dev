@@ -48,7 +48,7 @@ public class FixPassTests
     public void Defaults_OneGuardPerFivePrisoners_ModelsOn_MovementForSurf()
     {
         Assert.Equal(5f, new TeamsConfig().PrisonersPerGuard);
-        Assert.True(new PlayerModelsConfig().ApplyModels);
+        Assert.False(new PlayerModelsConfig().ApplyModels); // missing models give huge first-person guns
         var mv = new ServerTweaksConfig().MovementCvars;
         Assert.True(float.Parse(mv["sv_airaccelerate"]) >= 100f);
         Assert.Equal("1", mv["sv_enablebunnyhopping"]);
@@ -56,11 +56,16 @@ public class FixPassTests
     }
 
     [Fact]
-    public void Store_HasStockAgentPlayerModels()
+    public void Store_HasNoOldPathAgents()
     {
-        var models = StoreConfig.DefaultItems().Where(i => i.Type == StoreItemType.PlayerModel).ToList();
-        Assert.NotEmpty(models);
-        Assert.All(models, m => Assert.Matches(@"^characters/models/tm_[a-z_]+/tm_[a-z_]+\.vmdl$", m.Data));
-        Assert.Equal(5, StoreConfig.CurrentDefaultsVersion);
+        Assert.DoesNotContain(StoreConfig.DefaultItems(), i => ModelPaths.IsLegacyAgentPath(i.Data));
+        Assert.Equal(10, StoreConfig.RemovedAgentIds.Length);
     }
+
+    [Theory]
+    [InlineData("characters/models/tm_phoenix/tm_phoenix_varianth.vmdl", true)]
+    [InlineData("characters/models/ctm_sas/ctm_sas.vmdl", true)]
+    [InlineData("agents/models/ctm_diver/ctm_diver_varianta.vmdl", false)]
+    [InlineData("characters/models/swbs/store/flash/flash.vmdl", false)]
+    public void LegacyAgentPaths_AreDetected(string path, bool legacy) => Assert.Equal(legacy, ModelPaths.IsLegacyAgentPath(path));
 }

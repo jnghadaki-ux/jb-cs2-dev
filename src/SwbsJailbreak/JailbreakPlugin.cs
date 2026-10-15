@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.20.0"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.20.3"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -199,6 +199,36 @@ public sealed class JailbreakPlugin : BasePlugin
             Config.Update<Modules.Extras.WorkshopPackConfig>("WorkshopPack", w => { w.Enabled = true; w.UseModels = true; });
             Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 4);
             Logger.LogInformation("Config migrated to revision 4: WorkshopPack.Enabled on (model trails, paintball splats, pack sounds)");
+        }
+
+        if (Config.General.ConfigRevision < 5)
+        {
+            // 0.20.1: the pack's SWBS prisoners have no CS2 skeleton (console flood "Attempted to attach attachment ... to an
+            // unknown bone"): back to the stock jumpsuits.
+            Config.Update<Modules.PlayerExtras.PlayerModelsConfig>("PlayerModels", m =>
+            {
+                if (m.PrisonerModels.Any(global::SwbsJailbreak.Modules.PlayerExtras.PlayerModelsModule.IsPackPrisoner))
+                    m.PrisonerModels = new Modules.PlayerExtras.PlayerModelsConfig().PrisonerModels;
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 5);
+            Logger.LogInformation("Config migrated to revision 5: prisoners use the stock CS2 jumpsuits (pack prisoners lack CS2 bones)");
+        }
+
+        if (Config.General.ConfigRevision < 6)
+        {
+            // 0.20.3: CS2 moved its agents to agents/models/..., so the characters/models/* agents 0.19 turned on do not
+            // exist and gave players huge first-person guns. Team models off again, the 0.19 store agents removed, the
+            // deputy model moved to an agent that exists.
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.PlayerModelsConfig>("PlayerModels", m => m.ApplyModels = false);
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+                s.Items.RemoveAll(i => global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig.RemovedAgentIds.Contains(i.Id, StringComparer.OrdinalIgnoreCase)
+                                       && ModelPaths.IsLegacyAgentPath(i.Data)));
+            Config.Update<global::SwbsJailbreak.Modules.Warden.WardenToolsConfig>("WardenTools", w =>
+            {
+                if (ModelPaths.IsLegacyAgentPath(w.DeputyModel)) w.DeputyModel = new global::SwbsJailbreak.Modules.Warden.WardenToolsConfig().DeputyModel;
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 6);
+            Logger.LogInformation("Config migrated to revision 6: team models off, old-path store agents removed, deputy model = CS2 diver agent");
         }
     }
 
