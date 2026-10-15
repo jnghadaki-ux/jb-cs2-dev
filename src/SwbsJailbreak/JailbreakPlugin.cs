@@ -259,6 +259,17 @@ public sealed class JailbreakPlugin : BasePlugin
             Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 8);
             Logger.LogInformation("Config migrated to revision 8: kill sounds use .vsnd files, see-through body is now a ghost skin");
         }
+
+        if (Config.General.ConfigRevision < 9)
+        {
+            // 0.21: hats parent to clip_limit (on the head bone of every CS2 agent); facemask does not exist on CS2 agents.
+            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            {
+                if (s.HatAttachment.Equals("facemask", StringComparison.OrdinalIgnoreCase)) s.HatAttachment = "clip_limit";
+            });
+            Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 9);
+            Logger.LogInformation("Config migrated to revision 9: store hats attach to clip_limit");
+        }
     }
 
     public override void Unload(bool hotReload)

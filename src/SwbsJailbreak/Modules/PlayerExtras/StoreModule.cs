@@ -88,8 +88,14 @@ public sealed class StoreConfig
     /// <summary>Kill and grenade sounds are heard by players this close (and always by the killer and victim).</summary>
     public float SoundRange { get; set; } = 1200f;
 
-    /// <summary>Player model attachment hats are parented to.</summary>
-    public string HatAttachment { get; set; } = "facemask";
+    /// <summary>
+    /// Player model attachment hats are parented to. clip_limit sits on the head bone of every CS2 agent (and of the
+    /// SWBS models rebuilt on the agent skeleton), so the hat follows the head.
+    /// </summary>
+    public string HatAttachment { get; set; } = "clip_limit";
+
+    /// <summary>Hat height above the eyes when it is put on (the hat keeps that offset from the head).</summary>
+    public float HatHeight { get; set; } = 7.5f;
 
     /// <summary>
     /// Player model items can be worn by both teams (default). False keeps them for prisoners only, so guards always
@@ -97,7 +103,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = true;
 
-    public const int CurrentDefaultsVersion = 7;
+    public const int CurrentDefaultsVersion = 8;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -176,7 +182,22 @@ public sealed class StoreConfig
         new() { Id = "killsound_zap", Name = "Teleport zap", Type = StoreItemType.KillSound, Data = "sounds/swbs/misc/teleport.vsnd", Price = 800 },
         new() { Id = "killsound_boom", Name = "Rocket boom", Type = StoreItemType.KillSound, Data = "sounds/swbs/rpg/explode1.vsnd", Price = 900 },
         new() { Id = "killsound_scream", Name = "Death scream", Type = StoreItemType.KillSound, Data = "sounds/swbs/rpg/death.vsnd", Price = 900 },
-        new() { Id = "killsound_alarm", Name = "Freekill alarm", Type = StoreItemType.KillSound, Data = "sounds/swbs/jailbreak/freekill.vsnd", Price = 1000 }
+        new() { Id = "killsound_alarm", Name = "Freekill alarm", Type = StoreItemType.KillSound, Data = "sounds/swbs/jailbreak/freekill.vsnd", Price = 1000 },
+        // ---- version 8: hats (workshop pack models/swbs/hats, white and tinted here; shown once WorkshopPack.HatModels is on)
+        Hat("top_hat", "Top hat", "30,30,30", 1500),
+        Hat("crown", "Gold crown", "255,200,40", 3000),
+        Hat("party_hat", "Party hat", "rainbow", 1200),
+        Hat("halo", "Halo", "255,235,140", 2500),
+        Hat("beanie", "Red beanie", "200,40,40", 1000),
+        Hat("cowboy_hat", "Cowboy hat", "125,82,45", 1500)
+    };
+
+    /// <summary>Path prefix of the workshop pack's store hats.</summary>
+    internal const string PackHatFolder = "models/swbs/hats/";
+
+    private static StoreItem Hat(string name, string title, string color, int price) => new()
+    {
+        Id = "hat_" + name, Name = title, Type = StoreItemType.Hat, Color = color, Price = price, Data = PackHatFolder + name + ".vmdl"
     };
 
     /// <summary>Workshop pack sound files used by store items (played with the client "play" command).</summary>
@@ -264,7 +285,7 @@ public sealed partial class StoreModule : JbModule
         Plugin.AddTimer(0.15f, EffectsTick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(m =>
         {
-            foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0))
+            foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0 && Available(i)))
                 m.AddResource(it.Data.Trim());
             foreach (var particle in Particles) m.AddResource(particle); // kill effect extras: unprecached particles never show
             if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
@@ -491,6 +512,10 @@ public sealed partial class StoreModule : JbModule
     /// <summary>Body items (see-through, size) are fair-play limited unless <see cref="StoreConfig.BodyItemsAnytime"/>.</summary>
     internal static bool BodyItemsAllowed(bool anytime, bool warmup, bool freedayDay, bool freedayLr) => anytime || warmup || freedayDay || freedayLr;
 
+    /// <summary>Pack hats only exist once the pack is compiled with them (WorkshopPack.HatModels).</summary>
+    internal static bool Available(StoreItem i) =>
+        !(i.Type == StoreItemType.Hat && i.Data.Trim().StartsWith(StoreConfig.PackHatFolder, StringComparison.OrdinalIgnoreCase) && !Extras.WorkshopPackModule.HatModelsOn);
+
     private StoreItem? Find(string id) => Cfg.Items.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
     private StoreItem? Equipped(int slot, StoreItemType type) =>
@@ -563,7 +588,7 @@ public sealed partial class StoreModule : JbModule
         foreach (var type in Enum.GetValues<StoreItemType>())
         {
             var t = type;
-            var items = Cfg.Items.Where(i => i.Type == t).ToList();
+            var items = Cfg.Items.Where(i => i.Type == t && Available(i)).ToList();
             if (items.Count == 0) continue;
             var inv = _inv[c.Slot];
             var owned = inv == null ? 0 : items.Count(i => inv.Owned.Contains(i.Id, StringComparer.OrdinalIgnoreCase));
@@ -585,7 +610,7 @@ public sealed partial class StoreModule : JbModule
             Parent = BuildMain(c) // 7 / R goes back to the categories
         };
 
-        foreach (var item in Cfg.Items.Where(i => i.Type == type))
+        foreach (var item in Cfg.Items.Where(i => i.Type == type && Available(i)))
         {
             var it = item;
             var owned = inv.Owned.Contains(it.Id, StringComparer.OrdinalIgnoreCase);
@@ -1027,7 +1052,7 @@ public sealed partial class StoreModule : JbModule
     private void UpdateHat(CCSPlayerController c, bool allowed)
     {
         var item = allowed ? Equipped(c.Slot, StoreItemType.Hat) : null;
-        if (item == null || item.Data.Length == 0)
+        if (item == null || item.Data.Length == 0 || !Available(item))
         {
             RemoveHat(c.Slot);
             return;
@@ -1045,9 +1070,12 @@ public sealed partial class StoreModule : JbModule
             hat.Spawnflags = 256; // no collision
             if (!item.Color.Equals("255,255,255", StringComparison.Ordinal)) hat.Render = ColorOf(item.Color, Random.Shared);
             hat.DispatchSpawn();
-            hat.Teleport(c.EyePosition(), new QAngle(0, pawn.EyeAngles.Y, 0), new Vector(0, 0, 0));
+            // Upright on top of the head first, then parented to the head attachment keeping that offset: the attachment's
+            // own axes point along the head bone, so snapping onto it would lay the hat on its side.
+            var eye = c.EyePosition();
+            hat.Teleport(new Vector(eye.X, eye.Y, eye.Z + Cfg.HatHeight), new QAngle(0, pawn.EyeAngles.Y, 0), new Vector(0, 0, 0));
             hat.AcceptInput("SetParent", pawn, hat, "!activator");
-            if (Cfg.HatAttachment.Length > 0) hat.AcceptInput("SetParentAttachment", null, null, Cfg.HatAttachment);
+            if (Cfg.HatAttachment.Length > 0) hat.AcceptInput("SetParentAttachmentMaintainOffset", null, null, Cfg.HatAttachment);
             // Not drawn for the wearer (it would sit in front of their eyes) and honouring everyone's settings.
             Visibility.OnlyFor(hat, ViewFilter(c, true)!);
             _hat[c.Slot] = hat;

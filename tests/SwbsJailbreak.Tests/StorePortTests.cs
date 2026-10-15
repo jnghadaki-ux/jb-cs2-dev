@@ -17,7 +17,12 @@ public class StorePortTests
             Assert.Contains(items, i => i.Type == t);
         // Grenade sounds and hats need workshop files nobody made yet: no defaults. Kill sounds play the SWBS pack's own
         // .vsnd files directly (no sound event needed).
-        Assert.DoesNotContain(items, i => i.Type is StoreItemType.GrenadeSound or StoreItemType.Hat);
+        Assert.DoesNotContain(items, i => i.Type is StoreItemType.GrenadeSound);
+        // Hats are the pack's generated hats (tools/workshop-hats), hidden until WorkshopPack.HatModels is on.
+        Assert.All(items.Where(i => i.Type == StoreItemType.Hat), i => Assert.StartsWith(StoreConfig.PackHatFolder, i.Data));
+        Assert.Equal(6, items.Count(i => i.Type == StoreItemType.Hat));
+        Assert.All(items.Where(i => i.Type == StoreItemType.Hat), i => Assert.False(StoreModule.Available(i)));
+        Assert.Equal("clip_limit", new StoreConfig().HatAttachment);
         Assert.All(items.Where(i => i.Type == StoreItemType.KillSound), i => Assert.Matches(@"^sounds/swbs/.+\.vsnd$", i.Data));
         Assert.Contains(items, i => i.Type == StoreItemType.KillEffect && i.Data == "lightning");
         Assert.Contains(items, i => i.Type == StoreItemType.KillEffect && i.Data == "fire");
