@@ -78,7 +78,8 @@ public sealed class WorkshopPackConfig
 /// Loads the SWBS workshop pack: precaches its sound event file (and any extra resources) and, the first time it is
 /// enabled, points every sound setting the pack covers at the pack's sound events (round wins, LR activated, freekill,
 /// guard message, Horror Movie cowbell, RPG / Rocketeer shoot, explode, pain and death, slaps, jetpack, teleports),
-/// adds the "Cowbell" kill sound to the store and sets PlayerModels.PrisonerModels to the pack's SWBS prisoners.
+/// and adds the "Cowbell" kill sound to the store. The pack's SWBS prisoner models are not switched on: they were converted
+/// from CS:GO without CS2's player skeleton bones (see PlayerModelsConfig.AllowPackPrisonerModels).
 /// Admins can change any of them afterwards; !workshoppack re-applies. With StoreModels on, the store pack's character
 /// player models are added to the store once. Players only get the files when the server makes them download the
 /// addons (MultiAddonManager).
@@ -250,8 +251,6 @@ public sealed class WorkshopPackModule : JbModule
             if (!c.Items.Any(i => i.Id.Equals("killsound_cowbell", StringComparison.OrdinalIgnoreCase)))
                 c.Items.Add(new StoreItem { Id = "killsound_cowbell", Name = "Cowbell", Type = StoreItemType.KillSound, Data = Events.Cowbell, Price = 800 });
         });
-        // The pack's SWBS prisoners replace the stock jumpsuits; they only show once PlayerModels.ApplyModels is on.
-        config.Update<PlayerModelsConfig>("PlayerModels", c => c.PrisonerModels = PrisonerModels.ToList());
         config.Update<WorkshopPackConfig>("WorkshopPack", c => c.SoundsApplied = true);
         Logger.LogInformation("[WorkshopPack] sound settings now use the pack's {Count} sound events", Events.All.Length);
     }

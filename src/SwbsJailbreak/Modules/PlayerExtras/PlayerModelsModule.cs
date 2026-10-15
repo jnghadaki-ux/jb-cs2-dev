@@ -33,6 +33,14 @@ public sealed class PlayerModelsConfig
         "characters/models/tm_jumpsuit/tm_jumpsuit_variantc.vmdl"
     };
 
+    /// <summary>
+    /// The workshop pack's SWBS prisoners (characters/models/swbs/prisoners/...) were converted from CS:GO and miss CS2's
+    /// player skeleton bones (hands, IK targets, aim axis): every spawn floods the console with "Attempted to attach
+    /// attachment ... to an unknown bone" and the prisoner cannot hold weapons properly. They are skipped unless this is
+    /// turned on (only after the pack's prisoners are rebuilt on a CS2 agent skeleton).
+    /// </summary>
+    public bool AllowPackPrisonerModels { get; set; } = false;
+
     /// <summary>ultjb_playermodels_help1_bonushealth / help2.</summary>
     public int Help1BonusHealth { get; set; } = 30;
     public int Help2BonusHealth { get; set; } = 15;
@@ -92,7 +100,7 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
     private void OnPrecache(ResourceManifest manifest)
     {
         if (!Cfg.ApplyModels) return;
-        foreach (var path in Cfg.PrisonerModels.Append(Cfg.GuardModel))
+        foreach (var path in UsablePrisonerModels().Append(Cfg.GuardModel))
             if (!string.IsNullOrWhiteSpace(path)) manifest.AddResource(path);
     }
 
@@ -137,7 +145,7 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
     public bool ApplyPrisonerModel(JbPlayer player)
     {
         if (!Cfg.ApplyModels) return false;
-        var list = Cfg.PrisonerModels.Where(m => !string.IsNullOrWhiteSpace(m)).ToList();
+        var list = UsablePrisonerModels();
         if (list.Count == 0) return false;
         var help = Jb.Settings.GetHelpNumber(player) - 1;
         string model;
@@ -146,6 +154,19 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
         else model = list.Count > 2 ? list[Random.Shared.Next(2, list.Count)] : list[Random.Shared.Next(list.Count)];
         _lastPrisonerModel[player.Slot] = model;
         return SetModel(player, model);
+    }
+
+    /// <summary>Engine-free: is this one of the pack's CS:GO-converted prisoners (no CS2 skeleton)?</summary>
+    internal static bool IsPackPrisoner(string path) => path.Contains("/swbs/prisoners/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The configured prisoner models minus the unusable ones; the stock jumpsuits when nothing is left.</summary>
+    internal List<string> UsablePrisonerModels() => Usable(Cfg.PrisonerModels, Cfg.AllowPackPrisonerModels);
+
+    internal static List<string> Usable(IEnumerable<string> configured, bool allowPack)
+    {
+        var list = configured.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim())
+            .Where(m => allowPack || !IsPackPrisoner(m)).ToList();
+        return list.Count > 0 ? list : new PlayerModelsConfig().PrisonerModels;
     }
 
     private readonly string?[] _lastPrisonerModel = new string?[Players.MaxSlots];
