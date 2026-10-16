@@ -125,7 +125,7 @@ public sealed partial class WardenModule
         {
             var e = _ptrEnd;
             _pulses.Spawn(new Vector(e.X, e.Y, e.Z + 2f), 1f, Math.Max(1f, Cfg.PulseRingRadius), Cfg.PulseRingLife,
-                WDraw.ToColor(Cfg.PointerColor, Color.OrangeRed), Cfg.PulseRingWidth, 16);
+                BeaconColor(), Cfg.PulseRingWidth, 16);
         }
 
         _ptrButtonExpire = now + PointerExpire;
@@ -204,7 +204,7 @@ public sealed partial class WardenModule
         _ptrButtonExpire = Math.Max(_ptrButtonExpire, Server.EngineTime + Cfg.PingPointerTime);
         DrawPointerBeam(c);
         _pulses.Spawn(new Vector(pos.X, pos.Y, pos.Z + 2f), 1f, Math.Max(1f, Cfg.PulseRingRadius), Cfg.PulseRingLife,
-            WDraw.ToColor(Cfg.PointerColor, Color.OrangeRed), Cfg.PulseRingWidth, 16);
+            BeaconColor(), Cfg.PulseRingWidth, 16);
     }
 
     /// <summary>Beam from the end point (width 0.4) to near the weapon muzzle (end width 1.0).</summary>

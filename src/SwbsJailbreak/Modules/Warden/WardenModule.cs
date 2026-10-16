@@ -505,7 +505,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
         var pawn = p.Pawn;
         if (pawn != null && !string.IsNullOrWhiteSpace(Cfg.WardenModel))
         {
-            try { pawn.SetModel(Cfg.WardenModel); }
+            try { Fx.SetModel(pawn, Cfg.WardenModel); }
             catch (Exception ex) { Logger.LogWarning(ex, "Warden model {Model} could not be applied", Cfg.WardenModel); }
         }
 
@@ -535,7 +535,7 @@ public sealed partial class WardenModule : JbModule, IWardenService
             var pawn = p.Pawn;
             if (pawn != null && !string.IsNullOrEmpty(saved) && !string.IsNullOrWhiteSpace(Cfg.WardenModel))
             {
-                try { pawn.SetModel(saved); }
+                try { Fx.SetModel(pawn, saved); }
                 catch (Exception ex) { Logger.LogDebug(ex, "Warden model restore failed"); }
             }
         }

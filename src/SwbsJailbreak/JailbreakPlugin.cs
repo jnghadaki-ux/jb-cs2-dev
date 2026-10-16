@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.22.1"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.22.4"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -296,6 +296,17 @@ public sealed class JailbreakPlugin : BasePlugin
                 g.ConfigRevision = 11;
             });
             Logger.LogInformation("Config migrated to revision 11: respawn/1up/xup Level 1+, bring/goto/gravity and !bhc Level 3+");
+        }
+
+        if (Config.General.ConfigRevision < 12)
+        {
+            // 0.22.3: the warden pointer / beacon settings (!wbeacon) are Lead tier and root only.
+            Config.Update<GeneralConfig>("General", g =>
+            {
+                if (!g.Permissions.TryGetValue("warden.beacon", out var b) || b == "@css/generic") g.Permissions["warden.beacon"] = Perms.Defaults["warden.beacon"];
+                g.ConfigRevision = 12;
+            });
+            Logger.LogInformation("Config migrated to revision 12: !wbeacon needs the Lead admin tier (or root)");
         }
     }
 

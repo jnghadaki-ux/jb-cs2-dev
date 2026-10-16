@@ -402,7 +402,7 @@ public sealed class WardenToolsModule : JbModule
         if (!string.IsNullOrEmpty(saved) && !string.IsNullOrWhiteSpace(Cfg.DeputyModel) && c != null && c.IsValid && c.IsAliveP() &&
             c.Team == CsTeam.CounterTerrorist && c.PawnOrNull() is { } pawn)
         {
-            try { pawn.SetModel(saved); }
+            try { Fx.SetModel(pawn, saved); }
             catch (Exception ex) { Logger.LogDebug(ex, "[WardenTools] deputy model restore failed"); }
         }
         if (announceDeath) Chat.TellAll("wt.deputy.died", d.Name);
@@ -419,7 +419,7 @@ public sealed class WardenToolsModule : JbModule
         var model = Cfg.DeputyModel?.Trim() ?? "";
         if (model.Length == 0 || !c.IsAliveP() || c.PawnOrNull() is not { } pawn || ModelOf(c) == model) return;
         if (!ModelPaths.UsableOnPlayer(model, "WardenTools.DeputyModel")) return;
-        try { pawn.SetModel(model); }
+        try { Fx.SetModel(pawn, model); }
         catch (Exception ex) { Logger.LogWarning(ex, "[WardenTools] deputy model {Model} could not be applied", model); }
     }
 

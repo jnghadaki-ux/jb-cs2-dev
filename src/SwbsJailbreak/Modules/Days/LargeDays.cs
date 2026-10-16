@@ -295,8 +295,7 @@ public sealed class LargeDays : JbModule
                 var box = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic_override");
                 if (box == null) continue;
                 box.Collision.SolidType = SolidType_t.SOLID_NONE;
-                box.DispatchSpawn();
-                box.SetModel(Cfg.WeaponBoxModel);
+                Fx.SpawnWithModel(box, Cfg.WeaponBoxModel); // model as a spawn key value: no SetupModel staging assertion
                 box.Teleport(new Vector(at.X, at.Y, at.Z + 10f), new QAngle(0, Random.Shared.NextSingle() * 360f, 0), new Vector(0, 0, 0));
                 box.Glow.GlowColorOverride = Color.Orange;
                 box.Glow.GlowType = 3;

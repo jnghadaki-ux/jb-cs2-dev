@@ -168,6 +168,28 @@ public static class Fx
         entity.DispatchSpawn(kv);
     }
 
+    /// <summary>EF_IN_STAGING_LIST (entityidentity.h): the entity is created but the entity system has not finished it yet.</summary>
+    private const uint InStagingList = 0x4;
+
+    /// <summary>
+    /// SetModel that never trips "Assertion Failed in function SetupModel(): ... EF_IN_STAGING_LIST": while the entity
+    /// (a pawn mid-spawn, a prop created this frame) is still in the staging list the call waits a frame (up to ~0.25 s).
+    /// </summary>
+    public static void SetModel(CBaseModelEntity? entity, string model, int tries = 16)
+    {
+        if (entity is not { IsValid: true } || string.IsNullOrWhiteSpace(model)) return;
+        uint flags;
+        try { flags = entity.Entity?.Flags ?? 0; }
+        catch { flags = 0; }
+        if ((flags & InStagingList) != 0)
+        {
+            if (tries > 0) Server.NextFrame(() => SetModel(entity, model, tries - 1));
+            return;
+        }
+
+        entity.SetModel(model.Trim());
+    }
+
     public static void Tint(CBaseModelEntity? prop, Color color)
     {
         if (prop is not { IsValid: true } || prop.Render == color) return;

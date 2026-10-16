@@ -19,6 +19,7 @@ public static class Perms
     {
         ["admin"] = "@css/generic",          // basic admin: see admin chat, logs, use !admin menu
         ["warden.manage"] = "@css/generic",  // force/remove warden
+        ["warden.beacon"] = "@css/config",   // (Lead tier and root) !wbeacon: warden pointer tracer and beacon colour / size
         ["cells"] = "@css/root",             // sm_celldoors_open / sm_cdo (original: ADMFLAG_ROOT)
         ["cells.edit"] = "@css/root",        // sm_celldoors_edit + save (original: ADMFLAG_ROOT)
         ["cells.open"] = "@css/generic",
@@ -101,14 +102,23 @@ public static class Perms
         if (id == null) return false;
         try
         {
-            if (flag.StartsWith('#')) return AdminManager.PlayerInGroup(id, flag);
-            return AdminManager.PlayerHasPermissions(id, flag) || AdminManager.PlayerHasPermissions(id, "@css/root");
+            if (flag.StartsWith('#')) return AdminManager.PlayerInGroup(id, flag) || AdminLevels.TierImplies(TierOf(id), flag);
+            if (AdminManager.PlayerHasPermissions(id, flag) || AdminManager.PlayerHasPermissions(id, "@css/root")) return true;
+            // SWBS tiers are a ladder: a tier member has every flag of their tier and the tiers below, even when
+            // admin_groups.json is old, was edited, or has not been reloaded yet.
+            return AdminLevels.TierGrants(TierOf(id), flag);
         }
         catch
         {
             return false;
         }
     }
+
+    private static int TierOf(SteamID id) => AdminLevels.TierOf(g =>
+    {
+        try { return AdminManager.PlayerInGroup(id, g); }
+        catch { return false; }
+    });
 
     public static AdminData? AdminDataOf(CCSPlayerController player)
     {

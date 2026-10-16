@@ -321,9 +321,8 @@ public sealed class JihadModule : JbModule, IJihadService
                 if (prop != null)
                 {
                     prop.Collision.SolidType = SolidType_t.SOLID_NONE;
+                    Fx.SpawnWithModel(prop, Cfg.HeadModel); // model as a spawn key value: no SetupModel staging assertion
                     if (prop.CBodyComponent?.SceneNode != null) prop.CBodyComponent.SceneNode.Scale = Cfg.HeadModelScale;
-                    prop.DispatchSpawn();
-                    prop.SetModel(Cfg.HeadModel);
                     var o = pawn.AbsOrigin;
                     var yaw = pawn.AbsRotation?.Y ?? 0f;
                     prop.Teleport(new Vector(o.X, o.Y, o.Z + 90f), new QAngle(270f, yaw + 180f, 0f), new Vector(0, 0, 0));
