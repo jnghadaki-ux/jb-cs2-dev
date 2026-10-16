@@ -50,6 +50,7 @@ Type `!commands` in game for the full command list (also [below](#command-list))
 | Counter-Strike 2 dedicated server | newest build (SteamCMD app `730`) |
 | [Metamod:Source](https://www.sourcemm.net/downloads.php?branch=dev) | 2.0 (dev / master build), **not** 1.12 |
 | [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/releases) | **1.0.376 or newer**, the `with-runtime` download (it bundles .NET 10) |
+| [MultiAddonManager](https://github.com/Source2ZE/MultiAddonManager/releases) | newest release (Metamod plugin): mounts the SWBS Workshop packs and pre-downloads vote maps |
 
 Always pair the newest CS2 build with the newest CounterStrikeSharp release. If Valve ships a game update, wait for the matching CSS release.
 
@@ -60,10 +61,11 @@ Always pair the newest CS2 build with the newest CounterStrikeSharp release. If 
 1. **Install the server** with SteamCMD: `+login anonymous +app_update 730 validate`.
 2. **Install Metamod:Source 2.0** into `game/csgo/` and make sure `game/csgo/gameinfo.gi` loads it (the Metamod instructions cover this line).
 3. **Install CounterStrikeSharp** (`with-runtime`) by extracting its `addons` folder into `game/csgo/`.
-4. **Install the plugin.** Download the latest `SwbsJailbreak-<version>-net10.zip` from [`releases/`](releases) and extract it into `game/csgo/`. You should end up with
+4. **Install MultiAddonManager** by extracting its release into `game/csgo/` (it is a Metamod plugin, next to CounterStrikeSharp). Put the SWBS Workshop pack ids in its `mm_extra_addons` cvar (in `game/csgo/cfg/multiaddonmanager/multiaddonmanager.cfg`, or later in game with `!addon add <id or link>`), so every player downloads the models, sounds and hats.
+5. **Install the plugin.** Download the latest `SwbsJailbreak-<version>-net10.zip` from [`releases/`](releases) and extract it into `game/csgo/`. You should end up with
    `game/csgo/addons/counterstrikesharp/plugins/SwbsJailbreak/SwbsJailbreak.dll`.
    Remove any older `SwbsJailbreak` folder first.
-5. **Add yourself as an admin** in `game/csgo/addons/counterstrikesharp/configs/admins.json`:
+6. **Add yourself as an admin** in `game/csgo/addons/counterstrikesharp/configs/admins.json`:
    ```json
    {
      "YourName": {
@@ -73,7 +75,7 @@ Always pair the newest CS2 build with the newest CounterStrikeSharp release. If 
    }
    ```
    CounterStrikeSharp only recognises admins by their Steam-verified ID, so a server needs a game server token (`+sv_setsteamaccount <token>`). For a local test server started with `-insecure`, set `General.TrustUnverifiedSteamIds` to `true` in the plugin config (test servers only).
-6. **Start the server.** The console should print `SWBS Ultimate Jailbreak v<version> loaded`. A config file is created on first run at
+7. **Start the server.** The console should print `SWBS Ultimate Jailbreak v<version> loaded`. A config file is created on first run at
    `game/csgo/addons/counterstrikesharp/configs/plugins/SwbsJailbreak/SwbsJailbreak.json`, with every setting documented by its name. Restart (or change map) after editing it.
 
 ### Per-map setup
@@ -262,7 +264,7 @@ A vote also starts by itself 3 minutes before the time limit, with an "Extend th
 3. `!mapadd <id or Steam link>` adds a single map (its name loads from Steam); `!mapremove <name or id>` switches one off.
 4. `!startjb` (Level 3+): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
 
-**MultiAddonManager**: when it is loaded, `!mapadd` also downloads the map to the server ahead of time, and `!addon add|remove|list <id or link>` (Lead+) mounts Workshop addons such as the store pack, with names from Steam.
+**MultiAddonManager** (required, see [Requirements](#requirements)): `!mapadd` also downloads the map to the server ahead of time, and `!addon add|remove|list <id or link>` (Lead+) mounts Workshop addons such as the store pack, with names from Steam.
 
 ---
 

@@ -206,6 +206,12 @@ public sealed class MapVoteModule : JbModule
         _extends = 0;
         _mapStart = Server.CurrentTime;
         RefreshFromSteam(null);
+        if (!_warnedNoMam && !MultiAddonManager.Loaded)
+        {
+            _warnedNoMam = true;
+            Logger.LogWarning("[MapVote] MultiAddonManager is not loaded: it is required to mount the SWBS Workshop packs (models, sounds, hats) and pre-download vote maps. https://github.com/Source2ZE/MultiAddonManager/releases");
+        }
+
         _voteTimer?.Kill();
         _voteTimer = null;
     }
@@ -365,6 +371,7 @@ public sealed class MapVoteModule : JbModule
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
     private bool _refreshing;
+    private bool _warnedNoMam;
 
     /// <summary>
     /// Fetch the collection's maps and every unnamed map's Workshop title from Steam (background thread), then store them
