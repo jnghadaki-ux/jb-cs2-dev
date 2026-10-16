@@ -49,14 +49,12 @@ public static class Glow
                 return null;
             }
 
-            relay.SetModel(model);
             relay.Spawnflags = 256; // start with collision disabled
             relay.RenderMode = RenderMode_t.kRenderNone;
-            relay.DispatchSpawn();
+            Fx.SpawnWithModel(relay, model); // model as a spawn key value: SetModel before spawning trips an engine assertion
 
-            outline.SetModel(model);
             outline.Spawnflags = 256;
-            outline.DispatchSpawn();
+            Fx.SpawnWithModel(outline, model);
             outline.Glow.GlowColorOverride = color;
             outline.Glow.GlowRange = 5000;
             outline.Glow.GlowRangeMin = 0;
