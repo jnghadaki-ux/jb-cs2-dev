@@ -111,6 +111,7 @@ public class CommandCatalogTests
     [InlineData("pool")]
     [InlineData("sabotage")]
     [InlineData("perk")]
+    [InlineData("demo")]
     public void OpenCommands_AreListedForEveryone(string name) =>
         Assert.Null(Catalogue().Single(e => e.Name == name).Capability);
 

@@ -163,10 +163,30 @@ public static class Fx
     /// </summary>
     public static void SpawnWithModel(CBaseEntity entity, string model)
     {
+        var path = model.Trim();
         var kv = new CEntityKeyValues();
-        kv.SetString("model", model.Trim());
+        kv.SetString("model", path);
         entity.DispatchSpawn(kv);
+        // Safety net: if the engine did not take the model from the key value (a prop with no model is invisible, and
+        // a glow outline without one shows nothing), set it directly once the entity has left the staging list.
+        Server.NextFrame(() =>
+        {
+            if (!entity.IsValid) return;
+            string? current;
+            try { current = entity.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName; }
+            catch { current = null; }
+            if (string.Equals(current, path, StringComparison.OrdinalIgnoreCase)) return;
+            if (!_warnedKvModel)
+            {
+                _warnedKvModel = true;
+                JailbreakPlugin.Instance?.Logger.LogInformation("[Fx] the spawn key value \"model\" was not applied ({Model}); props get their model with SetModel instead", path);
+            }
+
+            SetModel(entity.As<CBaseModelEntity>(), path);
+        });
     }
+
+    private static bool _warnedKvModel;
 
     /// <summary>EF_IN_STAGING_LIST (entityidentity.h): the entity is created but the entity system has not finished it yet.</summary>
     private const uint InStagingList = 0x4;

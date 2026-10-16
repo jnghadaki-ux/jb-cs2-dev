@@ -86,8 +86,13 @@ public sealed class LoggerModule : JbModule, ILogService
 
     // ================================================================== ILogService
 
+    /// <summary>Every jail log line as it is written (the demo recorder copies them into the game's .log file).</summary>
+    internal static event Action<string, LogType>? LineLogged;
+
     public void LogEvent(string message, JbPlayer? primary, JbPlayer? secondary, LogType type, bool global = true)
     {
+        try { LineLogged?.Invoke(message, type); }
+        catch { /* a listener must never break logging */ }
         if (type == LogType.Admin) Admin.AdminActivityModule.Record(message, primary, secondary);
 
         var t = Math.Max(0, (int)(Server.CurrentTime - _roundStart));
