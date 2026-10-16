@@ -109,6 +109,8 @@ public class CommandCatalogTests
     [InlineData("maplist")]
     [InlineData("currentmap")]
     [InlineData("pool")]
+    [InlineData("sabotage")]
+    [InlineData("perk")]
     public void OpenCommands_AreListedForEveryone(string name) =>
         Assert.Null(Catalogue().Single(e => e.Name == name).Capability);
 
@@ -138,6 +140,7 @@ public class CommandCatalogTests
     [InlineData("mapadd", "map", "@css/changemap")]
     [InlineData("mapremove", "map", "@css/changemap")]
     [InlineData("addon", "config", "@css/config")]
+    [InlineData("sabotagesetup", "config", "@css/config")]
     public void TierChanges_UseTheirCapability(string name, string capability, string flag)
     {
         Assert.Equal(capability, Catalogue().Single(e => e.Name == name).Capability);

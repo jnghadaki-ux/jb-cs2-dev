@@ -103,8 +103,14 @@ public sealed partial class WardenModule
     }
 
     /// <summary>CheckBeamCreation_Pointer for a fresh USE press.</summary>
+    /// <summary>Set by the Jammed radio sabotage: until this server time the pointer and its beacon do not work.</summary>
+    internal static float PointerJammedUntil;
+
+    private static bool PointerJammed => Server.CurrentTime < PointerJammedUntil;
+
     private void PointerFreshPress(CCSPlayerController c, double now)
     {
+        if (PointerJammed) return;
         if (now > _ptrButtonExpire)
         {
             if (now > _ptrStartExpire)
@@ -197,6 +203,7 @@ public sealed partial class WardenModule
     /// <summary>A warden ping shows the pointer laser at the pinged spot, with a pulse ring, for PingPointerTime.</summary>
     private void OnPing(CCSPlayerController c, Vector pos, int entity)
     {
+        if (PointerJammed) return;
         if (!Cfg.PointerEnabled || Cfg.PingPointerTime <= 0) return;
         var w = Warden;
         if (w == null || w.Slot != c.Slot || !w.IsAlive) return;

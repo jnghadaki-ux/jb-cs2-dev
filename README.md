@@ -39,7 +39,7 @@ Buttons-based map games, jetpack and other game days, and a game browser for the
 - AFK handling, bhop checks, chat formatting and anti-spam, parachute, map ratings and map music.
 - Everything is configurable from one JSON file; all messages are translatable.
 
-Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [point pools](#point-pools), [admin tiers](#admin-tiers).
+Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [point pools](#point-pools), [prisoner shop](#prisoner-shop-sabotage-and-perks), [admin tiers](#admin-tiers).
 
 ---
 
@@ -281,6 +281,36 @@ Prisoners can put their points behind what they want the warden to run: a **ward
 
 ---
 
+## Prisoner shop (sabotage and perks)
+
+Prisoners spend points on effects that last **the whole round**: `!sabotage` (`!sab`) for the shop, `!perk` for perks only.
+
+**On by default**
+
+| Sabotage (against the guards, all round) | Effect | Cost |
+|---|---|---|
+| Smoke screen | A random guard is partly blinded for 4 s every 35-50 s | 600 |
+| Bad trip | One guard has a mild drug sway all round; it passes on if they die | 700 |
+| Hot floor | Every 45 s the guard standing still longest burns for 3 s (cannot kill) | 650 |
+| Heavy boots | All guards 8% slower | 800 |
+| Jammed radio | The warden's pointer and beacon black out 10 s of every 40 s | 600 |
+| Paranoia | Fake sounds near a random guard every 30-60 s | 450 |
+
+| Perk (for you, until you die) | Effect | Cost |
+|---|---|---|
+| Thick skin | +15 max HP, 1 HP every 3 s up to 115 | 500 |
+| Light feet | +8% speed, 15% less fall damage | 450 |
+| Shadow | Guards deal 15% less damage to you while you crouch | 550 |
+| Second wind | The first time you would drop below 20 HP you heal to 50 | 600 |
+
+**Off by default** (switch on with `!sabotagesetup`): curses (Frostbite, Static, Gravity well, Rusty guns, Butterfingers, Echo, Glowstick, Blackout pulse), skills (Vampire, Long jump, Impulse, Lucky, Adrenaline, Ghost step, Scavenger, Double jump, Iron lungs, Contraband) and team auras the prisoners fund together (Riot, Solidarity, Underground).
+
+**Rules**: buy in the first 2 minutes of a round, never in days or last requests, not in the round you joined; 1 sabotage and 1 perk per prisoner per round; each sabotage once per round and at most 2 against the guards; everything stops when last requests or a day start or only 1 guard is left; nothing can kill. The guards see what is running on their HUD (the buyer stays anonymous). Points spent on sabotages are **shared by the guards who survive the round**.
+
+**Admins**: `!sabotagesetup` (Lead+) switches every effect on or off for the server; costs and limits are in the `Sabotage` config section.
+
+---
+
 ## Admin tiers
 
 The plugin adds four admin groups under root to CounterStrikeSharp's `configs/admin_groups.json` and reloads them. The tiers are a ladder: Level 1 < Level 2 < Level 3 < Lead, and each tier always has everything the tiers below it have. On every start the plugin adds any lower-tier flag a higher tier is missing, including flags you added to a lower tier yourself. Your other groups, your immunities and any extra flags you gave a tier are never removed. A higher tier also has a higher immunity, so a lower tier cannot target a higher one. Put an admin in a tier with `"groups": ["#swbs/level2"]` in `admins.json`. Admins given flags directly instead of a group are ranked by their flags (for example `@css/ban` = Level 2) and also get everything below that rank. Targeting follows the same ladder, with root above Lead, even when `admins.json` gives no immunity.
@@ -308,7 +338,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (174 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (177 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -488,7 +518,7 @@ Every command of the plugin (174 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Store, points and player extras</b> (18)</summary>
+<details><summary><b>Store, points and player extras</b> (21)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -497,11 +527,14 @@ Every command of the plugin (174 commands, generated from the code). Type them i
 | `!givepoints` |  | Root | &lt;target&gt; &lt;amount&gt; - give jailbreak points |
 | `!lrstats` |  | Everyone | [player] - last request duel wins and losses per LR |
 | `!maprating` |  | Everyone | [map] - show a map's rating |
+| `!perk` |  | Everyone | (prisoners) buy a perk or skill for this round |
 | `!points` |  | Everyone | [target] - show your jailbreak points (admins: anyone's) |
 | `!pool` | !pools, !fund | Everyone | put points behind a warden game, map game or day you want (pools start in the first minute) |
 | `!rank` | !top | Everyone | [category\|player] - jailbreak leaderboard and your position |
 | `!ratemap` | !rm | Everyone | rate the current map |
 | `!ratewarden` | !rate | Everyone | rate the last round's warden from 1 to 5 |
+| `!sabotage` | !sab | Everyone | (prisoners) buy an effect on the guards, a perk, or chip in for a team aura |
+| `!sabotagesetup` |  | Lead | (admin) switch shop effects on/off for this server |
 | `!search` | !frisk | Everyone | [prisoner] - (guard) frisk the prisoner in front of you for contraband |
 | `!setpoints` |  | Root | &lt;target&gt; &lt;amount&gt; - set a player's jailbreak points |
 | `!snitch` | !tip | Everyone | &lt;prisoner&gt; - (prisoner) anonymously tip the guards that someone carries a weapon |
