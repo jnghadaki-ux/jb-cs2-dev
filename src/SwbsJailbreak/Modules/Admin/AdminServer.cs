@@ -22,6 +22,13 @@ public sealed partial class AdminModule
 
     internal void ChangeMap(CCSPlayerController? caller, string map, CommandInfo? info)
     {
+        // The map vote module knows the Workshop maps by name and checks that the change really happened.
+        if (Plugin.GetModule<Extras.MapVoteModule>() is { } maps)
+        {
+            if (maps.ChangeNow(caller, map, info)) Activity(caller, "admin.act.map", map);
+            return;
+        }
+
         map = map.Trim();
         string command;
         if (map.StartsWith("workshop/", StringComparison.OrdinalIgnoreCase)) map = map[9..];

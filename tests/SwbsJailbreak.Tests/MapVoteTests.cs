@@ -89,4 +89,14 @@ public class MapVoteTests
     [Fact]
     public void MultiAddonManagerList_Parses() =>
         Assert.Equal(new ulong[] { 123, 456 }, MultiAddonManager.ParseList(" 123,456 , abc,123"));
+
+    [Fact]
+    public void ChangeCommands_WorkshopIdFirst_ThenKnownName()
+    {
+        Assert.Equal(new[] { "host_workshop_map 42", "ds_workshop_changelevel jb_x" },
+            MapVoteRules.ChangeCommands(new VoteMap("", 42), "jb_x", _ => false));
+        Assert.Equal(new[] { "host_workshop_map 42" }, MapVoteRules.ChangeCommands(new VoteMap("Pretty Name", 42), "", _ => false));
+        Assert.Equal(new[] { "changelevel de_dust2", "ds_workshop_changelevel de_dust2" },
+            MapVoteRules.ChangeCommands(new VoteMap("de_dust2", 0), "de_dust2", n => n == "de_dust2"));
+    }
 }
