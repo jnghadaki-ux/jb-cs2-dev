@@ -39,7 +39,7 @@ Buttons-based map games, jetpack and other game days, and a game browser for the
 - AFK handling, bhop checks, chat formatting and anti-spam, parachute, map ratings and map music.
 - Everything is configurable from one JSON file; all messages are translatable.
 
-Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [point pools](#point-pools), [prisoner shop](#prisoner-shop-sabotage-and-perks), [admin tiers](#admin-tiers).
+Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [point pools](#point-pools), [prisoner shop](#prisoner-shop-sabotage-and-perks), [demos](#demos), [admin tiers](#admin-tiers).
 
 ---
 
@@ -311,6 +311,27 @@ Prisoners spend points on effects that last **the whole round**: `!sabotage` (`!
 
 ---
 
+## Demos
+
+Every game is recorded with SourceTV, like on the old servers:
+
+- **Recording**: each map is recorded from start to the end of the game into `game/csgo/demos/<server>_<map>_<date-time>.dem`. Watch it with CS2's own viewer (`playdemo demos/<name>`). The jail log of every round is printed into the demo's console, so it shows up while you watch.
+- **Console log**: a `.log` with the same name sits next to each demo: chat, kills, round starts/ends, connects and every jail log line (LRs, days, admin actions), each stamped with the **demo time** (`[12:41] ...`).
+- `!demo` (everyone): the demo being recorded and the current time in it, so players can quote it in reports. `!demos` (admins): the last 15 games in the console.
+- **Demo database**: set `Demos.UploadUrl` (and `Demos.UploadToken`) and each finished game (demo + log, zipped) is sent there as a `multipart/form-data` POST with the fields `server`, `name`, `map`, `started`, `ended`, `duration`, `players` and `file`. Every server can upload to the same database. `demos/index.json` lists every game on the server.
+- **Housekeeping**: games nobody played are deleted, local files older than 14 days are removed (`Demos.KeepDays`), and recording pauses when less than 2 GB is free.
+
+**Server setup** (once, in `server.cfg`, then restart; SourceTV cannot start mid-map):
+```
+tv_enable 1
+tv_delay 30
+tv_maxclients 0
+tv_name "SWBS SourceTV"
+```
+SourceTV takes one player slot.
+
+---
+
 ## Admin tiers
 
 The plugin adds four admin groups under root to CounterStrikeSharp's `configs/admin_groups.json` and reloads them. The tiers are a ladder: Level 1 < Level 2 < Level 3 < Lead, and each tier always has everything the tiers below it have. On every start the plugin adds any lower-tier flag a higher tier is missing, including flags you added to a lower tier yourself. Your other groups, your immunities and any extra flags you gave a tier are never removed. A higher tier also has a higher immunity, so a lower tier cannot target a higher one. Put an admin in a tier with `"groups": ["#swbs/level2"]` in `admins.json`. Admins given flags directly instead of a group are ranked by their flags (for example `@css/ban` = Level 2) and also get everything below that rank. Targeting follows the same ladder, with root above Lead, even when `admins.json` gives no immunity.
@@ -338,7 +359,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (177 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (179 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -447,7 +468,7 @@ Every command of the plugin (177 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (21)</summary>
+<details><summary><b>Extras</b> (23)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -457,6 +478,8 @@ Every command of the plugin (177 commands, generated from the code). Type them i
 | `!bhopcheck` | !bhc | Level 3 | &lt;#userid\|name&gt; - bhop log (console) |
 | `!commands` |  | Everyone | list the commands you can use (!commands console prints them to your console) |
 | `!currentmap` |  | Everyone | show the current map |
+| `!demo` |  | Everyone | the demo being recorded and the time in it (quote it in reports) |
+| `!demos` |  | Level 1 | (admin) the last recorded games (console) |
 | `!giveparachute` |  | Level 3 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
 | `!mapadd` |  | Level 3 | &lt;workshop id\|url&gt; - (admin) add a Workshop map to the vote list (its name comes from Steam) |
 | `!mapchange` | !changemap | Level 3 | [map name\|workshop id\|link] - (admin) change the map now (no name = pick from a menu) |

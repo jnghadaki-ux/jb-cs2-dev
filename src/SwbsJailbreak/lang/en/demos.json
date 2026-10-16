@@ -1,0 +1,5 @@
+{
+  "demos.not_recording": "{olive}No demo is being recorded right now.",
+  "demos.current": "{olive}Demo: {green}{0}.dem{olive}, time {green}{1}{olive}. Quote it in a report so admins can find the moment.",
+  "demos.see_console": "{olive}The list is in your console."
+}
