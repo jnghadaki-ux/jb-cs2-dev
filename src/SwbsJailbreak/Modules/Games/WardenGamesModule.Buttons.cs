@@ -156,7 +156,7 @@ public sealed partial class WardenGamesModule
         foreach (var b in _buttons.Buttons)
         {
             var button = b;
-            m.Add(Hud.Escape(button.Label), p => ChooseReward(p, _games.OfType<MapGame>().First(), null, button, false));
+            m.Add(Hud.Escape(button.Label + PlayerExtras.PoolsModule.Tag(PlayerExtras.PoolCategory.MapGame, button.Label)), p => ChooseReward(p, _games.OfType<MapGame>().First(), null, button, false));
         }
 
         if (m.Items.Count == 0) m.AddInfo(Lang.T("games.err.no_buttons"));

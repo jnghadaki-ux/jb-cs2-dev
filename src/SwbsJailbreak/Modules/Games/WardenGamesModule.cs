@@ -231,7 +231,7 @@ public sealed partial class WardenGamesModule : JbModule
         {
             var game = g;
             var ok = game.CanStart(this, out var gameWhy);
-            var label = Lang.T(game.NameKey) + (ok ? "" : $" ({Lang.T(gameWhy)})");
+            var label = Lang.T(game.NameKey) + (ok ? "" : $" ({Lang.T(gameWhy)})") + PlayerExtras.PoolsModule.Tag(PlayerExtras.PoolCategory.Game, game.Key);
             m.Add(Hud.Escape(label), p => ChooseArea(p, game), ok);
         }
 
@@ -393,6 +393,7 @@ public sealed partial class WardenGamesModule : JbModule
         Logger.LogInformation("[Games] \"{Starter}\" started {Game} ({Players} players, reward {Reward}, area {Area})",
             starter.PlayerName, game.Key, s.Players.Count, reward, area?.Name ?? "-");
         SafeCall(() => game.Start(s));
+        PlayerExtras.PoolsModule.GameStarted(button != null ? PlayerExtras.PoolCategory.MapGame : PlayerExtras.PoolCategory.Game, button != null ? button.Label : game.Key);
         if (Jb.Warden.IsWarden(starter) || Perms.Has(starter, "games.admin")) ShowControl(starter);
         else if (warden.IsValid) ShowControl(warden);
     }

@@ -293,7 +293,7 @@ public sealed partial class DaysModule : JbModule, IDayService
             var day = d;
             var forcedFfa = (d.Flags & DayFlags.ForceFreeForAll) != 0;
             var usable = d.Enabled && (!forcedFfa || HasEnoughRebelPointsForFfa) && (d.CanStart?.Invoke() ?? true);
-            m.Add(Hud.Escape(d.Name), x =>
+            m.Add(Hud.Escape(d.Name + PlayerExtras.PoolsModule.Tag(PlayerExtras.PoolCategory.Day, d.Name)), x =>
             {
                 if (!StillAllowed(x, admin)) return;
                 var force = (day.Flags & DayFlags.ForceFreeForAll) != 0;
