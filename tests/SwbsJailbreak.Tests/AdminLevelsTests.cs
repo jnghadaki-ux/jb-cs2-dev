@@ -94,4 +94,49 @@ public class AdminLevelsTests
 
         Assert.Contains(Perms.Defaults["ban"], AdminLevels.All.Single(l => l.Name == "Level 3").Flags); // level 3 can ban
     }
+
+    [Fact]
+    public void FlagOnlyAdmins_GetTheirRankAndEverythingBelow()
+    {
+        int Tier(string name) => System.Array.FindIndex(AdminLevels.All, l => l.Name == name);
+        Assert.Equal(new[] { "@css/kick" }, AdminLevels.Signature(Tier("Level 2")));
+        Assert.Contains("@css/ban", AdminLevels.Signature(Tier("Level 3")));
+        Assert.Equal(Tier("Level 2"), AdminLevels.TierOfFlags(f => f == "@css/kick"));
+        Assert.Equal(Tier("Level 3"), AdminLevels.TierOfFlags(f => f == "@css/ban"));
+        Assert.Equal(Tier("Level 3"), AdminLevels.TierOfFlags(f => f is "@css/ban" or "@css/cheats"));
+        Assert.Equal(Tier("Lead"), AdminLevels.TierOfFlags(f => f == "@swbs/noclip"));
+        Assert.Equal(Tier("Level 1"), AdminLevels.TierOfFlags(f => f == "@css/generic"));
+        Assert.Equal(-1, AdminLevels.TierOfFlags(f => f == "@css/chat")); // a chat-only helper is not ranked
+        Assert.True(AdminLevels.TierGrants(AdminLevels.TierOfFlags(f => f == "@css/kick"), "@css/slay"));
+    }
+
+    [Fact]
+    public void Targeting_FollowsTheLadder_RootAboveAll()
+    {
+        int Tier(string name) => System.Array.FindIndex(AdminLevels.All, l => l.Name == name);
+        var root = AdminLevels.EffectiveImmunity(0, true, -1);
+        var lead = AdminLevels.EffectiveImmunity(0, false, Tier("Lead"));
+        var l2 = AdminLevels.EffectiveImmunity(0, false, Tier("Level 2"));
+        var l1 = AdminLevels.EffectiveImmunity(10, false, Tier("Level 1"));
+        Assert.True(root > lead && lead > l2 && l2 > l1);
+        Assert.Equal(0u, AdminLevels.EffectiveImmunity(0, false, -1));
+        Assert.Equal(80u, AdminLevels.EffectiveImmunity(80, false, Tier("Level 1"))); // a higher configured immunity stays
+    }
+
+    [Fact]
+    public void Bans_AreLevel3Up_KickStaysLevel2_AndOldGroupsAreMovedUp()
+    {
+        int Tier(string name) => System.Array.FindIndex(AdminLevels.All, l => l.Name == name);
+        Assert.False(AdminLevels.TierGrants(Tier("Level 2"), Perms.Defaults["ban"]));
+        Assert.True(AdminLevels.TierGrants(Tier("Level 3"), Perms.Defaults["ban"]));
+        Assert.True(AdminLevels.TierGrants(Tier("Level 2"), Perms.Defaults["kick"]));
+        Assert.True(AdminLevels.TierGrants(Tier("Level 2"), Perms.Defaults["ctban"]));
+        // An untouched Level 2 group from an older version loses @css/ban; Level 3 still has it.
+        var old = "{ \"#swbs/level2\": { \"flags\": [\"@css/reservation\",\"@css/generic\",\"@css/chat\",\"@css/slay\",\"@css/kick\",\"@css/ban\"], \"immunity\": 20 } }";
+        var merged = JsonNode.Parse(AdminLevels.MergeInto(old)!)!.AsObject();
+        List<string> F(string g) => merged[g]!["flags"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
+        Assert.DoesNotContain("@css/ban", F("#swbs/level2"));
+        Assert.Contains("@css/ban", F("#swbs/level3"));
+        Assert.Null(AdminLevels.MergeInto(merged.ToJsonString()));
+    }
 }

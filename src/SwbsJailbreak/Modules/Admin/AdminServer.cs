@@ -82,7 +82,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_reloadadmins", "sm_reloadadmins - reload CSS admins, groups and overrides")]
     public void CmdReloadAdmins(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "ban")) return;
+        if (!Require(caller, info, "kick")) return;
         Server.ExecuteCommand("css_admins_reload");
         Server.ExecuteCommand("css_groups_reload");
         Server.ExecuteCommand("css_overrides_reload");

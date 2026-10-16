@@ -114,6 +114,17 @@ public class CommandCatalogTests
     [InlineData("xup", "respawn", "@css/slay")]
     [InlineData("bhopcheck", "bhc", "@css/unban")]
     [InlineData("bhce", "bhc", "@css/unban")]
+    [InlineData("addban", "ban", "@css/ban")]
+    [InlineData("heal", "fun", "@css/cheats")]
+    [InlineData("speed", "fun", "@css/cheats")]
+    [InlineData("giveparachute", "fun", "@css/cheats")]
+    [InlineData("ungod", "god", "@swbs/god")]
+    [InlineData("sw", "warden.manage", "@css/generic")]
+    [InlineData("rw", "warden.manage", "@css/generic")]
+    [InlineData("log", "logs", "@css/generic")]
+    [InlineData("unban", "unban", "@swbs/unban")]
+    [InlineData("unctban", "unban", "@swbs/unban")]
+    [InlineData("noclip", "noclip", "@swbs/noclip")]
     public void TierChanges_UseTheirCapability(string name, string capability, string flag)
     {
         Assert.Equal(capability, Catalogue().Single(e => e.Name == name).Capability);

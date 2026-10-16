@@ -87,7 +87,7 @@ public sealed class ParachuteModule : JbModule
 
     private void SetParachute(CCSPlayerController? caller, CommandInfo info, bool give)
     {
-        if (!Perms.Has(caller, "ban")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (!Perms.Has(caller, "fun")) { Chat.ReplyT(caller, info, "core.no_access"); return; } // Level 3+ (give items)
         if (Cfg.Everyone) { Chat.ReplyT(caller, info, "chute.everyone"); return; }
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", give ? "!giveparachute <target>" : "!removeparachute <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1));

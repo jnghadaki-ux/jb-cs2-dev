@@ -371,7 +371,7 @@ public sealed class CommandsModule : JbModule
     [ConsoleCommand("css_speed", "sm_speed <target> <0.0 to 10.0> - set a player's speed")]
     public void CmdSpeed(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (!Perms.Has(caller, "fun")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
         if (info.ArgCount < 3 || !float.TryParse(info.GetArg(2), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value) || value < 0f || value > 10f)
         {
             Chat.ReplyT(caller, info, "core.usage", "!speed <target> <0.0 to 10.0>");

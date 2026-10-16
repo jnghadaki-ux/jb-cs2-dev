@@ -15,8 +15,11 @@ public sealed record AdminLevel(string Group, string Name, int Immunity, string[
 public static class AdminLevels
 {
     private static readonly string[] L1 = { "@css/reservation", "@css/generic", "@css/chat", "@css/slay" };
-    private static readonly string[] L2 = L1.Concat(new[] { "@css/kick", "@css/ban" }).ToArray();
-    private static readonly string[] L3 = L2.Concat(new[] { "@css/unban", "@css/cheats", "@css/changemap" }).ToArray();
+    private static readonly string[] L2 = L1.Concat(new[] { "@css/kick" }).ToArray();
+    private static readonly string[] L3 = L2.Concat(new[] { "@css/ban", "@css/unban", "@css/cheats", "@css/changemap" }).ToArray();
+
+    // Before 0.22.7 server bans (@css/ban) were Level 2 (Level 3's flag set did not change).
+    private static readonly string[] OldL2 = L1.Concat(new[] { "@css/kick", "@css/ban" }).ToArray();
     private static readonly string[] Lead = L3.Concat(new[] { "@css/config", "@css/cvar", "@swbs/unban", "@swbs/noclip", "@swbs/god" }).ToArray();
 
     /// <summary>
@@ -25,19 +28,20 @@ public static class AdminLevels
     /// </summary>
     private static readonly Dictionary<string, string[][]> PreviousDefaults = new()
     {
+        ["#swbs/level2"] = new[] { OldL2 },
         ["#swbs/lead"] = new[] { L3.Concat(new[] { "@css/config", "@css/cvar" }).ToArray() }
     };
 
     public static readonly AdminLevel[] All =
     {
         new("#swbs/level1", "Level 1", 10, L1,
-            "admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, respawn/1up/xup"),
+            "admin menu and chat, jail logs (!log), warden control (!sw/!rw), open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, respawn/1up/xup"),
         new("#swbs/level2", "Level 2", 20, L2,
-            "+ kick, move/swap teams, bans and timed CT bans, crew admin"),
+            "+ kick, move/swap teams, timed CT bans, warnings, crew admin"),
         new("#swbs/level3", "Level 3", 30, L3,
-            "+ permanent CT bans, day/LR editing, teleport (bring/goto), gravity, bhop logs (!bhc), give/hp/armor/speed and other fun commands (not noclip/god), map change"),
+            "+ server bans (!ban, !banip, !addban), permanent CT bans, day/LR editing, teleport (bring/goto), gravity, bhop logs (!bhc), give/hp/heal/armor/speed/parachutes and other fun commands (not noclip/god), map change"),
         new("#swbs/lead", "Lead", 50, Lead,
-            "+ unban (bans and CT bans), noclip, god, warden pointer/beacon settings, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
+            "+ unban (bans and CT bans), noclip, god/ungod, warden pointer/beacon settings, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
     };
 
     /// <summary>The highest tier a player is in (by group, or by flags for admins set up without groups); null if none.</summary>
@@ -78,6 +82,30 @@ public static class AdminLevels
         return -1;
     }
 
+    /// <summary>Immunity root admins count with (above every tier).</summary>
+    public const uint RootImmunity = 99;
+
+    /// <summary>Engine-free: the immunity used for targeting: the configured one, but never below the admin's rank.</summary>
+    public static uint EffectiveImmunity(uint configured, bool root, int tier) =>
+        Math.Max(configured, root ? RootImmunity : tier >= 0 && tier < All.Length ? (uint)All[tier].Immunity : 0u);
+
+    /// <summary>
+    /// The flags that mark a tier for admins set up with flags instead of a tier group: what the tier adds over the one
+    /// below it (Level 1: @css/generic, the basic admin flag). An admin with "@css/ban" counts as Level 2 and so also gets
+    /// Level 1's commands.
+    /// </summary>
+    public static string[] Signature(int tier) => tier <= 0
+        ? new[] { "@css/generic" }
+        : All[tier].Flags.Except(All[tier - 1].Flags, StringComparer.OrdinalIgnoreCase).ToArray();
+
+    /// <summary>The highest tier whose signature flags the admin holds (-1 if none). <paramref name="hasFlag"/> asks CSS.</summary>
+    public static int TierOfFlags(Func<string, bool> hasFlag)
+    {
+        for (var i = All.Length - 1; i >= 0; i--)
+            if (Signature(i).Any(hasFlag)) return i;
+        return -1;
+    }
+
     /// <summary>
     /// Engine-free: add the SWBS tiers to an admin_groups.json document and keep them a ladder: every tier holds every
     /// flag of the tier below it (Level 1 &lt; Level 2 &lt; Level 3 &lt; Lead), including flags an owner added to a lower tier.
@@ -98,7 +126,7 @@ public static class AdminLevels
             {
                 flags = (existing["flags"] as JsonArray)?.Select(n => n?.GetValue<string>() ?? "").Where(f => f.Length > 0).ToList() ?? new List<string>();
                 // An untouched group from an earlier version gets the current flags (immunity is kept).
-                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && olds.Any(o => flags.ToHashSet().SetEquals(o)))
+                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && !flags.ToHashSet().SetEquals(l.Flags) && olds.Any(o => flags.ToHashSet().SetEquals(o)))
                 {
                     flags = l.Flags.ToList();
                     changed = true;
