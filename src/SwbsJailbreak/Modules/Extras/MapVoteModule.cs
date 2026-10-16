@@ -648,8 +648,26 @@ public sealed class MapVoteModule : JbModule
         }
     }
 
+    private DateTime _nextNameCheck = DateTime.MinValue;
+
+    /// <summary>
+    /// Every 10 s (also right after a mid-map plugin load, which gets no map start): look up maps that still show as
+    /// "workshop &lt;id&gt;", at most every 10 minutes while some are unnamed.
+    /// </summary>
+    private void NameCheck()
+    {
+        if (!Cfg.FetchNamesFromSteam || _refreshing || DateTime.UtcNow < _nextNameCheck) return;
+        var collection = ulong.TryParse(Cfg.WorkshopCollectionId.Trim(), out var cid) ? cid : 0;
+        var collectionMissing = collection != 0 && Storage.Get<List<ulong>>(Ns, "collection") == null;
+        var unnamed = AllMaps().Any(m => m.WorkshopId != 0 && m.Name.Length == 0 && Storage.Get<string>(Ns, "title:" + m.WorkshopId) is not { Length: > 0 });
+        if (!collectionMissing && !unnamed) return;
+        _nextNameCheck = DateTime.UtcNow.AddMinutes(10);
+        RefreshFromSteam(null);
+    }
+
     private void CheckEndVote()
     {
+        NameCheck();
         if (_voting || _voted || Cfg.EndVoteMinutesBefore <= 0 || Pool().Count == 0) return;
         if (TimeLeft() is { } left && left <= Cfg.EndVoteMinutesBefore * 60f) StartVote(false);
     }
