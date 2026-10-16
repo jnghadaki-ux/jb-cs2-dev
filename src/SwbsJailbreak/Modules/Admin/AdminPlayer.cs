@@ -106,7 +106,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_heal", "sm_heal <#steamid|#userid|name> - heal a player to 100 health")]
     public void CmdHeal(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "root")) return;
+        if (!Require(caller, info, "fun")) return; // Level 3+, like !hp
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!heal <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true);
         if (t == null) return;
@@ -164,7 +164,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_ungod", "Disable god mode: !ungod <target>")]
     public void CmdUngod(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "fun")) return;
+        if (!Require(caller, info, "god")) return; // Lead+, like !god
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!ungod <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1));
         if (t == null) return;

@@ -244,10 +244,10 @@ The plugin adds four admin groups under root to CounterStrikeSharp's `configs/ad
 
 | Tier | Group | Immunity | Adds |
 |---|---|---|---|
-| Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, `!respawn`/`!1up`/`!xup` |
-| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, bans and timed CT bans, crew admin |
-| Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, teleport (`!bring`/`!goto`), `!gravity`, bhop logs (`!bhc`), give/hp/armor/speed and other fun commands (not noclip/god), map change |
-| Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`, `!wbeacon`, zone editor and server cvars |
+| Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs (`!log`), warden control (`!sw`/`!rw`), open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, `!respawn`/`!1up`/`!xup` |
+| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, bans (`!ban`, `!addban`) and timed CT bans, warnings, crew admin |
+| Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, teleport (`!bring`/`!goto`), `!gravity`, bhop logs (`!bhc`), give/hp/heal/armor/speed/parachutes and other fun commands (not noclip/god), map change |
+| Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`/`!ungod`, `!wbeacon`, zone editor and server cvars |
 | Root | `@css/root` (a flag, not a group) | 100 | everything, including rcon, the cell door editor, points and server setup |
 
 In `admins.json`:
@@ -271,7 +271,7 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
-| `!addban` |  | Root | &lt;minutes\|0&gt; &lt;steamid&gt; [reason] |
+| `!addban` |  | Level 2 | &lt;minutes\|0&gt; &lt;steamid&gt; [reason] |
 | `!admin` | !adminmenu | Level 1 | Open the admin menu |
 | `!adminlevels` |  | Level 1 | the SWBS admin tiers and what each can do |
 | `!adminlog` |  | Level 2 | [lines] [filter] - recent admin activity (console) |
@@ -298,7 +298,7 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 | `!god` |  | Lead | Toggle god mode: !god &lt;target&gt; [0/1] |
 | `!goto` |  | Level 3 | Teleport to a player: !goto &lt;target&gt; |
 | `!gravity` |  | Level 3 | &lt;#userid\|name&gt; [amount] - leave amount off to reset (0.0 - 5.0) |
-| `!heal` |  | Root | &lt;#steamid\|#userid\|name&gt; - heal a player to 100 health |
+| `!heal` |  | Level 3 | &lt;#steamid\|#userid\|name&gt; - heal a player to 100 health |
 | `!hp` |  | Level 3 | Set player health: !hp &lt;target&gt; &lt;amount&gt; |
 | `!kick` |  | Level 2 | &lt;#userid\|name&gt; [reason] |
 | `!map` |  | Level 3 | &lt;map\|workshop id&gt; - change map |
@@ -324,7 +324,7 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 | `!unban` |  | Lead | &lt;steamid\|ip&gt; |
 | `!unfreeze` |  | Level 1 | Unfreeze a player |
 | `!ungag` | !timed_ungag | Level 1 | &lt;player&gt; |
-| `!ungod` |  | Level 3 | Disable god mode: !ungod &lt;target&gt; |
+| `!ungod` |  | Lead | Disable god mode: !ungod &lt;target&gt; |
 | `!unmute` | !timed_unmute | Level 1 | &lt;player&gt; |
 | `!unsilence` | !timed_unsilence | Level 1 | &lt;player&gt; |
 | `!unwarn` |  | Level 2 | Clear a player's warnings: !unwarn &lt;target&gt; |
@@ -382,10 +382,10 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 | `!bhce` |  | Level 3 | &lt;#userid\|name&gt; - extended bhop log (console) |
 | `!bhopcheck` | !bhc | Level 3 | &lt;#userid\|name&gt; - bhop log (console) |
 | `!commands` |  | Everyone | list the commands you can use (!commands console prints them to your console) |
-| `!giveparachute` |  | Level 2 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
+| `!giveparachute` |  | Level 3 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!perfsound` |  | Everyone | toggle the perfect-jump sound |
-| `!removeparachute` |  | Level 2 | &lt;target&gt; - remove a parachute |
+| `!removeparachute` |  | Level 3 | &lt;target&gt; - remove a parachute |
 | `!workshoppack` |  | Root | point the sound settings at the SWBS workshop pack again |
 
 </details>
@@ -401,7 +401,7 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 | `!g` | !gc, !guardchat | Everyone | &lt;message&gt; - (prisoners) private message to the guards |
 | `!jbrules` |  | Everyone | jailbreak rules link |
 | `!roll` |  | Everyone | [max] - warden rolls a random number |
-| `!speed` |  | Level 2 | &lt;target&gt; &lt;0.0 to 10.0&gt; - set a player's speed |
+| `!speed` |  | Level 3 | &lt;target&gt; &lt;0.0 to 10.0&gt; - set a player's speed |
 | `!stoptimer` |  | Everyone | stop the countdown timer |
 | `!timer` |  | Everyone | &lt;seconds&gt; - warden countdown timer |
 | `!whokilled` | !wk | Level 1 | &lt;who&gt; - check who killed a player |
@@ -429,7 +429,7 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
-| `!log` | !logs, !sm_log, !sm_logs | Level 2 | &lt;player&gt; &lt;num&gt; - List the actions relating to &lt;player&gt; (last &lt;num&gt; lines). |
+| `!log` | !logs, !sm_log, !sm_logs | Level 1 | &lt;player&gt; &lt;num&gt; - List the actions relating to &lt;player&gt; (last &lt;num&gt; lines). |
 
 </details>
 
@@ -488,11 +488,11 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 | `!kiss` | !smooch | Everyone | Kisses the player you're looking at (or !kiss &lt;player&gt;). |
 | `!rand` | !random | Everyone | (warden/deputy) pick a random alive prisoner |
 | `!repeat` |  | Everyone | (prisoner) ask the warden to repeat the last order |
-| `!rw` |  | Level 2 | Removes the current warden. |
+| `!rw` |  | Level 1 | Removes the current warden. |
 | `!split` | !teams | Everyone | [2-4\|off] - (warden/deputy) split the alive prisoners into colour teams |
 | `!splitun` | !unsplit | Everyone | (warden/deputy) remove the !split colour teams |
 | `!spotlight` | !spot | Everyone | [player] - (warden/deputy) the prisoner you look at glows for guards |
-| `!sw` | !setw, !setwarden | Root | Sets the current warden. |
+| `!sw` | !setw, !setwarden | Level 1 | Sets the current warden. |
 | `!uw` |  | Everyone | Allows the warden to unwarden themselves. |
 | `!votewarden` | !vw | Everyone | vote to remove the current warden (type again to take your vote back) |
 | `!w` | !warden | Everyone | Adds you to the warden queue. |

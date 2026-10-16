@@ -119,7 +119,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_addban", "sm_addban <minutes|0> <steamid> [reason]")]
     public void CmdAddBan(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "rcon")) return;
+        if (!Require(caller, info, "ban")) return; // Level 2+, like !ban
         if (info.ArgCount < 3 || !int.TryParse(info.GetArg(1), out var minutes) || minutes < 0)
         {
             Chat.ReplyT(caller, info, "core.usage", "!addban <minutes|0> <steamid> [reason]");

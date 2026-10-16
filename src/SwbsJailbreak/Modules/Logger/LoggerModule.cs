@@ -497,7 +497,7 @@ public sealed class LoggerModule : JbModule, ILogService
     [ConsoleCommand("sm_logs", "sm_log <player> <num> - List the actions relating to <player> (last <num> lines).")]
     public void OnLogsCommand(CCSPlayerController? player, CommandInfo info)
     {
-        if (!Perms.HasFlag(player, "@css/ban"))
+        if (!Perms.Has(player, "logs")) // Level 1+ (jail logs)
         {
             Chat.Reply(player, info, Lang.T("core.no_access"));
             return;
