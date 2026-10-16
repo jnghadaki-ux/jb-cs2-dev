@@ -39,7 +39,7 @@ Buttons-based map games, jetpack and other game days, and a game browser for the
 - AFK handling, bhop checks, chat formatting and anti-spam, parachute, map ratings and map music.
 - Everything is configurable from one JSON file; all messages are translatable.
 
-Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [admin tiers](#admin-tiers).
+Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [admin tiers](#admin-tiers).
 
 ---
 
@@ -238,6 +238,34 @@ Limits: Map Input repairs map *logic* (buttons, relays, doors, triggers). It can
 
 ---
 
+## Map voting
+
+Players vote on the next map; maps are **Workshop maps**. The map only ever changes when the game ends. By default a map lasts **30 minutes** (`MapVote.MapTimeLimitMinutes`).
+
+**Player commands**
+
+| Command | What it does |
+|---|---|
+| `!rtv` (`!votechange`, `!rockthevote`) | Vote to change the map. When 60% of players have typed it, a map vote starts; the winner loads when the game ends (the game ends after the current round). |
+| `!nominate [map]` | Put a map on the next ballot (no name = pick from a menu). |
+| `!nextmap` | The next map, once voted. |
+| `!timeleft` | Time left on this map. |
+| `!maplist` (`!maps`) | Every map you can vote for. |
+| `!currentmap` | The map you are on. |
+
+A vote also starts by itself 3 minutes before the time limit, with an "Extend this map" option.
+
+**Setting up the maps (admins)**
+
+1. Put your jailbreak maps in a Steam Workshop collection and set `MapVote.WorkshopCollectionId` to its id (the number in the collection's Steam link). The plugin reads the collection and every map's **name** from Steam, so you never type map ids by hand.
+2. `!mapsetup` (Level 3+): every map by name with **[ON]/[OFF]** switches, and "Refresh map names from Steam".
+3. `!mapadd <id or Steam link>` adds a single map (its name loads from Steam); `!mapremove <name or id>` switches one off.
+4. `!startjb` (Level 3+): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
+
+**MultiAddonManager**: when it is loaded, `!mapadd` also downloads the map to the server ahead of time, and `!addon add|remove|list <id or link>` (Lead+) mounts Workshop addons such as the store pack, with names from Steam.
+
+---
+
 ## Admin tiers
 
 The plugin adds four admin groups under root to CounterStrikeSharp's `configs/admin_groups.json` and reloads them. The tiers are a ladder: Level 1 < Level 2 < Level 3 < Lead, and each tier always has everything the tiers below it have. On every start the plugin adds any lower-tier flag a higher tier is missing, including flags you added to a lower tier yourself. Your other groups, your immunities and any extra flags you gave a tier are never removed. A higher tier also has a higher immunity, so a lower tier cannot target a higher one. Put an admin in a tier with `"groups": ["#swbs/level2"]` in `admins.json`. Admins given flags directly instead of a group are ranked by their flags (for example `@css/ban` = Level 2) and also get everything below that rank. Targeting follows the same ladder, with root above Lead, even when `admins.json` gives no immunity.
@@ -265,7 +293,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (161 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (172 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -374,18 +402,29 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (9)</summary>
+<details><summary><b>Extras</b> (20)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
+| `!addon` | !addons | Lead | &lt;add\|remove\|list&gt; [workshop id\|link] - (admin) mount Workshop addons with MultiAddonManager |
 | `!admintag` |  | Level 1 | toggle your admin clan tag |
 | `!bhce` |  | Level 3 | &lt;#userid\|name&gt; - extended bhop log (console) |
 | `!bhopcheck` | !bhc | Level 3 | &lt;#userid\|name&gt; - bhop log (console) |
 | `!commands` |  | Everyone | list the commands you can use (!commands console prints them to your console) |
+| `!currentmap` |  | Everyone | show the current map |
 | `!giveparachute` |  | Level 3 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
+| `!mapadd` |  | Level 3 | &lt;workshop id\|url&gt; - (admin) add a Workshop map to the vote list (its name comes from Steam) |
+| `!maplist` | !maps | Everyone | list the maps you can vote for |
+| `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
+| `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
+| `!nextmap` |  | Everyone | show the next map |
+| `!nominate` |  | Everyone | [map] - put a map on the next map vote |
 | `!perfsound` |  | Everyone | toggle the perfect-jump sound |
 | `!removeparachute` |  | Level 3 | &lt;target&gt; - remove a parachute |
+| `!rtv` | !rockthevote, !votechange | Everyone | rock the vote: vote to change the map |
+| `!startjb` | !jbstart | Level 3 | [collection id\|map] - (admin) start jailbreak: from a default map, load the Workshop jailbreak maps |
+| `!timeleft` |  | Everyone | time left on this map |
 | `!workshoppack` |  | Root | point the sound settings at the SWBS workshop pack again |
 
 </details>

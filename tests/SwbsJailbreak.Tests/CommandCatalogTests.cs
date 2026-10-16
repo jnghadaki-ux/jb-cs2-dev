@@ -102,6 +102,12 @@ public class CommandCatalogTests
     [InlineData("deputy")]
     [InlineData("split")]
     [InlineData("repeat")]
+    [InlineData("rtv")]
+    [InlineData("nominate")]
+    [InlineData("nextmap")]
+    [InlineData("timeleft")]
+    [InlineData("maplist")]
+    [InlineData("currentmap")]
     public void OpenCommands_AreListedForEveryone(string name) =>
         Assert.Null(Catalogue().Single(e => e.Name == name).Capability);
 
@@ -125,6 +131,11 @@ public class CommandCatalogTests
     [InlineData("unban", "unban", "@swbs/unban")]
     [InlineData("unctban", "unban", "@swbs/unban")]
     [InlineData("noclip", "noclip", "@swbs/noclip")]
+    [InlineData("startjb", "map", "@css/changemap")]
+    [InlineData("mapsetup", "map", "@css/changemap")]
+    [InlineData("mapadd", "map", "@css/changemap")]
+    [InlineData("mapremove", "map", "@css/changemap")]
+    [InlineData("addon", "config", "@css/config")]
     public void TierChanges_UseTheirCapability(string name, string capability, string flag)
     {
         Assert.Equal(capability, Catalogue().Single(e => e.Name == name).Capability);
