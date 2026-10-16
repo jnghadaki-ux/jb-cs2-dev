@@ -240,7 +240,7 @@ Limits: Map Input repairs map *logic* (buttons, relays, doors, triggers). It can
 
 ## Admin tiers
 
-The plugin adds four admin groups under root to CounterStrikeSharp's `configs/admin_groups.json` (only when missing; your own groups are never changed). Each tier has everything of the tiers below it, and a higher immunity so a lower tier cannot target a higher one. Restart the server once after the first load so CounterStrikeSharp reads them.
+The plugin adds four admin groups under root to CounterStrikeSharp's `configs/admin_groups.json` and reloads them. The tiers are a ladder: Level 1 < Level 2 < Level 3 < Lead, and each tier always has everything the tiers below it have. On every start the plugin adds any lower-tier flag a higher tier is missing, including flags you added to a lower tier yourself. Your other groups, your immunities and any extra flags you gave a tier are never removed. A higher tier also has a higher immunity, so a lower tier cannot target a higher one. Put an admin in a tier with `"groups": ["#swbs/level2"]` in `admins.json`.
 
 | Tier | Group | Immunity | Adds |
 |---|---|---|---|

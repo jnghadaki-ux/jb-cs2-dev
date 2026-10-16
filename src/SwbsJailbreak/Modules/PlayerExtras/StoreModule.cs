@@ -406,7 +406,7 @@ public sealed partial class StoreModule : JbModule
         {
             if (!ModelPaths.UsableOnPlayer(model, "Store item " + item.Id)) return;
             if (pawn.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName == model) return;
-            pawn.SetModel(model);
+            Fx.SetModel(pawn, model);
         }
         catch (Exception ex)
         {

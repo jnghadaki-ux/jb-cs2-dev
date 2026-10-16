@@ -289,7 +289,7 @@ public sealed class LastGuardModule : JbModule, ILastGuardService
         var pawn = lg.Pawn;
         if (pawn != null && !string.IsNullOrWhiteSpace(Cfg.LastGuardModel))
         {
-            try { pawn.SetModel(Cfg.LastGuardModel); }
+            try { Fx.SetModel(pawn, Cfg.LastGuardModel); }
             catch (Exception ex) { Logger.LogWarning(ex, "Last guard model {Model} could not be applied", Cfg.LastGuardModel); }
         }
 

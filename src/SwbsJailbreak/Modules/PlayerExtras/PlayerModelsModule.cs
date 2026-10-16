@@ -187,7 +187,7 @@ public sealed class PlayerModelsModule : JbModule, IPlayerModelService
         {
             if (!ModelPaths.UsableOnPlayer(model, "PlayerModels")) return false;
             if (CurrentModel(player) == model) return true;
-            pawn.SetModel(model);
+            Fx.SetModel(pawn, model);
             return true;
         }
         catch (Exception ex)

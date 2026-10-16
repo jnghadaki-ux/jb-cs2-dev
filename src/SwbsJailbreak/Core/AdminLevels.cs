@@ -54,40 +54,83 @@ public static class AdminLevels
         return Perms.IsAdmin(player) ? "Admin" : null;
     }
 
+    /// <summary>Index of a tier group in <see cref="All"/> (case-insensitive), -1 if it is not one.</summary>
+    public static int IndexOf(string group) => Array.FindIndex(All, l => string.Equals(l.Group, group, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Engine-free: tier <paramref name="tier"/> (index in <see cref="All"/>) has this flag, itself or through a lower tier.</summary>
+    public static bool TierGrants(int tier, string flag) =>
+        tier >= 0 && tier < All.Length && All.Take(tier + 1).Any(l => l.Flags.Contains(flag, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>Engine-free: a member of tier <paramref name="tier"/> counts as a member of <paramref name="group"/> (that tier or a lower one).</summary>
+    public static bool TierImplies(int tier, string group)
+    {
+        var g = IndexOf(group);
+        return tier >= 0 && g >= 0 && g <= tier;
+    }
+
     /// <summary>
-    /// Engine-free: add the SWBS tiers to an admin_groups.json document, leaving every existing group (including one with
-    /// the same name an owner edited) untouched. Returns the new JSON text, or null when nothing had to be added.
+    /// The highest SWBS tier a player is in by group membership (-1 if none). <paramref name="inGroup"/> asks CSS.
+    /// </summary>
+    public static int TierOf(Func<string, bool> inGroup)
+    {
+        for (var i = All.Length - 1; i >= 0; i--)
+            if (inGroup(All[i].Group)) return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// Engine-free: add the SWBS tiers to an admin_groups.json document and keep them a ladder: every tier holds every
+    /// flag of the tier below it (Level 1 &lt; Level 2 &lt; Level 3 &lt; Lead), including flags an owner added to a lower tier.
+    /// Other groups, immunities and flags an owner added are never removed. Returns the new JSON text, or null when
+    /// nothing changed.
     /// </summary>
     public static string? MergeInto(string? existingJson)
     {
         JsonObject doc;
         try { doc = string.IsNullOrWhiteSpace(existingJson) ? new JsonObject() : JsonNode.Parse(existingJson) as JsonObject ?? new JsonObject(); }
         catch (JsonException) { return null; } // never overwrite a file we cannot read
-        var added = false;
+        var changed = false;
+        var below = new List<string>();
         foreach (var l in All)
         {
+            List<string> flags;
             if (doc[l.Group] is JsonObject existing)
             {
+                flags = (existing["flags"] as JsonArray)?.Select(n => n?.GetValue<string>() ?? "").Where(f => f.Length > 0).ToList() ?? new List<string>();
                 // An untouched group from an earlier version gets the current flags (immunity is kept).
-                var flags = (existing["flags"] as JsonArray)?.Select(n => n?.GetValue<string>() ?? "").ToHashSet() ?? new HashSet<string>();
-                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && olds.Any(o => flags.SetEquals(o)))
+                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && olds.Any(o => flags.ToHashSet().SetEquals(o)))
                 {
-                    existing["flags"] = new JsonArray(l.Flags.Select(f => (JsonNode)JsonValue.Create(f)!).ToArray());
-                    added = true;
+                    flags = l.Flags.ToList();
+                    changed = true;
                 }
 
-                continue;
+                var missing = below.Where(f => !flags.Contains(f, StringComparer.OrdinalIgnoreCase)).ToList();
+                if (missing.Count > 0)
+                {
+                    flags.AddRange(missing);
+                    changed = true;
+                }
+
+                if (changed) existing["flags"] = new JsonArray(flags.Select(f => (JsonNode)JsonValue.Create(f)!).ToArray());
+            }
+            else if (doc.ContainsKey(l.Group))
+            {
+                continue; // something we cannot read as a group: leave it alone
+            }
+            else
+            {
+                flags = l.Flags.Concat(below).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                doc[l.Group] = new JsonObject
+                {
+                    ["flags"] = new JsonArray(flags.Select(f => (JsonNode)JsonValue.Create(f)!).ToArray()),
+                    ["immunity"] = l.Immunity
+                };
+                changed = true;
             }
 
-            if (doc.ContainsKey(l.Group)) continue;
-            doc[l.Group] = new JsonObject
-            {
-                ["flags"] = new JsonArray(l.Flags.Select(f => (JsonNode)JsonValue.Create(f)!).ToArray()),
-                ["immunity"] = l.Immunity
-            };
-            added = true;
+            below = flags;
         }
 
-        return added ? doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) : null;
+        return changed ? doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) : null;
     }
 }

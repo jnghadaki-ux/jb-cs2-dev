@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -22,7 +23,9 @@ public sealed partial class AdminModule
             var merged = AdminLevels.MergeInto(text);
             if (merged == null) return;
             File.WriteAllText(path, merged);
-            Logger.LogInformation("[Admin] added the SWBS admin groups (#swbs/level1, level2, level3, lead) to {Path}; restart the server to load them", path);
+            Server.ExecuteCommand("css_groups_reload");
+            Server.ExecuteCommand("css_admins_reload");
+            Logger.LogInformation("[Admin] updated the SWBS admin groups (#swbs/level1 < level2 < level3 < lead, each with every lower tier's flags) in {Path}", path);
         }
         catch (Exception ex)
         {

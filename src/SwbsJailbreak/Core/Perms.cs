@@ -102,14 +102,23 @@ public static class Perms
         if (id == null) return false;
         try
         {
-            if (flag.StartsWith('#')) return AdminManager.PlayerInGroup(id, flag);
-            return AdminManager.PlayerHasPermissions(id, flag) || AdminManager.PlayerHasPermissions(id, "@css/root");
+            if (flag.StartsWith('#')) return AdminManager.PlayerInGroup(id, flag) || AdminLevels.TierImplies(TierOf(id), flag);
+            if (AdminManager.PlayerHasPermissions(id, flag) || AdminManager.PlayerHasPermissions(id, "@css/root")) return true;
+            // SWBS tiers are a ladder: a tier member has every flag of their tier and the tiers below, even when
+            // admin_groups.json is old, was edited, or has not been reloaded yet.
+            return AdminLevels.TierGrants(TierOf(id), flag);
         }
         catch
         {
             return false;
         }
     }
+
+    private static int TierOf(SteamID id) => AdminLevels.TierOf(g =>
+    {
+        try { return AdminManager.PlayerInGroup(id, g); }
+        catch { return false; }
+    });
 
     public static AdminData? AdminDataOf(CCSPlayerController player)
     {
