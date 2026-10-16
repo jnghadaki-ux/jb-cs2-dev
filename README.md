@@ -29,7 +29,7 @@ Buttons-based map games, jetpack and other game days, and a game browser for the
 **Crews, points and the store**
 - **Crews** (clans) with tags, favors, a crew war day and admin tools.
 - **Points** earned for kills and wins.
-- **Store** (`!store`): bullet tracers, paintballs, kill effects, trails, auras, sparkles, chat colours and titles, body size and transparency, hats, face and back equipment (glasses, masks, wings, jetpack; store pack 2, `tools/store-pack-2`), kill and grenade sounds, player models.
+- **Store** (`!store`): bullet tracers, paintballs, kill effects, trails, auras (pulse, orbiting comets, helix, rising rings, ring of fire, storm), sparkles, chat colours and titles, body size and transparency, hats, face and back equipment (glasses, masks, wings, jetpack; store pack 2, `tools/store-pack-2`), equipment effects (flames, sparks, electric, twinkle from the worn pieces), kill and grenade sounds, player models.
 - **Betting** on rounds, **contraband** and snitch rewards, **leaderboards** and per-player stats.
 
 **Server tools**

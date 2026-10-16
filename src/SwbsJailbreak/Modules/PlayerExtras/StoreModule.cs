@@ -29,6 +29,7 @@ public enum StoreItemType
     Hat,
     Face,
     Back,
+    GearEffect,
     PlayerModel
 }
 
@@ -45,7 +46,9 @@ public sealed class StoreItem
     public string Color { get; set; } = "255,255,255";
 
     /// <summary>
-    /// Per type: KillEffect "ring" / "fire" / "explosion"; ChatColor a chat colour tag ("{red}"); BodySize a scale
+    /// Per type: KillEffect "ring" / "fire" / "explosion"; Aura a style (StoreAuras: pulse, orbit, helix, rings, flames,
+    /// storm); GearEffect a style drawn from the worn hat / face / back pieces (StoreGearFx: flames, sparks, electric,
+    /// twinkle); ChatColor a chat colour tag ("{red}"); BodySize a scale
     /// ("0.85"); Transparency an alpha 0-255; KillSound a sound event; GrenadeSound "bounce event|explode event"; Hat,
     /// Face and Back a .vmdl path from your workshop pack (Face / Back: store pack 2, see WorkshopPack.Store2Equipment);
     /// PlayerModel a player .vmdl path (the store pack, see WorkshopPack.StoreModels).
@@ -127,7 +130,7 @@ public sealed class StoreConfig
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = true;
 
-    public const int CurrentDefaultsVersion = 9;
+    public const int CurrentDefaultsVersion = 10;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -226,7 +229,34 @@ public sealed class StoreConfig
         Gear(StoreItemType.Back, "bat_wings", "Devil wings", "150,20,20", 4000),
         Gear(StoreItemType.Back, "jetpack", "Jetpack", "150,155,165", 3000),
         Gear(StoreItemType.Back, "backpack", "Backpack", "60,90,40", 1500),
-        Gear(StoreItemType.Back, "katana", "Katana", "35,35,40", 2500)
+        Gear(StoreItemType.Back, "katana", "Katana", "35,35,40", 2500),
+        // ---- version 10: aura styles (StoreAuras) and equipment effects (SMPlugins Item_EquipmentEffects, StoreGearFx)
+        AuraItem("orbit", "cyan", "Cyan comets", "60,220,255", 1200),
+        AuraItem("orbit", "rainbow", "Rainbow comets", "rainbow", 1600),
+        AuraItem("helix", "green", "Green helix", "60,255,120", 1400),
+        AuraItem("helix", "rainbow", "Rainbow helix", "rainbow", 1800),
+        AuraItem("rings", "gold", "Rising gold rings", "255,200,40", 1400),
+        AuraItem("rings", "rainbow", "Rising rainbow rings", "rainbow", 1800),
+        AuraItem("flames", "fire", "Ring of fire", "255,255,255", 1600),
+        AuraItem("flames", "blue", "Blue flames", "70,140,255", 1600),
+        AuraItem("storm", "blue", "Storm", "255,255,255", 1800),
+        AuraItem("storm", "purple", "Purple storm", "190,90,255", 1800),
+        GearFx("flames", "fire", "Flaming equipment", "255,255,255", 1500),
+        GearFx("flames", "blue", "Blue-flame equipment", "70,140,255", 1500),
+        GearFx("sparks", "gold", "Gold sparks", "255,200,40", 1000),
+        GearFx("sparks", "rainbow", "Rainbow sparks", "rainbow", 1300),
+        GearFx("electric", "blue", "Electric equipment", "120,190,255", 1500),
+        GearFx("twinkle", "white", "Twinkling equipment", "255,255,255", 1000)
+    };
+
+    private static StoreItem AuraItem(string style, string name, string title, string color, int price) => new()
+    {
+        Id = $"aura_{style}_{name}", Name = title, Type = StoreItemType.Aura, Color = color, Data = style, Price = price
+    };
+
+    private static StoreItem GearFx(string style, string name, string title, string color, int price) => new()
+    {
+        Id = $"gearfx_{style}_{name}", Name = title, Type = StoreItemType.GearEffect, Color = color, Data = style, Price = price
     };
 
     /// <summary>Path prefix of store pack 2's face and back equipment.</summary>
@@ -343,6 +373,7 @@ public sealed partial class StoreModule : JbModule
             if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
                 foreach (var model in StoreTrails.AllModels()) m.AddResource(model);
         });
+        Plugin.RegisterListener<Listeners.OnTick>(AuraFrame);
         JbEvents.PlayerModelsApplied += ApplyPlayerModel;
         ChatDecor.AddPrefix(Name, TitlePrefix);
         ChatDecor.AddColor(Name, ChatColor);
@@ -352,7 +383,11 @@ public sealed partial class StoreModule : JbModule
     {
         JbEvents.PlayerModelsApplied -= ApplyPlayerModel;
         ChatDecor.Remove(Name);
-        for (var i = 0; i < Players.MaxSlots; i++) RemoveGear(i);
+        for (var i = 0; i < Players.MaxSlots; i++)
+        {
+            RemoveGear(i);
+            RemoveAuraRig(i);
+        }
     }
 
     /// <summary>Configs written before the new items existed get them once (an item an admin removed later stays removed).</summary>
@@ -410,6 +445,7 @@ public sealed partial class StoreModule : JbModule
         _trailLast[player.Slot] = null;
         _dropLast[player.Slot] = null;
         RemoveGear(player.Slot);
+        RemoveAuraRig(player.Slot);
         // Without the PlayerModels module nobody raises PlayerModelsApplied: apply the store model from here.
         if (Jb.Models is NullServices) SchedulePlayerModel(player.Slot);
     }
@@ -420,6 +456,7 @@ public sealed partial class StoreModule : JbModule
         Array.Clear(_trailLast);
         Array.Fill(_alpha, 0);
         Array.Fill(_scale, 1f);
+        Array.Clear(_auraRig); // the map change removed the beams
         foreach (var kind in GearTypes)
         {
             Array.Clear(_gear[kind]);
@@ -435,6 +472,7 @@ public sealed partial class StoreModule : JbModule
         _scale[slot] = 1f;
         ClearPaint(slot);
         RemoveGear(slot);
+        RemoveAuraRig(slot);
     }
 
     /// <summary>After PlayerModels gave the player their team model: the equipped store player model replaces it.</summary>
@@ -578,6 +616,9 @@ public sealed partial class StoreModule : JbModule
             return Extras.WorkshopPackModule.HatModelsOn;
         if (i.Type is StoreItemType.Face or StoreItemType.Back && data.StartsWith(StoreConfig.PackGearFolder, StringComparison.OrdinalIgnoreCase))
             return Extras.WorkshopPackModule.Store2EquipmentOn;
+        // Equipment effects need something to come out of: the pack hats or store pack 2.
+        if (i.Type == StoreItemType.GearEffect)
+            return Extras.WorkshopPackModule.HatModelsOn || Extras.WorkshopPackModule.Store2EquipmentOn;
         return true;
     }
 
@@ -714,6 +755,7 @@ public sealed partial class StoreModule : JbModule
                     if (item.Type == StoreItemType.ChatTitle) Chat.Tell(c, "store.title.how", Cfg.TitleMaxLength);
                     if (item.Type is StoreItemType.Transparency or StoreItemType.BodySize && !Cfg.BodyItemsAnytime) Chat.Tell(c, "store.body.when");
                     if (item.Type == StoreItemType.PlayerModel) TellModel(c);
+                    if (item.Type == StoreItemType.GearEffect && GearTypes.All(k => Equipped(c.Slot, k) == null)) Chat.Tell(c, "store.geareffect.needs");
                     break;
             }
         }
@@ -897,6 +939,7 @@ public sealed partial class StoreModule : JbModule
     {
         _trailLast[victim.Slot] = null;
         RemoveGear(victim.Slot);
+        RemoveAuraRig(victim.Slot);
         if (attacker == null || ReferenceEquals(attacker, victim) || attacker.Controller is not { IsValid: true } ac) return;
         var o = victim.Controller?.Origin() ?? _lastAlive[victim.Slot];
         if (o == null) return;
@@ -1000,7 +1043,9 @@ public sealed partial class StoreModule : JbModule
             }
             if (allowed && _tick % 2 == 0 && Equipped(c.Slot, StoreItemType.Sparkles) is { } sp) Sparkle(c, o, sp);
             if (allowed && _tick % 4 == 0 && Equipped(c.Slot, StoreItemType.Halo) is { } halo) Swirl(c, o, halo);
-            if (allowed && _tick % 7 == 0 && Equipped(c.Slot, StoreItemType.Aura) is { } aura) Aura(c, o, aura);
+            if (allowed && Equipped(c.Slot, StoreItemType.Aura) is { } aura) AuraTick(c, o, aura);
+            else RemoveAuraRig(c.Slot);
+            if (allowed && Equipped(c.Slot, StoreItemType.GearEffect) is { } gearFx) GearEffectTick(c, gearFx);
             if (_tick % 7 == 0)
             {
                 ApplyBody(c);
