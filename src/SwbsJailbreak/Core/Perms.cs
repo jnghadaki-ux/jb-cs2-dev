@@ -114,11 +114,18 @@ public static class Perms
         }
     }
 
-    private static int TierOf(SteamID id) => AdminLevels.TierOf(g =>
-    {
-        try { return AdminManager.PlayerInGroup(id, g); }
-        catch { return false; }
-    });
+    /// <summary>The admin's SWBS tier: by tier group, or by the tier flags they were given directly (the higher one).</summary>
+    private static int TierOf(SteamID id) => Math.Max(
+        AdminLevels.TierOf(g =>
+        {
+            try { return AdminManager.PlayerInGroup(id, g); }
+            catch { return false; }
+        }),
+        AdminLevels.TierOfFlags(f =>
+        {
+            try { return AdminManager.PlayerHasPermissions(id, f); }
+            catch { return false; }
+        }));
 
     public static AdminData? AdminDataOf(CCSPlayerController player)
     {
@@ -147,12 +154,29 @@ public static class Perms
         try
         {
             var targetId = AdminId(target);
-            return targetId == null || AdminManager.CanPlayerTarget(AdminId(admin), targetId);
+            if (targetId == null || AdminManager.CanPlayerTarget(AdminId(admin), targetId)) return true;
+            // CSS compares only the immunity numbers in admins.json / admin_groups.json: a root admin or an admin given
+            // tier flags directly usually has 0 and could not touch a tier admin. Ranks decide: root > Lead > 3 > 2 > 1.
+            var adminId = AdminId(admin);
+            return adminId != null && AdminLevels.EffectiveImmunity(Immunity(adminId), IsRoot(adminId), TierOf(adminId))
+                >= AdminLevels.EffectiveImmunity(Immunity(targetId), IsRoot(targetId), TierOf(targetId));
         }
         catch
         {
             return true;
         }
+    }
+
+    private static uint Immunity(SteamID id)
+    {
+        try { return AdminManager.GetPlayerImmunity(id); }
+        catch { return 0; }
+    }
+
+    private static bool IsRoot(SteamID id)
+    {
+        try { return AdminManager.PlayerHasPermissions(id, "@css/root"); }
+        catch { return false; }
     }
 }
 

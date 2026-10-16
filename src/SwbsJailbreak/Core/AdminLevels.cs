@@ -78,6 +78,30 @@ public static class AdminLevels
         return -1;
     }
 
+    /// <summary>Immunity root admins count with (above every tier).</summary>
+    public const uint RootImmunity = 99;
+
+    /// <summary>Engine-free: the immunity used for targeting: the configured one, but never below the admin's rank.</summary>
+    public static uint EffectiveImmunity(uint configured, bool root, int tier) =>
+        Math.Max(configured, root ? RootImmunity : tier >= 0 && tier < All.Length ? (uint)All[tier].Immunity : 0u);
+
+    /// <summary>
+    /// The flags that mark a tier for admins set up with flags instead of a tier group: what the tier adds over the one
+    /// below it (Level 1: @css/generic, the basic admin flag). An admin with "@css/ban" counts as Level 2 and so also gets
+    /// Level 1's commands.
+    /// </summary>
+    public static string[] Signature(int tier) => tier <= 0
+        ? new[] { "@css/generic" }
+        : All[tier].Flags.Except(All[tier - 1].Flags, StringComparer.OrdinalIgnoreCase).ToArray();
+
+    /// <summary>The highest tier whose signature flags the admin holds (-1 if none). <paramref name="hasFlag"/> asks CSS.</summary>
+    public static int TierOfFlags(Func<string, bool> hasFlag)
+    {
+        for (var i = All.Length - 1; i >= 0; i--)
+            if (Signature(i).Any(hasFlag)) return i;
+        return -1;
+    }
+
     /// <summary>
     /// Engine-free: add the SWBS tiers to an admin_groups.json document and keep them a ladder: every tier holds every
     /// flag of the tier below it (Level 1 &lt; Level 2 &lt; Level 3 &lt; Lead), including flags an owner added to a lower tier.
