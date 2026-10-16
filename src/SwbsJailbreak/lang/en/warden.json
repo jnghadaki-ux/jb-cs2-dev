@@ -32,7 +32,6 @@
   "warden.hud": "<font class='fontSize-s' color='#6FC41A'>Warden:</font> <font class='fontSize-s' color='#DE2626'>{0}</font>",
   "warden.pointer.tip": "{olive}Double-tap {lightred}USE {olive}to point, triple-tap {lightred}WALK {olive}to draw a line and triple-tap {lightred}DUCK {olive}to draw a ring.",
   "warden.pointer.no_trace": "{olive}Ping (your CS2 ping key, middle mouse by default) or shoot where the pointer should go - this server has no ray trace to follow your crosshair.",
-
   "wm.type_wm": "{olive}Type {lightred}!wm {olive} to open the warden's menu.",
   "wm.must_be_warden": "{red}You must be warden to use this command.",
   "wm.title.main": "Warden Menu",
@@ -76,5 +75,21 @@
   "wm.color.set.hint": "Your color has been set to<br><font color='{0}'>{1}</font>.",
   "wm.color.removed.hint": "Your color has been removed.",
   "warden.selected.auto": "{lightred}{0} {olive}was automatically selected as warden because nobody queued.",
-  "warden.bonus": "{olive}Few guards left: you gained {lightred}+{0} HP {olive}and {lightred}+{1} armor {olive}as warden ({2} guards alive)."
+  "warden.bonus": "{olive}Few guards left: you gained {lightred}+{0} HP {olive}and {lightred}+{1} armor {olive}as warden ({2} guards alive).",
+  "warden.beacon.title": "Warden Pointer & Beacon",
+  "warden.beacon.item.tracer_color": "Tracer colour: {0}",
+  "warden.beacon.item.beacon_color": "Beacon colour: {0}",
+  "warden.beacon.item.size": "Beacon size: {0}",
+  "warden.beacon.item.width": "Beacon thickness: {0}",
+  "warden.beacon.item.tracer_width": "Tracer thickness: {0}",
+  "warden.beacon.item.time": "Beacon time: {0}s",
+  "warden.beacon.item.on": "Pointer: ON",
+  "warden.beacon.item.off": "Pointer: OFF",
+  "warden.beacon.item.test": "Preview",
+  "warden.beacon.item.reset": "Reset to defaults",
+  "warden.beacon.same": "same as tracer",
+  "warden.beacon.state.on": "on",
+  "warden.beacon.state.off": "off",
+  "warden.beacon.describe": "Pointer {0}: tracer {1}, beacon {2}, size {3}",
+  "warden.beacon.now": "{olive}{0}"
 }

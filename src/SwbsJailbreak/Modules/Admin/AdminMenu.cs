@@ -161,6 +161,8 @@ public sealed partial class AdminModule
             Jb.Warden.RemoveWarden();
             LogActivity(a, "removed the warden");
         }, Perms.Has(admin, "warden.manage") && Jb.Warden.HasWarden);
+        if (Plugin.GetModule<Warden.WardenModule>() is { } wardens)
+            m.Add(Lang.T("admin.menu.jb.warden_beacon"), a => wardens.OpenBeaconMenu(a, m), Perms.Has(admin, "warden.beacon"));
         m.Add(Lang.T("admin.menu.jb.days"), a => Jb.Days.OpenMenu(a, null, true), Perms.Has(admin, "days"));
         m.Add(Lang.T("admin.menu.jb.edit_days"), a => Plugin.GetModule<Days.DaysModule>()?.OpenEditMenu(a, m),
             Perms.Has(admin, "days.edit") && Plugin.GetModule<Days.DaysModule>() != null);

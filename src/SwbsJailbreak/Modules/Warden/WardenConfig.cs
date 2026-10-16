@@ -70,9 +70,12 @@ public sealed class WardenConfig
     public int[] PointerColor { get; set; } = { 240, 50, 15, 255 };
     public float PointerWidth { get; set; } = 0.4f;
     public float PointerEndWidth { get; set; } = 1.0f;
+    /// <summary>The beacon ring at the end of the tracer: size (units), how long it lasts, thickness and colour.</summary>
     public float PulseRingRadius { get; set; } = 40f;
     public float PulseRingLife { get; set; } = 0.3f;
     public float PulseRingWidth { get; set; } = 3f;
+    /// <summary>Beacon ring colour, R,G,B,A. Empty = the tracer colour. Admins change all of these in game with !wbeacon.</summary>
+    public int[] PulseRingColor { get; set; } = Array.Empty<int>();
 
     /// <summary>
     /// CounterStrikeSharp 1.0.368 (.NET 8) has no ray trace, so the warden aims with the stock CS2 ping key (player_ping,

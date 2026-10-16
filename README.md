@@ -124,6 +124,7 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 | `!admin` | Admin menu | Admins |
 | `!zm` (`!zones`) | Zone manager, [see below](#zone-manager) | Lead / root |
 | `!celldoors_edit` | Cell door editor | Lead / root |
+| `!wbeacon` | Warden pointer & beacon look: tracer colour, beacon colour and size, thickness, how long the beacon lasts (saved at once) | Admins |
 
 **Reading a menu**
 
@@ -264,7 +265,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (160 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (161 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -475,7 +476,7 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Warden</b> (18)</summary>
+<details><summary><b>Warden</b> (19)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -495,6 +496,7 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 | `!uw` |  | Everyone | Allows the warden to unwarden themselves. |
 | `!votewarden` | !vw | Everyone | vote to remove the current warden (type again to take your vote back) |
 | `!w` | !warden | Everyone | Adds you to the warden queue. |
+| `!wbeacon` | !wardenbeacon | Level 1 | [color\|beaconcolor &lt;name\|r g b\|same&gt;, size\|width\|time\|tracer &lt;n&gt;, on\|off, reset] - warden pointer and beacon settings |
 | `!wm` |  | Everyone | Opens the warden's menu. |
 | `!wwho` |  | Everyone | Displays the current warden. |
 

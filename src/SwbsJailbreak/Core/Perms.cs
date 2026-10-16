@@ -19,6 +19,7 @@ public static class Perms
     {
         ["admin"] = "@css/generic",          // basic admin: see admin chat, logs, use !admin menu
         ["warden.manage"] = "@css/generic",  // force/remove warden
+        ["warden.beacon"] = "@css/generic",  // !wbeacon: warden pointer tracer and beacon colour / size
         ["cells"] = "@css/root",             // sm_celldoors_open / sm_cdo (original: ADMFLAG_ROOT)
         ["cells.edit"] = "@css/root",        // sm_celldoors_edit + save (original: ADMFLAG_ROOT)
         ["cells.open"] = "@css/generic",
