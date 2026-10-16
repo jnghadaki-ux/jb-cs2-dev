@@ -37,7 +37,7 @@ public static class AdminLevels
         new("#swbs/level3", "Level 3", 30, L3,
             "+ permanent CT bans, day/LR editing, teleport (bring/goto), gravity, bhop logs (!bhc), give/hp/armor/speed and other fun commands (not noclip/god), map change"),
         new("#swbs/lead", "Lead", 50, Lead,
-            "+ unban (bans and CT bans), noclip, god, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
+            "+ unban (bans and CT bans), noclip, god, warden pointer/beacon settings, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
     };
 
     /// <summary>The highest tier a player is in (by group, or by flags for admins set up without groups); null if none.</summary>

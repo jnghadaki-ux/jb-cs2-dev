@@ -124,7 +124,7 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 | `!admin` | Admin menu | Admins |
 | `!zm` (`!zones`) | Zone manager, [see below](#zone-manager) | Lead / root |
 | `!celldoors_edit` | Cell door editor | Lead / root |
-| `!wbeacon` | Warden pointer & beacon look: tracer colour, beacon colour and size, thickness, how long the beacon lasts (saved at once) | Admins |
+| `!wbeacon` | Warden pointer & beacon look: tracer colour, beacon colour and size, thickness, how long the beacon lasts (saved at once) | Lead / root |
 
 **Reading a menu**
 
@@ -247,7 +247,7 @@ The plugin adds four admin groups under root to CounterStrikeSharp's `configs/ad
 | Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, `!respawn`/`!1up`/`!xup` |
 | Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, bans and timed CT bans, crew admin |
 | Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, teleport (`!bring`/`!goto`), `!gravity`, bhop logs (`!bhc`), give/hp/armor/speed and other fun commands (not noclip/god), map change |
-| Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`, zone editor and server cvars |
+| Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`, `!wbeacon`, zone editor and server cvars |
 | Root | `@css/root` (a flag, not a group) | 100 | everything, including rcon, the cell door editor, points and server setup |
 
 In `admins.json`:
@@ -496,7 +496,7 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 | `!uw` |  | Everyone | Allows the warden to unwarden themselves. |
 | `!votewarden` | !vw | Everyone | vote to remove the current warden (type again to take your vote back) |
 | `!w` | !warden | Everyone | Adds you to the warden queue. |
-| `!wbeacon` | !wardenbeacon | Level 1 | [color\|beaconcolor &lt;name\|r g b\|same&gt;, size\|width\|time\|tracer &lt;n&gt;, on\|off, reset] - warden pointer and beacon settings |
+| `!wbeacon` | !wardenbeacon | Lead | [color\|beaconcolor &lt;name\|r g b\|same&gt;, size\|width\|time\|tracer &lt;n&gt;, on\|off, reset] - warden pointer and beacon settings |
 | `!wm` |  | Everyone | Opens the warden's menu. |
 | `!wwho` |  | Everyone | Displays the current warden. |
 
