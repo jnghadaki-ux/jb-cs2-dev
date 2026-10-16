@@ -3,7 +3,9 @@ using System.Numerics;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.Extensions.Logging;
 using SwbsJailbreak.Core;
+using SwbsJailbreak.Modules.Cells;
 using CssVector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
 namespace SwbsJailbreak.Modules.Zones;
@@ -29,6 +31,7 @@ public sealed partial class ZonesModule
         RegisterType(new NotifyZone(this));
         RegisterType(new CellBlockZone());
         RegisterType(new SpawnZone());
+        RegisterType(new MapInputZone(this));
     }
 }
 
@@ -507,4 +510,192 @@ internal sealed class SpawnZone : ZoneType
         Guards => "guards",
         _ => "everyone"
     };
+}
+
+/// <summary>How a Map Input zone fires, from its "Activation" choice (engine-free, unit-tested).</summary>
+internal enum MapInputTrigger { PressUse, Enter, RoundStart }
+
+/// <summary>Map Input rules that need no engine (unit-tested).</summary>
+internal static class MapInputRules
+{
+    /// <summary>Activation choices: (label, value). Team 0 = anyone, 2 = prisoners, 3 = guards (CsTeam numbers).</summary>
+    public static readonly (string Name, int Value)[] Activations =
+    {
+        ("Press E inside (anyone)", 0), ("Press E inside (guards)", 1), ("Press E inside (prisoners)", 2),
+        ("Enter (anyone)", 3), ("Enter (guards)", 4), ("Enter (prisoners)", 5), ("Round start", 6)
+    };
+
+    public static (MapInputTrigger Trigger, int Team) Activation(int value) => value switch
+    {
+        1 => (MapInputTrigger.PressUse, 3),
+        2 => (MapInputTrigger.PressUse, 2),
+        3 => (MapInputTrigger.Enter, 0),
+        4 => (MapInputTrigger.Enter, 3),
+        5 => (MapInputTrigger.Enter, 2),
+        6 => (MapInputTrigger.RoundStart, 0),
+        _ => (MapInputTrigger.PressUse, 0)
+    };
+
+    /// <summary>Entity name match like Source I/O: case-insensitive, a trailing * matches any suffix.</summary>
+    public static bool NameMatches(string pattern, string? name)
+    {
+        pattern = (pattern ?? "").Trim();
+        if (pattern.Length == 0 || string.IsNullOrEmpty(name)) return false;
+        if (pattern.EndsWith('*')) return name.StartsWith(pattern[..^1], StringComparison.OrdinalIgnoreCase);
+        return string.Equals(pattern, name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Buttons the zone fires when no target name is set.</summary>
+    public static bool IsButton(string? designerName) => designerName is "func_button" or "func_rot_button" or "momentary_rot_button";
+
+    /// <summary>The input used when the Input field is empty: what "using" that kind of entity would do. Null = none.</summary>
+    public static string? DefaultInput(string? designerName) => designerName switch
+    {
+        "func_button" or "func_rot_button" or "momentary_rot_button" => "Press",
+        "func_door" or "func_door_rotating" or "prop_door_rotating" or "func_movelinear" => "Toggle",
+        "logic_relay" or "logic_auto" => "Trigger",
+        "trigger_multiple" or "trigger_once" or "trigger_teleport" or "trigger_hurt" or "trigger_push" => "Toggle",
+        "func_breakable" or "prop_dynamic" or "prop_physics" or "func_physbox" => "Break",
+        "math_counter" => "Add",
+        _ => null
+    };
+
+    /// <summary>Two axis-aligned boxes overlap (the zone and an entity's bounds).</summary>
+    public static bool BoxesOverlap(Vector3 aMin, Vector3 aMax, Vector3 bMin, Vector3 bMax) =>
+        aMin.X <= bMax.X && aMax.X >= bMin.X && aMin.Y <= bMax.Y && aMax.Y >= bMin.Y && aMin.Z <= bMax.Z && aMax.Z >= bMin.Z;
+}
+
+/// <summary>
+/// ADDITION: fires an input on map entities, to repair buttons, doors and minigames that broke in a map's CS2 port.
+/// Target = an entity name (a trailing * matches many; empty = every button inside this zone); Input = what to send
+/// (empty = the class default: Press for buttons, Toggle for doors, Trigger for relays, ...); Value = the input's
+/// parameter. The activating player is the !activator, so map logic that teleports or rewards "the presser" still works.
+/// </summary>
+internal sealed class MapInputZone : ZoneType
+{
+    private readonly ZonesModule _m;
+    private readonly HashSet<(int Zone, int Slot)> _useHeld = new();
+    private readonly Dictionary<int, float> _next = new();
+    private readonly HashSet<int> _warned = new();
+    private float _roundStartAt = -1;
+
+    public MapInputZone(ZonesModule m) => _m = m;
+
+    public override string Key => ZoneTypeKeys.MapInput;
+    public override string DisplayName => "Map Input (fix buttons)";
+    public override string Description => "Fires an input on map entities when a player presses E inside, walks in, or at round start. Use it to repair broken map buttons, doors and games.";
+
+    public override IReadOnlyList<ZoneField> Fields { get; } = new[]
+    {
+        new ZoneField("Target", ZoneFieldKind.Text, 1, "(entity name, name* for many, empty = buttons inside this zone)"),
+        new ZoneField("Input", ZoneFieldKind.Text, 2, "(Press, Open, Close, Toggle, Trigger, Enable, Unlock... empty = default)"),
+        new ZoneField("Value", ZoneFieldKind.Text, 3, "(optional input parameter)"),
+        new ZoneField("Activation", ZoneFieldKind.Choice, 1) { Options = MapInputRules.Activations },
+        new ZoneField("Cooldown", ZoneFieldKind.Number, 2, "seconds between fires, 0 = 1") { Min = 0, Max = 600 }
+    };
+
+    public override void OnRoundStart()
+    {
+        _useHeld.Clear();
+        _next.Clear();
+        // Give the map a moment to respawn its entities before round-start inputs go out.
+        _roundStartAt = Server.CurrentTime + 1f;
+    }
+
+    public override void OnUnassigned(Zone zone) => _useHeld.RemoveWhere(k => k.Zone == zone.Id);
+
+    public override void OnEnter(Zone zone, CCSPlayerController player)
+    {
+        var (trigger, team) = MapInputRules.Activation(zone.GetInt(1));
+        if (trigger == MapInputTrigger.Enter && TeamOk(player, team)) Fire(zone, player);
+    }
+
+    public override void OnExit(Zone zone, CCSPlayerController player) => _useHeld.Remove((zone.Id, player.Slot));
+
+    public override void OnTouch(Zone zone, CCSPlayerController player)
+    {
+        var (trigger, team) = MapInputRules.Activation(zone.GetInt(1));
+        if (trigger != MapInputTrigger.PressUse) return;
+        var key = (zone.Id, player.Slot);
+        var down = (player.Buttons & PlayerButtons.Use) != 0;
+        if (!down) { _useHeld.Remove(key); return; }
+        if (!_useHeld.Add(key)) return; // still held from the last press
+        if (MenuService.Current(player) != null) return; // E is selecting a menu item
+        if (TeamOk(player, team)) Fire(zone, player);
+    }
+
+    public override void OnTick(IReadOnlyList<Zone> zonesOfThisType)
+    {
+        if (_roundStartAt < 0 || Server.CurrentTime < _roundStartAt) return;
+        _roundStartAt = -1;
+        foreach (var z in zonesOfThisType)
+            if (MapInputRules.Activation(z.GetInt(1)).Trigger == MapInputTrigger.RoundStart)
+                Fire(z, null);
+    }
+
+    private static bool TeamOk(CCSPlayerController p, int team) => team == 0 || (int)p.Team == team;
+
+    private void Fire(Zone zone, CCSPlayerController? by)
+    {
+        var now = Server.CurrentTime;
+        if (_next.TryGetValue(zone.Id, out var t) && now < t) return;
+        _next[zone.Id] = now + (zone.GetInt(2) > 0 ? zone.GetInt(2) : 1);
+
+        var pawn = by?.PawnOrNull();
+        var input = zone.GetString(2).Trim();
+        var value = zone.GetString(3);
+        var fired = 0;
+        foreach (var e in Targets(zone))
+        {
+            var use = input.Length > 0 ? input : MapInputRules.DefaultInput(e.DesignerName);
+            if (use == null) continue;
+            try
+            {
+                e.AcceptInput(use, pawn, pawn, value);
+                fired++;
+            }
+            catch (Exception ex)
+            {
+                _m.Logger.LogWarning(ex, "[Zones] map input zone #{Id}: {Input} on {Class} failed", zone.Id, use, e.DesignerName);
+            }
+        }
+
+        if (fired == 0 && _warned.Add(zone.Id))
+            _m.Logger.LogWarning("[Zones] map input zone #{Id}: no entity matched target \"{Target}\"", zone.Id, zone.Name);
+    }
+
+    private IEnumerable<CBaseEntity> Targets(Zone zone)
+    {
+        var pattern = zone.Name.Trim();
+        var byName = pattern.Length > 0 && pattern != "@inside";
+        foreach (var raw in Utilities.GetAllEntities())
+        {
+            if (raw == null || !raw.IsValid) continue;
+            if (byName)
+            {
+                string? n;
+                try { n = raw.Entity?.Name; }
+                catch { continue; }
+                if (!MapInputRules.NameMatches(pattern, n)) continue;
+                var b = raw.As<CBaseEntity>();
+                if (b.IsValid) yield return b;
+            }
+            else
+            {
+                if (!MapInputRules.IsButton(raw.DesignerName)) continue;
+                var b = raw.As<CBaseEntity>();
+                if (!b.IsValid || !EntityBounds.TryGet(b, out var mn, out var mx)) continue;
+                if (MapInputRules.BoxesOverlap(zone.Box.WorldMins, zone.Box.WorldMaxs, new Vector3(mn.X, mn.Y, mn.Z), new Vector3(mx.X, mx.Y, mx.Z)))
+                    yield return b;
+            }
+        }
+    }
+
+    public override string Summary(Zone zone)
+    {
+        var target = zone.Name.Trim().Length > 0 ? zone.Name.Trim() : "buttons inside";
+        var input = zone.GetString(2).Trim().Length > 0 ? zone.GetString(2).Trim() : "default";
+        var act = MapInputRules.Activations.FirstOrDefault(a => a.Value == zone.GetInt(1)).Name ?? MapInputRules.Activations[0].Name;
+        return $"{input} → {target} ({act})";
+    }
 }
