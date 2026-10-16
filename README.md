@@ -24,7 +24,7 @@ Dozens of duels and contests: weapon battles, knife / grenade / shot-for-shot st
 Capture the Flag, Freeze Tag, Gun Game, Speedrun (with per-map records), Spy, RPG, Crew War, plus many simple and large-scale days. Admins start them from `!day`; `!daysedit` turns days on and off.
 
 **Warden games and game days**
-Buttons-based map games, jetpack and other game days, and a game browser for the warden.
+Buttons-based map games, jetpack and other game days, and a game browser for the warden. Plugin-run games that work on any map: Simon Says, Red Light, Musical Zones, Duck Hunt and **Death Crate** (a crate thrown around a ring of prisoners; the last survivor wins).
 
 **Crews, points and the store**
 - **Crews** (clans) with tags, favors, a crew war day and admin tools.
@@ -195,7 +195,7 @@ Who can use it: Lead and root (`@css/config`).
 | **Spawn** | At round start, moves players of its team to a random spot inside it. Use this to fix maps with bad spawns. Shortcut: `!spawnzone t\|ct\|all` makes one at your feet. | Team: Prisoners / Guards / Everyone |
 | **Teleport Destination** | A named spot. The jailbreak uses `lr_tele` (LR teleport); Capture the Flag uses `ctf_flag` / `ctf_capture`. | Name |
 | **Teleport** | Touching it sends the player to the Teleport Destination with the same name. | Destination name |
-| **Named** | A named area other features look up, e.g. the Speedrun finish line. | Name |
+| **Named** | A named area other features look up, e.g. the Speedrun finish line. Name one `deathcrate` to fix where the Death Crate ring goes (otherwise it goes where the warden pings). | Name |
 | **Notify (area alert)** | Tells guards, everyone or admins when someone enters, e.g. "Prisoner entered Armory". | Area name, triggered by, alert goes to |
 | **Cell Block** | Marks a cell block. Crews claim these as turf. | Block name (A, B, Upper, …) |
 | **Kill** | Kills anyone who touches it, optionally only between two timers. | Enabled / disabled timer (s) |
@@ -227,7 +227,7 @@ Many jailbreak maps were ported from CS:GO, and some of their buttons, doors or 
    - **Cooldown**: seconds before it can fire again (0 = 1 s).
 3. Test it, then save. If nothing happens, the server console logs `map input zone #id: no entity matched` the first time; check the name with `!zones_ents`.
 
-Limits: Map Input repairs map *logic* (buttons, relays, doors, triggers). It cannot fix map physics that broke in CS2, such as thrusters or spinning physics props. Only use it on buttons that are really broken, or a working button fires twice.
+Limits: Map Input repairs map *logic* (buttons, relays, doors, triggers). It cannot fix map physics that broke in CS2, such as thrusters or spinning physics props. The map's own **Death Crate** is usually broken this way: use the plugin's Death Crate game instead (`!games`, then Death Crate). Optionally put a Named zone called `deathcrate` in the arena so the ring always lands there. Only use it on buttons that are really broken, or a working button fires twice.
 
 ### Other tools
 

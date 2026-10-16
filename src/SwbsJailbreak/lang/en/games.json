@@ -128,5 +128,12 @@
   "games.duckhunt.release_now": "Release the duck now",
   "games.duckhunt.make_duck": "Make {0} the duck",
   "games.duckhunt.status_wait": "Duck takes off in {0}s",
-  "games.duckhunt.status_flying": "{0} HP - {1}s left"
+  "games.duckhunt.status_flying": "{0} HP - {1}s left",
+  "games.deathcrate.name": "Death Crate",
+  "games.deathcrate.rules": "{olive}Stand inside the red ring. A crate gets thrown around it, faster and faster - one touch and you are dead, and stepping out of the ring is out. The last {green}survivor{olive} wins.",
+  "games.deathcrate.countdown": "{olive}Death Crate in {green}{0}{olive} seconds - everyone get inside the red ring!",
+  "games.deathcrate.released": "{red}The crate is loose!{olive} Last {green}{0}{olive} standing wins.",
+  "games.deathcrate.release_now": "Release the crate now",
+  "games.deathcrate.status_wait": "Crate in {0}s - get in the ring",
+  "games.deathcrate.status": "{0} left - {1}s"
 }
