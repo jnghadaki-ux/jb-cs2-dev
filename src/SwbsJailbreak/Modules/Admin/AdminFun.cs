@@ -346,7 +346,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_noclip", "sm_noclip <#userid|name> - toggle noclip")]
     public void CmdNoclip(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "fun")) return;
+        if (!Require(caller, info, "noclip")) return;
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!noclip <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true);
         if (t == null) return;

@@ -17,18 +17,27 @@ public static class AdminLevels
     private static readonly string[] L1 = { "@css/reservation", "@css/generic", "@css/chat", "@css/slay" };
     private static readonly string[] L2 = L1.Concat(new[] { "@css/kick", "@css/ban" }).ToArray();
     private static readonly string[] L3 = L2.Concat(new[] { "@css/unban", "@css/cheats", "@css/changemap" }).ToArray();
-    private static readonly string[] Lead = L3.Concat(new[] { "@css/config", "@css/cvar" }).ToArray();
+    private static readonly string[] Lead = L3.Concat(new[] { "@css/config", "@css/cvar", "@swbs/unban", "@swbs/noclip", "@swbs/god" }).ToArray();
+
+    /// <summary>
+    /// Flag sets earlier plugin versions installed for a group. A group still holding exactly one of them was never
+    /// edited by the owner and is brought up to date; an edited group is left alone.
+    /// </summary>
+    private static readonly Dictionary<string, string[][]> PreviousDefaults = new()
+    {
+        ["#swbs/lead"] = new[] { L3.Concat(new[] { "@css/config", "@css/cvar" }).ToArray() }
+    };
 
     public static readonly AdminLevel[] All =
     {
         new("#swbs/level1", "Level 1", 10, L1,
             "admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze"),
         new("#swbs/level2", "Level 2", 20, L2,
-            "+ kick, move/swap teams, 1up/xup, timed CT bans and bans, crew admin"),
+            "+ kick, move/swap teams, 1up/xup, bans and timed CT bans, crew admin"),
         new("#swbs/level3", "Level 3", 30, L3,
-            "+ permanent CT bans and unbans, day/LR editing, respawn, noclip/god/give and other fun commands, map change"),
+            "+ permanent CT bans, day/LR editing, respawn, give/hp/armor/speed and other fun commands (not noclip/god), map change"),
         new("#swbs/lead", "Lead", 50, Lead,
-            "+ zone editor and server cvars (everything except root-only: rcon, cell door editor, points, server setup)")
+            "+ unban (bans and CT bans), noclip, god, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
     };
 
     /// <summary>The highest tier a player is in (by group, or by flags for admins set up without groups); null if none.</summary>
@@ -57,6 +66,19 @@ public static class AdminLevels
         var added = false;
         foreach (var l in All)
         {
+            if (doc[l.Group] is JsonObject existing)
+            {
+                // An untouched group from an earlier version gets the current flags (immunity is kept).
+                var flags = (existing["flags"] as JsonArray)?.Select(n => n?.GetValue<string>() ?? "").ToHashSet() ?? new HashSet<string>();
+                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && olds.Any(o => flags.SetEquals(o)))
+                {
+                    existing["flags"] = new JsonArray(l.Flags.Select(f => (JsonNode)JsonValue.Create(f)!).ToArray());
+                    added = true;
+                }
+
+                continue;
+            }
+
             if (doc.ContainsKey(l.Group)) continue;
             doc[l.Group] = new JsonObject
             {

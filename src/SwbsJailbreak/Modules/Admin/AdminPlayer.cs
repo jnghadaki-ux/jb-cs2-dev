@@ -147,7 +147,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_god", "Toggle god mode: !god <target> [0/1]")]
     public void CmdGod(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "fun")) return;
+        if (!Require(caller, info, "god")) return;
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!god <target> [0/1]"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true);
         if (t == null) return;

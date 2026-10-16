@@ -115,9 +115,9 @@ The plugin adds four admin groups under root to CounterStrikeSharp's `configs/ad
 | Tier | Group | Immunity | Adds |
 |---|---|---|---|
 | Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze |
-| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, `!1up`/`!xup`, timed CT bans and bans, crew admin |
-| Level 3 | `#swbs/level3` | 30 | permanent CT bans and unbans, day/LR editing, respawn, noclip/god/give and other fun commands, map change |
-| Lead | `#swbs/lead` | 50 | zone editor and server cvars |
+| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, `!1up`/`!xup`, bans and timed CT bans, crew admin |
+| Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, respawn, give/hp/armor/speed and other fun commands (not noclip/god), map change |
+| Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`, zone editor and server cvars |
 | Root | `@css/root` (a flag, not a group) | 100 | everything, including rcon, the cell door editor, points and server setup |
 
 In `admins.json`:
@@ -165,7 +165,7 @@ Every command of the plugin (159 commands, generated from the code). Type them i
 | `!freezebomb` |  | Level 1 | &lt;#userid\|name&gt; [0/1] |
 | `!gag` | !timed_gag | Level 1 | &lt;player&gt; [minutes] [reason] - remove text chat |
 | `!give` |  | Level 3 | Give an item: !give &lt;target&gt; &lt;weapon&gt; |
-| `!god` |  | Level 3 | Toggle god mode: !god &lt;target&gt; [0/1] |
+| `!god` |  | Lead | Toggle god mode: !god &lt;target&gt; [0/1] |
 | `!goto` |  | Level 1 | Teleport to a player: !goto &lt;target&gt; |
 | `!gravity` |  | Level 1 | &lt;#userid\|name&gt; [amount] - leave amount off to reset (0.0 - 5.0) |
 | `!heal` |  | Root | &lt;#steamid\|#userid\|name&gt; - heal a player to 100 health |
@@ -174,7 +174,7 @@ Every command of the plugin (159 commands, generated from the code). Type them i
 | `!map` |  | Level 3 | &lt;map\|workshop id&gt; - change map |
 | `!mute` | !timed_mute | Level 1 | &lt;player&gt; [minutes] [reason] - remove voice |
 | `!mylevel` |  | Everyone | your admin tier |
-| `!noclip` |  | Level 3 | &lt;#userid\|name&gt; - toggle noclip |
+| `!noclip` |  | Lead | &lt;#userid\|name&gt; - toggle noclip |
 | `!psay` |  | Level 1 | &lt;player&gt; &lt;message&gt; - private message |
 | `!rcon` |  | Root | &lt;args&gt; - run a server command |
 | `!reloadadmins` |  | Level 2 | reload CSS admins, groups and overrides |
@@ -191,7 +191,7 @@ Every command of the plugin (159 commands, generated from the code). Type them i
 | `!teamswitch_death` | !tsd | Level 2 | Switch a player's team when they die: !tsd &lt;target&gt; |
 | `!teamswitch_roundend` | !tsr | Level 2 | Switch a player's team at round end: !tsr &lt;target&gt; |
 | `!timebomb` |  | Level 1 | &lt;#userid\|name&gt; [0/1] |
-| `!unban` |  | Level 3 | &lt;steamid\|ip&gt; |
+| `!unban` |  | Lead | &lt;steamid\|ip&gt; |
 | `!unfreeze` |  | Level 1 | Unfreeze a player |
 | `!ungag` | !timed_ungag | Level 1 | &lt;player&gt; |
 | `!ungod` |  | Level 3 | Disable god mode: !ungod &lt;target&gt; |
@@ -334,7 +334,7 @@ Every command of the plugin (159 commands, generated from the code). Type them i
 | `!check_ctban` |  | Level 2 | &lt;#steamid\|#userid\|name&gt; - check a CT ban |
 | `!ctban` |  | Level 2 | &lt;#steamid\|#userid\|name&gt; &lt;minutes&gt; "reason" - ban a player from the CT team |
 | `!guard` |  | Everyone | join the guard queue |
-| `!unctban` |  | Level 2 | &lt;#steamid\|#userid\|name&gt; - remove a CT ban |
+| `!unctban` |  | Lead | &lt;#steamid\|#userid\|name&gt; - remove a CT ban |
 
 </details>
 

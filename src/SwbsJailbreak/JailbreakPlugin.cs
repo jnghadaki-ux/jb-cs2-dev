@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.21.1"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.21.2"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -269,6 +269,19 @@ public sealed class JailbreakPlugin : BasePlugin
             });
             Config.Update<GeneralConfig>("General", g => g.ConfigRevision = 9);
             Logger.LogInformation("Config migrated to revision 9: store hats attach to clip_limit");
+        }
+
+        if (Config.General.ConfigRevision < 10)
+        {
+            // 0.21.2: unban (bans and CT bans), noclip and god are Lead tier and root only (custom @swbs/* flags).
+            Config.Update<GeneralConfig>("General", g =>
+            {
+                if (g.Permissions.TryGetValue("unban", out var u) && u == "@css/unban") g.Permissions["unban"] = Perms.Defaults["unban"];
+                g.Permissions.TryAdd("noclip", Perms.Defaults["noclip"]);
+                g.Permissions.TryAdd("god", Perms.Defaults["god"]);
+                g.ConfigRevision = 10;
+            });
+            Logger.LogInformation("Config migrated to revision 10: unban, noclip and god need the Lead admin tier (or root)");
         }
     }
 

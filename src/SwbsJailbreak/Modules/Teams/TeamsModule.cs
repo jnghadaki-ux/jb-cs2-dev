@@ -564,7 +564,7 @@ public sealed class TeamsModule : JbModule, ITeamService
     [ConsoleCommand("css_unctban", "sm_unctban <#steamid|#userid|name> - remove a CT ban")]
     public void CmdUnCtBan(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && !Perms.Has(caller, "ctban")) { Chat.Tell(caller, "core.no_access"); return; }
+        if (caller != null && !Perms.Has(caller, "unban")) { Chat.Tell(caller, "core.no_access"); return; } // Lead tier and root
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "css_unctban <#steamid|#userid|name>"); return; }
         if (!ResolveBanTarget(caller, info, info.GetArg(1), out var target, out var steamId)) return;
         var key = steamId.ToString();

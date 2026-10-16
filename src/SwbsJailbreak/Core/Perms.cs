@@ -32,7 +32,9 @@ public static class Perms
         ["mute"] = "@css/chat",              // mute/gag/silence
         ["teams"] = "@css/kick",             // move players between teams, swap
         ["slay"] = "@css/slay",              // slay, slap, beacon, freeze, ... (fun commands)
-        ["fun"] = "@css/cheats",             // gravity, noclip, god, give weapons, speed
+        ["fun"] = "@css/cheats",             // gravity, give weapons, speed, hp/armor (Level 3)
+        ["noclip"] = "@swbs/noclip",         // !noclip (Lead tier and root)
+        ["god"] = "@swbs/god",               // !god (Lead tier and root)
         ["respawn"] = "@css/cheats",
         ["rcon"] = "@css/rcon",
         ["root"] = "@css/root",
@@ -43,7 +45,7 @@ public static class Perms
         ["zones"] = "@css/config",           // edit map zones / LR locations
         ["kick"] = "@css/kick",
         ["ban"] = "@css/ban",
-        ["unban"] = "@css/unban",
+        ["unban"] = "@swbs/unban",           // !unban and !unctban (Lead tier and root)
         ["map"] = "@css/changemap",
         ["cvar"] = "@css/cvar",
         ["config"] = "@css/config",
