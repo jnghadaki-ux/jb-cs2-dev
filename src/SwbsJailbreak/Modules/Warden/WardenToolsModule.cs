@@ -258,6 +258,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !rand
 
     [ConsoleCommand("css_rand", "sm_rand - (warden/deputy) pick a random alive prisoner")]
+    [OpenCommand]
     [ConsoleCommand("css_random", "sm_random - (warden/deputy) pick a random alive prisoner")]
     public void CmdRand(CCSPlayerController? caller, CommandInfo info)
     {
@@ -292,6 +293,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !ff
 
     [ConsoleCommand("css_ff", "sm_ff - (warden/deputy) toggle friendly fire between prisoners")]
+    [OpenCommand]
     [ConsoleCommand("css_friendlyfire", "sm_friendlyfire - (warden/deputy) toggle friendly fire between prisoners")]
     public void CmdFriendlyFire(CCSPlayerController? caller, CommandInfo info)
     {
@@ -323,6 +325,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !extend
 
     [ConsoleCommand("css_extend", "sm_extend [seconds] - (warden) add time to the round")]
+    [OpenCommand]
     public void CmdExtend(CCSPlayerController? caller, CommandInfo info)
     {
         if (!CanCommand(caller, false)) { Chat.ReplyT(caller, info, "wt.not_warden"); return; }
@@ -347,6 +350,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !deputy
 
     [ConsoleCommand("css_deputy", "sm_deputy [player] - (warden) appoint a guard as deputy; no name removes the deputy")]
+    [OpenCommand]
     public void CmdDeputy(CCSPlayerController? caller, CommandInfo info)
     {
         if (!Cfg.DeputyEnabled) { Chat.ReplyT(caller, info, "wt.disabled"); return; }
@@ -449,6 +453,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !repeat
 
     [ConsoleCommand("css_repeat", "sm_repeat - (prisoner) ask the warden to repeat the last order")]
+    [OpenCommand]
     public void CmdRepeat(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null) return;
@@ -516,6 +521,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !split
 
     [ConsoleCommand("css_split", "sm_split [2-4|off] - (warden/deputy) split the alive prisoners into colour teams")]
+    [OpenCommand]
     [ConsoleCommand("css_teams", "sm_teams [2-4|off] - (warden/deputy) split the alive prisoners into colour teams")]
     public void CmdSplit(CCSPlayerController? caller, CommandInfo info)
     {
@@ -524,6 +530,7 @@ public sealed class WardenToolsModule : JbModule
     }
 
     [ConsoleCommand("css_splitun", "sm_splitun - (warden/deputy) remove the !split colour teams")]
+    [OpenCommand]
     [ConsoleCommand("css_unsplit", "sm_unsplit - (warden/deputy) remove the !split colour teams")]
     public void CmdUnsplit(CCSPlayerController? caller, CommandInfo info) => Split(caller, info, "off");
 
@@ -624,6 +631,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !spotlight
 
     [ConsoleCommand("css_spotlight", "sm_spotlight [player] - (warden/deputy) the prisoner you look at glows for guards")]
+    [OpenCommand]
     [ConsoleCommand("css_spot", "sm_spot [player] - (warden/deputy) the prisoner you look at glows for guards")]
     public void CmdSpotlight(CCSPlayerController? caller, CommandInfo info)
     {
@@ -679,6 +687,7 @@ public sealed class WardenToolsModule : JbModule
     // ================================================================= !blindfold
 
     [ConsoleCommand("css_blindfold", "sm_blindfold [player|off] - (warden/deputy) black out a prisoner's screen; again to remove")]
+    [OpenCommand]
     [ConsoleCommand("css_bf", "sm_bf [player|off] - (warden/deputy) black out a prisoner's screen; again to remove")]
     public void CmdBlindfold(CCSPlayerController? caller, CommandInfo info)
     {

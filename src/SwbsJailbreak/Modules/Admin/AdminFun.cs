@@ -322,7 +322,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_gravity", "sm_gravity <#userid|name> [amount] - leave amount off to reset (0.0 - 5.0)")]
     public void CmdGravity(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "slay")) return;
+        if (!Require(caller, info, "gravity")) return;
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!gravity <target> [0.0-5.0]"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true);
         if (t == null) return;

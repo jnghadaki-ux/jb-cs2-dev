@@ -35,7 +35,10 @@ public static class Perms
         ["fun"] = "@css/cheats",             // gravity, give weapons, speed, hp/armor (Level 3)
         ["noclip"] = "@swbs/noclip",         // !noclip (Lead tier and root)
         ["god"] = "@swbs/god",               // !god (Lead tier and root)
-        ["respawn"] = "@css/cheats",
+        ["respawn"] = "@css/slay",           // !respawn, !1up, !xup (Level 1 and up)
+        ["teleport"] = "@css/cheats",        // !bring, !goto (Level 3 and up)
+        ["gravity"] = "@css/cheats",         // !gravity (Level 3 and up)
+        ["bhc"] = "@css/unban",              // !bhc / !bhce bhop logs (Level 3 and up)
         ["rcon"] = "@css/rcon",
         ["root"] = "@css/root",
         ["immunity"] = "@css/generic",       // immune to dead-talk mute etc.
@@ -142,3 +145,10 @@ public static class Perms
         }
     }
 }
+
+/// <summary>
+/// The command is for everyone: its body checks admin rights only for an extra (admins may look up anyone's points,
+/// admins also receive !g) or the game rules decide (warden, deputy, prisoner). Listed as open in !commands.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+internal sealed class OpenCommandAttribute : Attribute { }

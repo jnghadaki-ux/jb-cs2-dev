@@ -31,11 +31,11 @@ public static class AdminLevels
     public static readonly AdminLevel[] All =
     {
         new("#swbs/level1", "Level 1", 10, L1,
-            "admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze"),
+            "admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, respawn/1up/xup"),
         new("#swbs/level2", "Level 2", 20, L2,
-            "+ kick, move/swap teams, 1up/xup, bans and timed CT bans, crew admin"),
+            "+ kick, move/swap teams, bans and timed CT bans, crew admin"),
         new("#swbs/level3", "Level 3", 30, L3,
-            "+ permanent CT bans, day/LR editing, respawn, give/hp/armor/speed and other fun commands (not noclip/god), map change"),
+            "+ permanent CT bans, day/LR editing, teleport (bring/goto), gravity, bhop logs (!bhc), give/hp/armor/speed and other fun commands (not noclip/god), map change"),
         new("#swbs/lead", "Lead", 50, Lead,
             "+ unban (bans and CT bans), noclip, god, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
     };

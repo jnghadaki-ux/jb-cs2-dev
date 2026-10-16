@@ -243,9 +243,9 @@ The plugin adds four admin groups under root to CounterStrikeSharp's `configs/ad
 
 | Tier | Group | Immunity | Adds |
 |---|---|---|---|
-| Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze |
-| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, `!1up`/`!xup`, bans and timed CT bans, crew admin |
-| Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, respawn, give/hp/armor/speed and other fun commands (not noclip/god), map change |
+| Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs, warden control, open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, `!respawn`/`!1up`/`!xup` |
+| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, bans and timed CT bans, crew admin |
+| Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, teleport (`!bring`/`!goto`), `!gravity`, bhop logs (`!bhc`), give/hp/armor/speed and other fun commands (not noclip/god), map change |
 | Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`, zone editor and server cvars |
 | Root | `@css/root` (a flag, not a group) | 100 | everything, including rcon, the cell door editor, points and server setup |
 
@@ -281,7 +281,7 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 | `!banlist` |  | Level 2 | List active bans |
 | `!beacon` |  | Level 1 | &lt;#userid\|name&gt; [0/1] - toggle a beacon ring on a player |
 | `!blind` |  | Level 1 | &lt;#userid\|name&gt; [amount 0-255] - leave amount off to reset |
-| `!bring` |  | Level 1 | Teleport a player to you: !bring &lt;target&gt; |
+| `!bring` |  | Level 3 | Teleport a player to you: !bring &lt;target&gt; |
 | `!burn` |  | Level 1 | &lt;#userid\|name&gt; [time] |
 | `!chat` | !asay | Level 1 | &lt;message&gt; - message to all admins |
 | `!check_mute` | !check_gag, !check_silence | Level 1 | Show a player's mute status |
@@ -295,8 +295,8 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 | `!gag` | !timed_gag | Level 1 | &lt;player&gt; [minutes] [reason] - remove text chat |
 | `!give` |  | Level 3 | Give an item: !give &lt;target&gt; &lt;weapon&gt; |
 | `!god` |  | Lead | Toggle god mode: !god &lt;target&gt; [0/1] |
-| `!goto` |  | Level 1 | Teleport to a player: !goto &lt;target&gt; |
-| `!gravity` |  | Level 1 | &lt;#userid\|name&gt; [amount] - leave amount off to reset (0.0 - 5.0) |
+| `!goto` |  | Level 3 | Teleport to a player: !goto &lt;target&gt; |
+| `!gravity` |  | Level 3 | &lt;#userid\|name&gt; [amount] - leave amount off to reset (0.0 - 5.0) |
 | `!heal` |  | Root | &lt;#steamid\|#userid\|name&gt; - heal a player to 100 health |
 | `!hp` |  | Level 3 | Set player health: !hp &lt;target&gt; &lt;amount&gt; |
 | `!kick` |  | Level 2 | &lt;#userid\|name&gt; [reason] |
@@ -308,7 +308,7 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 | `!rcon` |  | Root | &lt;args&gt; - run a server command |
 | `!reloadadmins` |  | Level 2 | reload CSS admins, groups and overrides |
 | `!rename` |  | Level 1 | &lt;#userid\|name&gt; &lt;new name&gt; |
-| `!respawn` |  | Level 3 | &lt;#steamid\|#userid\|name&gt; - respawn a dead player |
+| `!respawn` |  | Level 1 | &lt;#steamid\|#userid\|name&gt; - respawn a dead player |
 | `!rr` | !restartround | Level 3 | Restart the round (mp_restartgame 1) |
 | `!say` |  | Level 1 | &lt;message&gt; - admin message to everyone |
 | `!silence` | !timed_silence | Level 1 | &lt;player&gt; [minutes] [reason] - remove voice and chat |
@@ -378,8 +378,8 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 | Command | Aliases | Who | Description |
 |---|---|---|---|
 | `!admintag` |  | Level 1 | toggle your admin clan tag |
-| `!bhce` |  | Everyone | &lt;#userid\|name&gt; - extended bhop log (console) |
-| `!bhopcheck` | !bhc | Everyone | &lt;#userid\|name&gt; - bhop log (console) |
+| `!bhce` |  | Level 3 | &lt;#userid\|name&gt; - extended bhop log (console) |
+| `!bhopcheck` | !bhc | Level 3 | &lt;#userid\|name&gt; - bhop log (console) |
 | `!commands` |  | Everyone | list the commands you can use (!commands console prints them to your console) |
 | `!giveparachute` |  | Level 2 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
@@ -393,18 +393,18 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
-| `!1up` |  | Level 2 | &lt;target&gt; - respawn a player where they died |
+| `!1up` |  | Level 1 | &lt;target&gt; - respawn a player where they died |
 | `!definitions` | !defs | Everyone | jailbreak definitions link |
 | `!fkslay` |  | Level 1 | &lt;prisoner&gt; - slay the guard who freekilled a prisoner and respawn the prisoner |
-| `!freekill` |  | Level 1 | &lt;msg&gt; - let admins know you were freekilled |
-| `!g` |  | Level 1 | &lt;message&gt; - message the guard team |
+| `!freekill` |  | Everyone | &lt;msg&gt; - let admins know you were freekilled |
+| `!g` | !gc, !guardchat | Everyone | &lt;message&gt; - (prisoners) private message to the guards |
 | `!jbrules` |  | Everyone | jailbreak rules link |
 | `!roll` |  | Everyone | [max] - warden rolls a random number |
 | `!speed` |  | Level 2 | &lt;target&gt; &lt;0.0 to 10.0&gt; - set a player's speed |
 | `!stoptimer` |  | Everyone | stop the countdown timer |
 | `!timer` |  | Everyone | &lt;seconds&gt; - warden countdown timer |
 | `!whokilled` | !wk | Level 1 | &lt;who&gt; - check who killed a player |
-| `!xup` |  | Level 2 | &lt;seconds&gt; - respawn prisoners that died in the last X seconds |
+| `!xup` |  | Level 1 | &lt;seconds&gt; - respawn prisoners that died in the last X seconds |
 
 </details>
 
@@ -441,7 +441,7 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 | `!givepoints` |  | Root | &lt;target&gt; &lt;amount&gt; - give jailbreak points |
 | `!lrstats` |  | Everyone | [player] - last request duel wins and losses per LR |
 | `!maprating` |  | Everyone | [map] - show a map's rating |
-| `!points` |  | Root | [target] - show your jailbreak points (admins: anyone's) |
+| `!points` |  | Everyone | [target] - show your jailbreak points (admins: anyone's) |
 | `!rank` | !top | Everyone | [category\|player] - jailbreak leaderboard and your position |
 | `!ratemap` | !rm | Everyone | rate the current map |
 | `!ratewarden` | !rate | Everyone | rate the last round's warden from 1 to 5 |
@@ -479,18 +479,18 @@ Every command of the plugin (160 commands, generated from the code). Type them i
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
-| `!blindfold` | !bf | Level 1 | [player\|off] - (warden/deputy) black out a prisoner's screen; again to remove |
+| `!blindfold` | !bf | Everyone | [player\|off] - (warden/deputy) black out a prisoner's screen; again to remove |
 | `!cc` |  | Everyone | Sets the clients render color. |
-| `!deputy` |  | Level 1 | [player] - (warden) appoint a guard as deputy; no name removes the deputy |
-| `!extend` |  | Level 1 | [seconds] - (warden) add time to the round |
-| `!ff` | !friendlyfire | Level 1 | (warden/deputy) toggle friendly fire between prisoners |
+| `!deputy` |  | Everyone | [player] - (warden) appoint a guard as deputy; no name removes the deputy |
+| `!extend` |  | Everyone | [seconds] - (warden) add time to the round |
+| `!ff` | !friendlyfire | Everyone | (warden/deputy) toggle friendly fire between prisoners |
 | `!kiss` | !smooch | Everyone | Kisses the player you're looking at (or !kiss &lt;player&gt;). |
-| `!rand` | !random | Level 1 | (warden/deputy) pick a random alive prisoner |
-| `!repeat` |  | Level 1 | (prisoner) ask the warden to repeat the last order |
+| `!rand` | !random | Everyone | (warden/deputy) pick a random alive prisoner |
+| `!repeat` |  | Everyone | (prisoner) ask the warden to repeat the last order |
 | `!rw` |  | Level 2 | Removes the current warden. |
-| `!split` | !teams | Level 1 | [2-4\|off] - (warden/deputy) split the alive prisoners into colour teams |
-| `!splitun` | !unsplit | Level 1 | (warden/deputy) remove the !split colour teams |
-| `!spotlight` | !spot | Level 1 | [player] - (warden/deputy) the prisoner you look at glows for guards |
+| `!split` | !teams | Everyone | [2-4\|off] - (warden/deputy) split the alive prisoners into colour teams |
+| `!splitun` | !unsplit | Everyone | (warden/deputy) remove the !split colour teams |
+| `!spotlight` | !spot | Everyone | [player] - (warden/deputy) the prisoner you look at glows for guards |
 | `!sw` | !setw, !setwarden | Root | Sets the current warden. |
 | `!uw` |  | Everyone | Allows the warden to unwarden themselves. |
 | `!votewarden` | !vw | Everyone | vote to remove the current warden (type again to take your vote back) |

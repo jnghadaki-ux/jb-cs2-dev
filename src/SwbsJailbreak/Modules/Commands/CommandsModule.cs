@@ -147,9 +147,10 @@ public sealed class CommandsModule : JbModule
     {
         if (player == null || !player.IsValid) return HookResult.Continue;
         var text = info.GetArg(1).Trim();
-        if (text.StartsWith("!g ", StringComparison.OrdinalIgnoreCase))
+        foreach (var prefix in new[] { "!g ", "!gc ", "!guardchat " })
         {
-            GuardMessage(player, text[3..].Trim());
+            if (!text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+            GuardMessage(player, text[prefix.Length..].Trim());
             return HookResult.Handled;
         }
 
@@ -164,7 +165,10 @@ public sealed class CommandsModule : JbModule
 
     // ------------------------------------------------------------------ !g (message the guards)
 
-    [ConsoleCommand("css_g", "sm_g <message> - message the guard team")]
+    [ConsoleCommand("css_g", "sm_g <message> - (prisoners) private message to the guards")]
+    [ConsoleCommand("css_gc", "sm_gc <message> - (prisoners) private message to the guards")]
+    [ConsoleCommand("css_guardchat", "sm_guardchat <message> - (prisoners) private message to the guards")]
+    [OpenCommand]
     public void CmdG(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null) return;
@@ -176,6 +180,7 @@ public sealed class CommandsModule : JbModule
         if (!caller.IsAliveP()) { Chat.Tell(caller, "core.only_alive"); return; }
         if (caller.Team == CsTeam.CounterTerrorist) { Chat.Tell(caller, "cmd.g.use_teamchat"); return; }
         if (message.Length < 1) { Chat.Tell(caller, "core.usage", "!g <message>"); return; }
+        if (caller.Jb() is { AdminChatGagged: true }) { Chat.Tell(caller, "crews.err.gagged"); return; }
         var s = S(caller.Jb()!);
         var now = (float)Server.EngineTime;
         if (s.NextGuardMessage > now) return;
@@ -193,6 +198,7 @@ public sealed class CommandsModule : JbModule
     // ------------------------------------------------------------------ freekill
 
     [ConsoleCommand("css_freekill", "sm_freekill <msg> - let admins know you were freekilled")]
+    [OpenCommand]
     public void CmdFreekill(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null) return;
@@ -283,7 +289,7 @@ public sealed class CommandsModule : JbModule
     [ConsoleCommand("css_1up", "sm_1up <target> - respawn a player where they died")]
     public void CmdOneUp(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (!Perms.Has(caller, "respawn")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!1up <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true);
         if (t == null) return;
@@ -294,7 +300,7 @@ public sealed class CommandsModule : JbModule
     [ConsoleCommand("css_xup", "sm_xup <seconds> - respawn prisoners that died in the last X seconds")]
     public void CmdXUp(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (!Perms.Has(caller, "respawn")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
         if (info.ArgCount < 2 || !int.TryParse(info.GetArg(1), out var seconds) || seconds < 1) { Chat.ReplyT(caller, info, "core.usage", "!xup <seconds>"); return; }
         var now = (float)Server.EngineTime;
         var any = false;

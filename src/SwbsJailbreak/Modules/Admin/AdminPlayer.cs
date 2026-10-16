@@ -191,7 +191,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_bring", "Teleport a player to you: !bring <target>")]
     public void CmdBring(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "slay")) return;
+        if (!Require(caller, info, "teleport")) return;
         if (caller == null || !caller.IsAliveP()) { Chat.ReplyT(caller, info, "core.only_alive"); return; }
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!bring <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true);
@@ -205,7 +205,7 @@ public sealed partial class AdminModule
     [ConsoleCommand("css_goto", "Teleport to a player: !goto <target>")]
     public void CmdGoto(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Require(caller, info, "slay")) return;
+        if (!Require(caller, info, "teleport")) return;
         if (caller == null || !caller.IsAliveP()) { Chat.ReplyT(caller, info, "core.only_alive"); return; }
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!goto <target>"); return; }
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), aliveOnly: true, singleOnly: true);

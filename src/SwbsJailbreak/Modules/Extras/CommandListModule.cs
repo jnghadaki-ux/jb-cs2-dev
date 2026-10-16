@@ -80,7 +80,7 @@ internal static class CommandCatalog
                     Name = names[0],
                     Aliases = names.Skip(1).ToArray(),
                     Description = description,
-                    Capability = FindCapability(method),
+                    Capability = method.IsDefined(typeof(OpenCommandAttribute), false) ? null : FindCapability(method),
                     ServerOnly = method.GetCustomAttributes<CommandHelperAttribute>(false).Any(h => h.WhoCanExcecute == CommandUsage.SERVER_ONLY)
                 };
                 var all = method.GetCustomAttributes<RequiresPermissions>(false).SelectMany(a => a.Permissions).ToArray();

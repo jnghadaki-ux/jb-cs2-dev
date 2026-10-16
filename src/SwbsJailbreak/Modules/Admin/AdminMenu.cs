@@ -91,13 +91,13 @@ public sealed partial class AdminModule
             t.RespawnSolid();
             Activity(a, "admin.act.respawn", t.PlayerName);
         });
-        Act("slay", "admin.menu.act.bring", (a, t) =>
+        Act("teleport", "admin.menu.act.bring", (a, t) =>
         {
             if (!a.IsAliveP() || a.Origin() is not { } pos) { Chat.Tell(a, "core.only_alive"); return; }
             t.TeleportTo(new Vector(pos.X, pos.Y, pos.Z + 5f));
             Activity(a, "admin.act.bring", t.PlayerName);
         });
-        Act("slay", "admin.menu.act.goto", (a, t) =>
+        Act("teleport", "admin.menu.act.goto", (a, t) =>
         {
             if (!a.IsAliveP() || t.Origin() is not { } pos) { Chat.Tell(a, "core.only_alive"); return; }
             a.TeleportTo(new Vector(pos.X, pos.Y, pos.Z + 5f));
