@@ -39,7 +39,7 @@ Buttons-based map games, jetpack and other game days, and a game browser for the
 - AFK handling, bhop checks, chat formatting and anti-spam, parachute, map ratings and map music.
 - Everything is configurable from one JSON file; all messages are translatable.
 
-Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [admin tiers](#admin-tiers).
+Type `!commands` in game for the full command list (also [below](#command-list)), or `!jbrules` for the rules. See also: [using menus](#menus), [the zone manager](#zone-manager), [map voting](#map-voting), [point pools](#point-pools), [admin tiers](#admin-tiers).
 
 ---
 
@@ -269,6 +269,18 @@ A vote also starts by itself 3 minutes before the time limit, with an "Extend th
 
 ---
 
+## Point pools
+
+Prisoners can put their points behind what they want the warden to run: a **warden game**, a **map game** or a **day**.
+
+- `!pool` (also `!pools`, `!fund`): pick a category, then an option, then an amount (50-1000).
+- **Starting** a pool is only possible in the **first 60 seconds** of a round, **once per player per round**, with at most **3 pools per category**. Anyone can **join** an open pool until the warden chooses, a day starts or last requests begin. One contribution per category per player per round. Only the start of a pool is announced in chat; the totals show on the guards' HUD.
+- The warden sees each pot in `!games` and `!day` (the biggest is marked ★).
+- When the warden starts a pooled option, **its pot is shared evenly by the current guards**. Every other pool is refunded in full (at round end, when a day starts or when last requests start). Guards cannot fund pools.
+- Settings: `Pools` section (start window, limits, amounts, categories).
+
+---
+
 ## Admin tiers
 
 The plugin adds four admin groups under root to CounterStrikeSharp's `configs/admin_groups.json` and reloads them. The tiers are a ladder: Level 1 < Level 2 < Level 3 < Lead, and each tier always has everything the tiers below it have. On every start the plugin adds any lower-tier flag a higher tier is missing, including flags you added to a lower tier yourself. Your other groups, your immunities and any extra flags you gave a tier are never removed. A higher tier also has a higher immunity, so a lower tier cannot target a higher one. Put an admin in a tier with `"groups": ["#swbs/level2"]` in `admins.json`. Admins given flags directly instead of a group are ranked by their flags (for example `@css/ban` = Level 2) and also get everything below that rank. Targeting follows the same ladder, with root above Lead, even when `admins.json` gives no immunity.
@@ -296,7 +308,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (173 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (174 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -476,7 +488,7 @@ Every command of the plugin (173 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Store, points and player extras</b> (17)</summary>
+<details><summary><b>Store, points and player extras</b> (18)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -486,6 +498,7 @@ Every command of the plugin (173 commands, generated from the code). Type them i
 | `!lrstats` |  | Everyone | [player] - last request duel wins and losses per LR |
 | `!maprating` |  | Everyone | [map] - show a map's rating |
 | `!points` |  | Everyone | [target] - show your jailbreak points (admins: anyone's) |
+| `!pool` | !pools, !fund | Everyone | put points behind a warden game, map game or day you want (pools start in the first minute) |
 | `!rank` | !top | Everyone | [category\|player] - jailbreak leaderboard and your position |
 | `!ratemap` | !rm | Everyone | rate the current map |
 | `!ratewarden` | !rate | Everyone | rate the last round's warden from 1 to 5 |

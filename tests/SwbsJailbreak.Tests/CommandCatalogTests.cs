@@ -108,6 +108,7 @@ public class CommandCatalogTests
     [InlineData("timeleft")]
     [InlineData("maplist")]
     [InlineData("currentmap")]
+    [InlineData("pool")]
     public void OpenCommands_AreListedForEveryone(string name) =>
         Assert.Null(Catalogue().Single(e => e.Name == name).Capability);
 
