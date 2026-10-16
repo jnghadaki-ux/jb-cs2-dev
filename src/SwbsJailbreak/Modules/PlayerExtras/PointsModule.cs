@@ -89,6 +89,7 @@ public sealed class PointsModule : JbModule, IPointsService
     }
 
     [ConsoleCommand("css_points", "sm_points [target] - show your jailbreak points (admins: anyone's)")]
+    [OpenCommand]
     public void CmdPoints(CCSPlayerController? caller, CommandInfo info)
     {
         if (info.ArgCount >= 2 && Perms.Has(caller, "points"))

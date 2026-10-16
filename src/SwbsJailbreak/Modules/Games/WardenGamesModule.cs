@@ -54,6 +54,25 @@ public sealed class GamesConfig
     public int DuckHealthPerHunter { get; set; } = 25;
     /// <summary>"both" (no-scope scout + deagle), "scout" or "deagle".</summary>
     public string HunterWeapons { get; set; } = "both";
+
+    // ---- Death Crate
+    /// <summary>Ring radius around the "deathcrate" Named zone, else the warden's ping, else the warden.</summary>
+    public float DeathCrateRadius { get; set; } = 380f;
+    public float DeathCrateDelaySeconds { get; set; } = 8f;
+    /// <summary>Crate speed in units/s: starts here, gains DeathCrateAcceleration per second, up to DeathCrateMaxSpeed.</summary>
+    public float DeathCrateSpeed { get; set; } = 380f;
+    public float DeathCrateAcceleration { get; set; } = 12f;
+    public float DeathCrateMaxSpeed { get; set; } = 1100f;
+    /// <summary>Chance (0-1) that the crate lunges at a player instead of a random spot.</summary>
+    public float DeathCrateAggression { get; set; } = 0.65f;
+    public float DeathCrateHopHeight { get; set; } = 48f;
+    /// <summary>The game ends when this many players are left; they win.</summary>
+    public int DeathCrateSurvivors { get; set; } = 1;
+    /// <summary>Everyone still in the game wins after this long.</summary>
+    public float DeathCrateMaxSeconds { get; set; } = 150f;
+    public string DeathCrateModel { get; set; } = "models/props/de_dust/hr_dust/dust_crates/dust_crate_style_01_32x32x32.vmdl";
+    /// <summary>Visual size of the 32-unit crate model (2.5 = an 80-unit crate). The hit box follows it.</summary>
+    public float DeathCrateScale { get; set; } = 2.5f;
 }
 
 /// <summary>A running game: participants, area, reward. Owned by <see cref="WardenGamesModule"/>.</summary>
@@ -133,7 +152,7 @@ public sealed partial class WardenGamesModule : JbModule
         _games.AddRange(new WardenGame[]
         {
             new WinZoneGame(), new LastStandingGame(), new SimonSaysGame(), new RedLightGame(), new MusicalZonesGame(), new MapGame(),
-            new DuckHuntGame()
+            new DuckHuntGame(), new DeathCrateGame()
         });
         DamageService.Register(Name, 94, OnDamage);
         Plugin.RegisterListener<Listeners.OnTick>(OnTick);

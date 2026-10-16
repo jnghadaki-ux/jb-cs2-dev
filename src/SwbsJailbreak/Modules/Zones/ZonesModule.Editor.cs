@@ -52,6 +52,7 @@ public sealed partial class ZonesModule
 
     [ConsoleCommand("css_zonemanager", "sm_zonemanager - opens the zone manager")]
     [ConsoleCommand("css_zm", "sm_zm - opens the zone manager")]
+    [ConsoleCommand("css_zones", "sm_zones - opens the zone manager")]
     public void CmdZoneManager(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null || !caller.IsValid) { info.ReplyToCommand("[Zones] in-game only; use css_zones_list from the console."); return; }
@@ -121,6 +122,41 @@ public sealed partial class ZonesModule
         }
 
         if (caller != null && info.CallingContext == CommandCallingContext.Chat) Chat.Tell(caller, "zones.see_console");
+    }
+
+    [ConsoleCommand("css_zones_ents", "sm_zones_ents [radius] - list map entities near your last ping (or you): class, name, distance - for Map Input zones")]
+    public void CmdEntities(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null || !caller.IsValid) { info.ReplyToCommand("[Zones] in-game only."); return; }
+        if (!Perms.Has(caller, "zones")) { Chat.Tell(caller, "core.no_access"); return; }
+        var radius = info.ArgCount > 1 && float.TryParse(info.GetArg(1), out var r) ? Math.Clamp(r, 16f, 4096f) : 256f;
+        Vector3? from = Aim.TryGetPing(caller, PingMaxAge, out var ping, out _) ? ToV3(ping) : Feet(caller);
+        if (from == null) { Chat.Tell(caller, "zones.must_be_alive"); return; }
+        var p = new CssVector(from.Value.X, from.Value.Y, from.Value.Z);
+        var found = new List<(float D, string Class, string Name)>();
+        foreach (var raw in Utilities.GetAllEntities())
+        {
+            if (raw == null || !raw.IsValid) continue;
+            var dn = raw.DesignerName ?? "";
+            if (dn.Length == 0 || dn.StartsWith("player", StringComparison.Ordinal) || dn.StartsWith("cs_player", StringComparison.Ordinal)
+                || dn.StartsWith("weapon_", StringComparison.Ordinal) || dn is "worldent" or "info_target" or "beam" or "env_beam") continue;
+            var e = raw.As<CBaseEntity>();
+            if (!e.IsValid) continue;
+            float d;
+            if (EntityBounds.TryGet(e, out var mn, out var mx)) d = EntityBounds.DistanceToBox(p, mn, mx);
+            else if (e.AbsOrigin is { } o) d = Vector3.Distance(from.Value, ToV3(o));
+            else continue;
+            if (d > radius) continue;
+            string n;
+            try { n = raw.Entity?.Name ?? ""; }
+            catch { n = ""; }
+            found.Add((d, dn, n));
+        }
+
+        Chat.PrintToConsole(caller, $"---- Entities within {radius:0} of {(Aim.TryGetPing(caller, PingMaxAge, out _, out _) ? "your ping" : "you")} ({found.Count}) ----");
+        foreach (var (d, cls, name) in found.OrderBy(x => x.D).Take(60))
+            Chat.PrintToConsole(caller, $"{d,6:0}  {cls,-28} {(name.Length > 0 ? name : "(no name)")}");
+        if (info.CallingContext == CommandCallingContext.Chat) Chat.Tell(caller, "zones.see_console");
     }
 
     // ====================================================================== menus

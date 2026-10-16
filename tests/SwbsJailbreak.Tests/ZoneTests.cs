@@ -200,3 +200,40 @@ public class ZoneRecordTests
         Assert.Equal(90, back.Zones[0].Angles[1]);
     }
 }
+
+public class MapInputRulesTests
+{
+    [Theory]
+    [InlineData("cell_button", "Cell_Button", true)]
+    [InlineData("cell_*", "cell_door_3", true)]
+    [InlineData("cell_*", "armory_door", false)]
+    [InlineData("", "cell_button", false)]
+    [InlineData("cell_button", null, false)]
+    public void NameMatches_IsCaseInsensitive_WithTrailingWildcard(string pattern, string? name, bool expected) =>
+        Assert.Equal(expected, SwbsJailbreak.Modules.Zones.MapInputRules.NameMatches(pattern, name));
+
+    [Theory]
+    [InlineData("func_button", "Press")]
+    [InlineData("func_door_rotating", "Toggle")]
+    [InlineData("logic_relay", "Trigger")]
+    [InlineData("info_target", null)]
+    public void DefaultInput_FollowsTheClass(string cls, string? expected) =>
+        Assert.Equal(expected, SwbsJailbreak.Modules.Zones.MapInputRules.DefaultInput(cls));
+
+    [Fact]
+    public void Activation_MapsChoicesToTriggerAndTeam()
+    {
+        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.PressUse, 0), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(0));
+        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.PressUse, 3), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(1));
+        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.Enter, 2), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(5));
+        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.RoundStart, 0), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(6));
+    }
+
+    [Fact]
+    public void BoxesOverlap_TouchingCountsAndApartDoesNot()
+    {
+        var a0 = new Vector3(0, 0, 0); var a1 = new Vector3(10, 10, 10);
+        Assert.True(SwbsJailbreak.Modules.Zones.MapInputRules.BoxesOverlap(a0, a1, new Vector3(10, 0, 0), new Vector3(20, 5, 5)));
+        Assert.False(SwbsJailbreak.Modules.Zones.MapInputRules.BoxesOverlap(a0, a1, new Vector3(11, 0, 0), new Vector3(20, 5, 5)));
+    }
+}

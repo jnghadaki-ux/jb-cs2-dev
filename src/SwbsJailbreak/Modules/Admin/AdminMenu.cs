@@ -83,21 +83,21 @@ public sealed partial class AdminModule
             Blind(t, on ? 255 : 0);
             Activity(a, "admin.act.blind", t.PlayerName, on ? 255 : 0);
         });
-        Act("fun", "admin.menu.act.noclip", (a, t) => { t.SetNoclip(!t.IsNoclip()); Activity(a, "admin.act.noclip", t.PlayerName); });
-        Act("fun", fx.God ? "admin.menu.act.ungod" : "admin.menu.act.god", (a, t) => { var f = Fxs(t.Jb()!); f.God = !f.God; Activity(a, f.God ? "admin.act.god" : "admin.act.ungod", t.PlayerName); });
+        Act("noclip", "admin.menu.act.noclip", (a, t) => { t.SetNoclip(!t.IsNoclip()); Activity(a, "admin.act.noclip", t.PlayerName); });
+        Act("god", fx.God ? "admin.menu.act.ungod" : "admin.menu.act.god", (a, t) => { var f = Fxs(t.Jb()!); f.God = !f.God; Activity(a, f.God ? "admin.act.god" : "admin.act.ungod", t.PlayerName); });
         Act("respawn", "admin.menu.act.respawn", (a, t) =>
         {
             if (t.IsAliveP() || t.Team is not (CsTeam.Terrorist or CsTeam.CounterTerrorist)) { Chat.Tell(a, "admin.respawn.none"); return; }
             t.RespawnSolid();
             Activity(a, "admin.act.respawn", t.PlayerName);
         });
-        Act("slay", "admin.menu.act.bring", (a, t) =>
+        Act("teleport", "admin.menu.act.bring", (a, t) =>
         {
             if (!a.IsAliveP() || a.Origin() is not { } pos) { Chat.Tell(a, "core.only_alive"); return; }
             t.TeleportTo(new Vector(pos.X, pos.Y, pos.Z + 5f));
             Activity(a, "admin.act.bring", t.PlayerName);
         });
-        Act("slay", "admin.menu.act.goto", (a, t) =>
+        Act("teleport", "admin.menu.act.goto", (a, t) =>
         {
             if (!a.IsAliveP() || t.Origin() is not { } pos) { Chat.Tell(a, "core.only_alive"); return; }
             a.TeleportTo(new Vector(pos.X, pos.Y, pos.Z + 5f));

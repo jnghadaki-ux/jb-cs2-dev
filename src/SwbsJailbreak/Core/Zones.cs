@@ -83,6 +83,7 @@ public static class ZoneTypeKeys
     public const string Notify = "notify";                        // new
     public const string CellBlock = "cell_block";                 // new (used by Crews turf)
     public const string Spawn = "spawn";                          // new: custom round-start spawn area
+    public const string MapInput = "map_input";                   // new: fire an input on map entities (fix broken buttons)
 }
 
 /// <summary>Live zone: the saved record plus its resolved type.</summary>

@@ -94,4 +94,29 @@ public class CommandCatalogTests
         Assert.Equal("@css/generic", Perms.Defaults["cells.open"]);
         Assert.Equal("@css/root", Perms.Defaults["cells"]);
     }
+
+    [Theory]
+    [InlineData("g")]
+    [InlineData("freekill")]
+    [InlineData("points")]
+    [InlineData("deputy")]
+    [InlineData("split")]
+    [InlineData("repeat")]
+    public void OpenCommands_AreListedForEveryone(string name) =>
+        Assert.Null(Catalogue().Single(e => e.Name == name).Capability);
+
+    [Theory]
+    [InlineData("bring", "teleport", "@css/cheats")]
+    [InlineData("goto", "teleport", "@css/cheats")]
+    [InlineData("gravity", "gravity", "@css/cheats")]
+    [InlineData("respawn", "respawn", "@css/slay")]
+    [InlineData("1up", "respawn", "@css/slay")]
+    [InlineData("xup", "respawn", "@css/slay")]
+    [InlineData("bhopcheck", "bhc", "@css/unban")]
+    [InlineData("bhce", "bhc", "@css/unban")]
+    public void TierChanges_UseTheirCapability(string name, string capability, string flag)
+    {
+        Assert.Equal(capability, Catalogue().Single(e => e.Name == name).Capability);
+        Assert.Equal(flag, Perms.Defaults[capability]);
+    }
 }

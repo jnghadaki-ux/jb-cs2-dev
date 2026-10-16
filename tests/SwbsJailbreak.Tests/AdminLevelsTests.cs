@@ -32,4 +32,32 @@ public class AdminLevelsTests
         Assert.Null(AdminLevels.MergeInto("{ not json"));             // never overwrite an unreadable file
         Assert.NotNull(AdminLevels.MergeInto(null));                  // no file yet: create it
     }
+
+    [Fact]
+    public void Merge_UpgradesAnUntouchedOldLeadGroup_ButNotAnEditedOne()
+    {
+        var oldLead = "[\"@css/reservation\",\"@css/generic\",\"@css/chat\",\"@css/slay\",\"@css/kick\",\"@css/ban\",\"@css/unban\",\"@css/cheats\",\"@css/changemap\",\"@css/config\",\"@css/cvar\"]";
+        var merged = JsonNode.Parse(AdminLevels.MergeInto("{ \"#swbs/lead\": { \"flags\": " + oldLead + ", \"immunity\": 55 } }")!)!.AsObject();
+        var flags = merged["#swbs/lead"]!["flags"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
+        Assert.Contains("@swbs/unban", flags);
+        Assert.Contains("@swbs/noclip", flags);
+        Assert.Equal(55, (int)merged["#swbs/lead"]!["immunity"]!); // the owner's immunity stays
+
+        var edited = "{ \"#swbs/lead\": { \"flags\": [\"@css/generic\"], \"immunity\": 50 } }";
+        var m2 = JsonNode.Parse(AdminLevels.MergeInto(edited)!)!.AsObject();
+        Assert.Single(m2["#swbs/lead"]!["flags"]!.AsArray());
+    }
+
+    [Fact]
+    public void UnbanNoclipGod_AreLeadOnly()
+    {
+        foreach (var cap in new[] { "unban", "noclip", "god" })
+        {
+            var flag = Perms.Defaults[cap];
+            Assert.Contains(flag, AdminLevels.All.Single(l => l.Name == "Lead").Flags);
+            Assert.DoesNotContain(flag, AdminLevels.All.Single(l => l.Name == "Level 3").Flags);
+        }
+
+        Assert.Contains(Perms.Defaults["ban"], AdminLevels.All.Single(l => l.Name == "Level 3").Flags); // level 3 can ban
+    }
 }

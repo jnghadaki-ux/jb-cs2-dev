@@ -264,10 +264,18 @@ public sealed class BhopCheckModule : JbModule
 
     [ConsoleCommand("css_bhopcheck", "sm_bhopcheck <#userid|name> - bhop log (console)")]
     [ConsoleCommand("css_bhc", "sm_bhc <#userid|name> - bhop log (console)")]
-    public void CmdBhc(CCSPlayerController? caller, CommandInfo info) => Print(caller, info, false);
+    public void CmdBhc(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "bhc")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        Print(caller, info, false);
+    }
 
     [ConsoleCommand("css_bhce", "sm_bhce <#userid|name> - extended bhop log (console)")]
-    public void CmdBhce(CCSPlayerController? caller, CommandInfo info) => Print(caller, info, true);
+    public void CmdBhce(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "bhc")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        Print(caller, info, true);
+    }
 
     private void Print(CCSPlayerController? caller, CommandInfo info, bool extended)
     {

@@ -32,8 +32,13 @@ public static class Perms
         ["mute"] = "@css/chat",              // mute/gag/silence
         ["teams"] = "@css/kick",             // move players between teams, swap
         ["slay"] = "@css/slay",              // slay, slap, beacon, freeze, ... (fun commands)
-        ["fun"] = "@css/cheats",             // gravity, noclip, god, give weapons, speed
-        ["respawn"] = "@css/cheats",
+        ["fun"] = "@css/cheats",             // gravity, give weapons, speed, hp/armor (Level 3)
+        ["noclip"] = "@swbs/noclip",         // !noclip (Lead tier and root)
+        ["god"] = "@swbs/god",               // !god (Lead tier and root)
+        ["respawn"] = "@css/slay",           // !respawn, !1up, !xup (Level 1 and up)
+        ["teleport"] = "@css/cheats",        // !bring, !goto (Level 3 and up)
+        ["gravity"] = "@css/cheats",         // !gravity (Level 3 and up)
+        ["bhc"] = "@css/unban",              // !bhc / !bhce bhop logs (Level 3 and up)
         ["rcon"] = "@css/rcon",
         ["root"] = "@css/root",
         ["immunity"] = "@css/generic",       // immune to dead-talk mute etc.
@@ -43,7 +48,7 @@ public static class Perms
         ["zones"] = "@css/config",           // edit map zones / LR locations
         ["kick"] = "@css/kick",
         ["ban"] = "@css/ban",
-        ["unban"] = "@css/unban",
+        ["unban"] = "@swbs/unban",           // !unban and !unctban (Lead tier and root)
         ["map"] = "@css/changemap",
         ["cvar"] = "@css/cvar",
         ["config"] = "@css/config",
@@ -140,3 +145,10 @@ public static class Perms
         }
     }
 }
+
+/// <summary>
+/// The command is for everyone: its body checks admin rights only for an extra (admins may look up anyone's points,
+/// admins also receive !g) or the game rules decide (warden, deputy, prisoner). Listed as open in !commands.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+internal sealed class OpenCommandAttribute : Attribute { }
