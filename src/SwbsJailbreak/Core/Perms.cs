@@ -23,8 +23,8 @@ public static class Perms
         ["cells"] = "@css/root",             // sm_celldoors_open / sm_cdo (original: ADMFLAG_ROOT)
         ["cells.edit"] = "@css/root",        // sm_celldoors_edit + save (original: ADMFLAG_ROOT)
         ["cells.open"] = "@css/generic",
-        ["crews.admin"] = "@css/ban",        // !crewadmin: rename / retag / kick / disband crews, set respect     // !open / !o (addition: any basic admin may open the cells)
-        ["ctban"] = "@css/ban",              // CT ban/unban
+        ["crews.admin"] = "@css/kick",       // !crewadmin: rename / retag / kick / disband crews, set respect     // !open / !o (addition: any basic admin may open the cells)
+        ["ctban"] = "@css/kick",             // timed CT bans (Level 2+)
         ["ctban.permanent"] = "@css/unban",  // permanent CT bans / unban others' bans
         ["days"] = "@css/generic",           // force-start / stop days
         ["days.edit"] = "@css/unban",        // sm_de / sm_daysedit (original: ADMFLAG_UNBAN)
@@ -48,7 +48,7 @@ public static class Perms
         ["games.admin"] = "@css/generic",    // warden games: force-end, mark map game buttons (!gamebuttons)
         ["zones"] = "@css/config",           // edit map zones / LR locations
         ["kick"] = "@css/kick",
-        ["ban"] = "@css/ban",
+        ["ban"] = "@css/ban",                // server bans: !ban, !banip, !addban, !banlist (Level 3+)
         ["unban"] = "@swbs/unban",           // !unban and !unctban (Lead tier and root)
         ["map"] = "@css/changemap",
         ["cvar"] = "@css/cvar",

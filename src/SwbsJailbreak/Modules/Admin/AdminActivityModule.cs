@@ -144,7 +144,7 @@ public sealed class AdminActivityModule : JbModule
     [ConsoleCommand("css_adminlog", "sm_adminlog [lines] [filter] - recent admin activity (console)")]
     public void CmdAdminLog(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!Perms.Has(caller, "ban")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (!Perms.Has(caller, "kick")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
         var count = 30;
         var filter = "";
         if (info.ArgCount > 1 && !int.TryParse(info.GetArg(1), out count)) { filter = info.GetArg(1); count = 30; }

@@ -208,7 +208,8 @@ public class CatalogTests
     [Fact]
     public void Permissions_ResolveCapabilities_AndPassThroughFlags()
     {
-        Assert.Equal("@css/ban", Perms.Resolve("ctban"));
+        Assert.Equal("@css/kick", Perms.Resolve("ctban"));
+        Assert.Equal("@css/ban", Perms.Resolve("ban"));
         Assert.Equal("@css/kick", Perms.Resolve("@css/kick"));
         Assert.Equal("@css/root", Perms.Resolve("unknown-capability"));
     }

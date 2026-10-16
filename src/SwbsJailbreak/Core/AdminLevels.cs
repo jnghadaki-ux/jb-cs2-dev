@@ -15,8 +15,11 @@ public sealed record AdminLevel(string Group, string Name, int Immunity, string[
 public static class AdminLevels
 {
     private static readonly string[] L1 = { "@css/reservation", "@css/generic", "@css/chat", "@css/slay" };
-    private static readonly string[] L2 = L1.Concat(new[] { "@css/kick", "@css/ban" }).ToArray();
-    private static readonly string[] L3 = L2.Concat(new[] { "@css/unban", "@css/cheats", "@css/changemap" }).ToArray();
+    private static readonly string[] L2 = L1.Concat(new[] { "@css/kick" }).ToArray();
+    private static readonly string[] L3 = L2.Concat(new[] { "@css/ban", "@css/unban", "@css/cheats", "@css/changemap" }).ToArray();
+
+    // Before 0.22.7 server bans (@css/ban) were Level 2 (Level 3's flag set did not change).
+    private static readonly string[] OldL2 = L1.Concat(new[] { "@css/kick", "@css/ban" }).ToArray();
     private static readonly string[] Lead = L3.Concat(new[] { "@css/config", "@css/cvar", "@swbs/unban", "@swbs/noclip", "@swbs/god" }).ToArray();
 
     /// <summary>
@@ -25,6 +28,7 @@ public static class AdminLevels
     /// </summary>
     private static readonly Dictionary<string, string[][]> PreviousDefaults = new()
     {
+        ["#swbs/level2"] = new[] { OldL2 },
         ["#swbs/lead"] = new[] { L3.Concat(new[] { "@css/config", "@css/cvar" }).ToArray() }
     };
 
@@ -33,9 +37,9 @@ public static class AdminLevels
         new("#swbs/level1", "Level 1", 10, L1,
             "admin menu and chat, jail logs (!log), warden control (!sw/!rw), open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, respawn/1up/xup"),
         new("#swbs/level2", "Level 2", 20, L2,
-            "+ kick, move/swap teams, bans (!ban, !addban) and timed CT bans, warnings, crew admin"),
+            "+ kick, move/swap teams, timed CT bans, warnings, crew admin"),
         new("#swbs/level3", "Level 3", 30, L3,
-            "+ permanent CT bans, day/LR editing, teleport (bring/goto), gravity, bhop logs (!bhc), give/hp/heal/armor/speed/parachutes and other fun commands (not noclip/god), map change"),
+            "+ server bans (!ban, !banip, !addban), permanent CT bans, day/LR editing, teleport (bring/goto), gravity, bhop logs (!bhc), give/hp/heal/armor/speed/parachutes and other fun commands (not noclip/god), map change"),
         new("#swbs/lead", "Lead", 50, Lead,
             "+ unban (bans and CT bans), noclip, god/ungod, warden pointer/beacon settings, zone editor and server cvars (root-only: rcon, cell door editor, points, server setup)")
     };
@@ -122,7 +126,7 @@ public static class AdminLevels
             {
                 flags = (existing["flags"] as JsonArray)?.Select(n => n?.GetValue<string>() ?? "").Where(f => f.Length > 0).ToList() ?? new List<string>();
                 // An untouched group from an earlier version gets the current flags (immunity is kept).
-                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && olds.Any(o => flags.ToHashSet().SetEquals(o)))
+                if (PreviousDefaults.TryGetValue(l.Group, out var olds) && !flags.ToHashSet().SetEquals(l.Flags) && olds.Any(o => flags.ToHashSet().SetEquals(o)))
                 {
                     flags = l.Flags.ToList();
                     changed = true;

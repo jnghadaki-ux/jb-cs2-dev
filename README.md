@@ -245,8 +245,8 @@ The plugin adds four admin groups under root to CounterStrikeSharp's `configs/ad
 | Tier | Group | Immunity | Adds |
 |---|---|---|---|
 | Level 1 | `#swbs/level1` | 10 | admin menu and chat, jail logs (`!log`), warden control (`!sw`/`!rw`), open cells, start/stop days, abort LRs, warden games, mute/gag/silence, slay/slap/beacon/freeze, `!respawn`/`!1up`/`!xup` |
-| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, bans (`!ban`, `!addban`) and timed CT bans, warnings, crew admin |
-| Level 3 | `#swbs/level3` | 30 | permanent CT bans, day/LR editing, teleport (`!bring`/`!goto`), `!gravity`, bhop logs (`!bhc`), give/hp/heal/armor/speed/parachutes and other fun commands (not noclip/god), map change |
+| Level 2 | `#swbs/level2` | 20 | kick, move/swap teams, timed CT bans, warnings, crew admin |
+| Level 3 | `#swbs/level3` | 30 | server bans (`!ban`, `!banip`, `!addban`), permanent CT bans, day/LR editing, teleport (`!bring`/`!goto`), `!gravity`, bhop logs (`!bhc`), give/hp/heal/armor/speed/parachutes and other fun commands (not noclip/god), map change |
 | Lead | `#swbs/lead` | 50 | unban (`!unban`, `!unctban`), `!noclip`, `!god`/`!ungod`, `!wbeacon`, zone editor and server cvars |
 | Root | `@css/root` (a flag, not a group) | 100 | everything, including rcon, the cell door editor, points and server setup |
 
@@ -271,15 +271,15 @@ Every command of the plugin (161 commands, generated from the code). Type them i
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
-| `!addban` |  | Level 2 | &lt;minutes\|0&gt; &lt;steamid&gt; [reason] |
+| `!addban` |  | Level 3 | &lt;minutes\|0&gt; &lt;steamid&gt; [reason] |
 | `!admin` | !adminmenu | Level 1 | Open the admin menu |
 | `!adminlevels` |  | Level 1 | the SWBS admin tiers and what each can do |
 | `!adminlog` |  | Level 2 | [lines] [filter] - recent admin activity (console) |
 | `!admins` |  | Everyone | List online admins |
 | `!armor` |  | Level 3 | Set player armour: !armor &lt;target&gt; &lt;amount&gt; [helmet 0/1] |
-| `!ban` |  | Level 2 | &lt;#userid\|name&gt; &lt;minutes\|0&gt; [reason] |
-| `!banip` |  | Level 2 | &lt;ip\|#userid\|name&gt; &lt;minutes\|0&gt; [reason] |
-| `!banlist` |  | Level 2 | List active bans |
+| `!ban` |  | Level 3 | &lt;#userid\|name&gt; &lt;minutes\|0&gt; [reason] |
+| `!banip` |  | Level 3 | &lt;ip\|#userid\|name&gt; &lt;minutes\|0&gt; [reason] |
+| `!banlist` |  | Level 3 | List active bans |
 | `!beacon` |  | Level 1 | &lt;#userid\|name&gt; [0/1] - toggle a beacon ring on a player |
 | `!blind` |  | Level 1 | &lt;#userid\|name&gt; [amount 0-255] - leave amount off to reset |
 | `!bring` |  | Level 3 | Teleport a player to you: !bring &lt;target&gt; |

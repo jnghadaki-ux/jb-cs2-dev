@@ -20,7 +20,7 @@ namespace SwbsJailbreak;
 [MinimumApiVersion(300)]
 public sealed class JailbreakPlugin : BasePlugin
 {
-    public const string PluginVersion = "0.22.6"; // .NET 10 / CSS 1.0.376 build
+    public const string PluginVersion = "0.22.7"; // .NET 10 / CSS 1.0.376 build
 
     public override string ModuleName => "SWBS Ultimate Jailbreak";
     public override string ModuleVersion => PluginVersion;
@@ -307,6 +307,18 @@ public sealed class JailbreakPlugin : BasePlugin
                 g.ConfigRevision = 12;
             });
             Logger.LogInformation("Config migrated to revision 12: !wbeacon needs the Lead admin tier (or root)");
+        }
+
+        if (Config.General.ConfigRevision < 13)
+        {
+            // 0.22.7: server bans are Level 3+ (the #swbs groups move @css/ban up); timed CT bans and crew admin stay Level 2.
+            Config.Update<GeneralConfig>("General", g =>
+            {
+                foreach (var cap in new[] { "ctban", "crews.admin" })
+                    if (!g.Permissions.TryGetValue(cap, out var f) || f == "@css/ban") g.Permissions[cap] = Perms.Defaults[cap];
+                g.ConfigRevision = 13;
+            });
+            Logger.LogInformation("Config migrated to revision 13: server bans Level 3+, CT bans and crew admin stay Level 2");
         }
     }
 

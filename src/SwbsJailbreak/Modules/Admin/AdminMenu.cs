@@ -202,7 +202,7 @@ public sealed partial class AdminModule
             Server.ExecuteCommand("css_admins_reload");
             Server.ExecuteCommand("css_groups_reload");
             Activity(a, "admin.act.reloadadmins");
-        }, Perms.Has(admin, "ban"));
+        }, Perms.Has(admin, "kick"));
         m.Open(admin);
     }
 }
