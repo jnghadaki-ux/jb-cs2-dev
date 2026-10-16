@@ -1066,10 +1066,9 @@ public sealed partial class StoreModule : JbModule
         {
             var hat = Utilities.CreateEntityByName<CBaseModelEntity>("prop_dynamic");
             if (hat == null) return;
-            hat.SetModel(item.Data);
             hat.Spawnflags = 256; // no collision
             if (!item.Color.Equals("255,255,255", StringComparison.Ordinal)) hat.Render = ColorOf(item.Color, Random.Shared);
-            hat.DispatchSpawn();
+            Fx.SpawnWithModel(hat, item.Data);
             // Upright on top of the head first, then parented to the head attachment keeping that offset: the attachment's
             // own axes point along the head bone, so snapping onto it would lay the hat on its side.
             var eye = c.EyePosition();

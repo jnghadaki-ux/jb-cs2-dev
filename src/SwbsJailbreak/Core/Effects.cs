@@ -142,10 +142,9 @@ public static class Fx
         {
             var prop = Utilities.CreateEntityByName<CBaseModelEntity>("prop_dynamic");
             if (prop == null) return null;
-            prop.SetModel(model);
             prop.Spawnflags = 256; // start with collision disabled
             if (tint is { } c) prop.Render = c;
-            prop.DispatchSpawn();
+            SpawnWithModel(prop, model);
             prop.Teleport(pos, angles, new Vector(0, 0, 0));
             return prop;
         }
@@ -154,6 +153,19 @@ public static class Fx
             JailbreakPlugin.Instance?.Logger.LogWarning(ex, "Failed to create prop {Model}", model);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Spawn an entity created with CreateEntityByName with its model given as a spawn key value. Calling SetModel
+    /// before DispatchSpawn sets up the skeleton of an entity that is still in the staging list, which fails the
+    /// engine assertion "Assertion Failed in function SetupModel(): 0 == ( ... & EF_IN_STAGING_LIST )" and floods the
+    /// server console (every trail piece, splat, hat and glow did it).
+    /// </summary>
+    public static void SpawnWithModel(CBaseEntity entity, string model)
+    {
+        var kv = new CEntityKeyValues();
+        kv.SetString("model", model.Trim());
+        entity.DispatchSpawn(kv);
     }
 
     public static void Tint(CBaseModelEntity? prop, Color color)
