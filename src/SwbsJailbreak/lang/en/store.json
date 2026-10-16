@@ -25,6 +25,8 @@
   "store.cat.killsound": "Kill sounds",
   "store.cat.grenadesound": "Grenade sounds",
   "store.cat.hat": "Hats",
+  "store.cat.face": "Face",
+  "store.cat.back": "Back",
   "store.cat.playermodel": "Player models",
   "store.settings": "Effect visibility",
   "store.settings.others": "Others' effects: {0}",

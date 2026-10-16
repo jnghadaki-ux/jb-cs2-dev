@@ -10,7 +10,6 @@ import struct
 import sys
 import zlib
 
-OUT = sys.argv[1] if len(sys.argv) > 1 else 'out'
 MAT = 'swbs_hat_white'
 VMAT = 'materials/swbs/hats/hat_white.vmat'
 PNG = 'materials/swbs/hats/hat_white.png'
@@ -248,6 +247,7 @@ def write_png(path, size=64, value=235):
 
 
 def main():
+    OUT = sys.argv[1] if len(sys.argv) > 1 else 'out'
     os.makedirs(os.path.join(OUT, 'models/swbs/hats'), exist_ok=True)
     os.makedirs(os.path.join(OUT, 'materials/swbs/hats'), exist_ok=True)
     write_png(os.path.join(OUT, PNG))
@@ -266,4 +266,5 @@ def main():
         print(f'{name}: {len(mesh.tris)} triangles, height {min(zs):.1f}..{max(zs):.1f}, radius {max(rs):.1f}')
 
 
-main()
+if __name__ == '__main__':
+    main()

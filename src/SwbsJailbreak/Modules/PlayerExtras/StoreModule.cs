@@ -27,6 +27,8 @@ public enum StoreItemType
     KillSound,
     GrenadeSound,
     Hat,
+    Face,
+    Back,
     PlayerModel
 }
 
@@ -44,8 +46,9 @@ public sealed class StoreItem
 
     /// <summary>
     /// Per type: KillEffect "ring" / "fire" / "explosion"; ChatColor a chat colour tag ("{red}"); BodySize a scale
-    /// ("0.85"); Transparency an alpha 0-255; KillSound a sound event; GrenadeSound "bounce event|explode event"; Hat a
-    /// .vmdl path from your workshop pack; PlayerModel a player .vmdl path (the store pack, see WorkshopPack.StoreModels).
+    /// ("0.85"); Transparency an alpha 0-255; KillSound a sound event; GrenadeSound "bounce event|explode event"; Hat,
+    /// Face and Back a .vmdl path from your workshop pack (Face / Back: store pack 2, see WorkshopPack.Store2Equipment);
+    /// PlayerModel a player .vmdl path (the store pack, see WorkshopPack.StoreModels).
     /// </summary>
     public string Data { get; set; } = "";
 
@@ -97,13 +100,34 @@ public sealed class StoreConfig
     /// <summary>Hat height above the eyes when it is put on (the hat keeps that offset from the head).</summary>
     public float HatHeight { get; set; } = 7.5f;
 
+    /// <summary>Attachment face items (glasses, masks, mustaches) follow: the head, like hats.</summary>
+    public string FaceAttachment { get; set; } = "clip_limit";
+
+    /// <summary>Face items are put this far in front of the eyes (raise it if glasses sink into a model's face).</summary>
+    public float FaceForward { get; set; } = 4.5f;
+
+    /// <summary>Face item height relative to the eyes (negative moves it down).</summary>
+    public float FaceHeight { get; set; } = 0f;
+
+    /// <summary>
+    /// Attachment back items (wings, jetpack, backpack, katana) follow. c4 sits on the upper spine (spine_3) of every CS2
+    /// agent and of the SWBS models rebuilt on the agent skeleton, where the bomb is carried.
+    /// </summary>
+    public string BackAttachment { get; set; } = "c4";
+
+    /// <summary>Back items are put this far below the eyes (follows crouching) ...</summary>
+    public float BackBelowEye { get; set; } = 17f;
+
+    /// <summary>... and this far behind them, on the upper back.</summary>
+    public float BackDepth { get; set; } = 6f;
+
     /// <summary>
     /// Player model items can be worn by both teams (default). False keeps them for prisoners only, so guards always
     /// look like guards. An item's own Team ("ct" / "t") still wins.
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = true;
 
-    public const int CurrentDefaultsVersion = 8;
+    public const int CurrentDefaultsVersion = 9;
 
     public static List<StoreItem> DefaultItems() => new()
     {
@@ -189,8 +213,33 @@ public sealed class StoreConfig
         Hat("party_hat", "Party hat", "rainbow", 1200),
         Hat("halo", "Halo", "255,235,140", 2500),
         Hat("beanie", "Red beanie", "200,40,40", 1000),
-        Hat("cowboy_hat", "Cowboy hat", "125,82,45", 1500)
+        Hat("cowboy_hat", "Cowboy hat", "125,82,45", 1500),
+        // ---- version 9: face and back equipment (the SMPlugins Item_Equipment face and torso slots), store pack 2
+        // (tools/store-pack-2), white and tinted here; shown once WorkshopPack.Store2Equipment is on
+        Gear(StoreItemType.Face, "sunglasses", "Sunglasses", "25,25,25", 1200),
+        Gear(StoreItemType.Face, "round_glasses", "Round glasses", "200,160,60", 1000),
+        Gear(StoreItemType.Face, "bandit_mask", "Bandit mask", "20,20,20", 1500),
+        Gear(StoreItemType.Face, "mustache", "Mustache", "70,40,20", 1000),
+        Gear(StoreItemType.Face, "clown_nose", "Clown nose", "230,25,25", 800),
+        Gear(StoreItemType.Face, "eyepatch", "Pirate eyepatch", "20,20,20", 1000),
+        Gear(StoreItemType.Back, "angel_wings", "Angel wings", "255,255,255", 4000),
+        Gear(StoreItemType.Back, "bat_wings", "Devil wings", "150,20,20", 4000),
+        Gear(StoreItemType.Back, "jetpack", "Jetpack", "150,155,165", 3000),
+        Gear(StoreItemType.Back, "backpack", "Backpack", "60,90,40", 1500),
+        Gear(StoreItemType.Back, "katana", "Katana", "35,35,40", 2500)
     };
+
+    /// <summary>Path prefix of store pack 2's face and back equipment.</summary>
+    internal const string PackGearFolder = "models/swbs/store2/";
+
+    private static StoreItem Gear(StoreItemType type, string name, string title, string color, int price)
+    {
+        var slot = type == StoreItemType.Face ? "face" : "back";
+        return new()
+        {
+            Id = slot + "_" + name, Name = title, Type = type, Color = color, Price = price, Data = $"{PackGearFolder}{slot}/{name}.vmdl"
+        };
+    }
 
     /// <summary>Path prefix of the workshop pack's store hats.</summary>
     internal const string PackHatFolder = "models/swbs/hats/";
@@ -250,8 +299,9 @@ public sealed class StoreInventory
 /// bullet tracers, paintballs, kill effects (shockwave / fire / explosion; the original's ragdoll "force" cannot be done
 /// on CS2's client-side ragdolls), trails, auras, sparkles, swirls, chat colours, a chat title (!title), see-through body
 /// and body size (fair-play limited, see <see cref="StoreConfig.BodyItemsAnytime"/>), and - once your workshop pack has
-/// the files - kill sounds, grenade sounds and hats (EquipmentColors = the hat tint). The original's per-player
-/// visibility settings are in !store > Settings. Player effects and hats are off during wardays and non-freeday LRs, so
+/// the files - kill sounds, grenade sounds, hats and (store pack 2) the Item_Equipment face and back slots
+/// (EquipmentColors = the tint). The original's per-player
+/// visibility settings are in !store > Settings. Player effects and equipment are off during wardays and non-freeday LRs, so
 /// they never give a hiding player away.
 /// </summary>
 public sealed partial class StoreModule : JbModule
@@ -273,8 +323,10 @@ public sealed partial class StoreModule : JbModule
     private readonly Queue<CEntityInstance?[]>[] _paint = Enumerable.Range(0, Players.MaxSlots).Select(_ => new Queue<CEntityInstance?[]>()).ToArray();
     private readonly int[] _alpha = new int[Players.MaxSlots];
     private readonly float[] _scale = new float[Players.MaxSlots];
-    private readonly CBaseModelEntity?[] _hat = new CBaseModelEntity?[Players.MaxSlots];
-    private readonly string?[] _hatId = new string?[Players.MaxSlots];
+    /// <summary>Equipment worn as a model: hat (head), face and back, one entity each per player.</summary>
+    private static readonly StoreItemType[] GearTypes = { StoreItemType.Hat, StoreItemType.Face, StoreItemType.Back };
+    private readonly Dictionary<StoreItemType, CBaseModelEntity?[]> _gear = GearTypes.ToDictionary(t => t, _ => new CBaseModelEntity?[Players.MaxSlots]);
+    private readonly Dictionary<StoreItemType, string?[]> _gearId = GearTypes.ToDictionary(t => t, _ => new string?[Players.MaxSlots]);
     private int _tick;
 
     public override void OnLoad(bool hotReload)
@@ -285,7 +337,7 @@ public sealed partial class StoreModule : JbModule
         Plugin.AddTimer(0.15f, EffectsTick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         Plugin.RegisterListener<Listeners.OnServerPrecacheResources>(m =>
         {
-            foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0 && Available(i)))
+            foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.Face or StoreItemType.Back or StoreItemType.PlayerModel && i.Data.Length > 0 && Available(i)))
                 m.AddResource(it.Data.Trim());
             foreach (var particle in Particles) m.AddResource(particle); // kill effect extras: unprecached particles never show
             if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
@@ -300,7 +352,7 @@ public sealed partial class StoreModule : JbModule
     {
         JbEvents.PlayerModelsApplied -= ApplyPlayerModel;
         ChatDecor.Remove(Name);
-        for (var i = 0; i < Players.MaxSlots; i++) RemoveHat(i);
+        for (var i = 0; i < Players.MaxSlots; i++) RemoveGear(i);
     }
 
     /// <summary>Configs written before the new items existed get them once (an item an admin removed later stays removed).</summary>
@@ -357,7 +409,7 @@ public sealed partial class StoreModule : JbModule
         _scale[player.Slot] = 1f;
         _trailLast[player.Slot] = null;
         _dropLast[player.Slot] = null;
-        RemoveHat(player.Slot);
+        RemoveGear(player.Slot);
         // Without the PlayerModels module nobody raises PlayerModelsApplied: apply the store model from here.
         if (Jb.Models is NullServices) SchedulePlayerModel(player.Slot);
     }
@@ -368,8 +420,11 @@ public sealed partial class StoreModule : JbModule
         Array.Clear(_trailLast);
         Array.Fill(_alpha, 0);
         Array.Fill(_scale, 1f);
-        Array.Clear(_hat);
-        Array.Clear(_hatId);
+        foreach (var kind in GearTypes)
+        {
+            Array.Clear(_gear[kind]);
+            Array.Clear(_gearId[kind]);
+        }
     }
 
     private void ResetSlot(int slot)
@@ -379,7 +434,7 @@ public sealed partial class StoreModule : JbModule
         _alpha[slot] = 0;
         _scale[slot] = 1f;
         ClearPaint(slot);
-        RemoveHat(slot);
+        RemoveGear(slot);
     }
 
     /// <summary>After PlayerModels gave the player their team model: the equipped store player model replaces it.</summary>
@@ -512,9 +567,19 @@ public sealed partial class StoreModule : JbModule
     /// <summary>Body items (see-through, size) are fair-play limited unless <see cref="StoreConfig.BodyItemsAnytime"/>.</summary>
     internal static bool BodyItemsAllowed(bool anytime, bool warmup, bool freedayDay, bool freedayLr) => anytime || warmup || freedayDay || freedayLr;
 
-    /// <summary>Pack hats only exist once the pack is compiled with them (WorkshopPack.HatModels).</summary>
-    internal static bool Available(StoreItem i) =>
-        !(i.Type == StoreItemType.Hat && i.Data.Trim().StartsWith(StoreConfig.PackHatFolder, StringComparison.OrdinalIgnoreCase) && !Extras.WorkshopPackModule.HatModelsOn);
+    /// <summary>
+    /// Pack hats only exist once the pack is compiled with them (WorkshopPack.HatModels), face and back equipment once
+    /// store pack 2 is uploaded and mounted (WorkshopPack.Store2Equipment).
+    /// </summary>
+    internal static bool Available(StoreItem i)
+    {
+        var data = i.Data.Trim();
+        if (i.Type == StoreItemType.Hat && data.StartsWith(StoreConfig.PackHatFolder, StringComparison.OrdinalIgnoreCase))
+            return Extras.WorkshopPackModule.HatModelsOn;
+        if (i.Type is StoreItemType.Face or StoreItemType.Back && data.StartsWith(StoreConfig.PackGearFolder, StringComparison.OrdinalIgnoreCase))
+            return Extras.WorkshopPackModule.Store2EquipmentOn;
+        return true;
+    }
 
     private StoreItem? Find(string id) => Cfg.Items.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
@@ -831,7 +896,7 @@ public sealed partial class StoreModule : JbModule
     public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
     {
         _trailLast[victim.Slot] = null;
-        RemoveHat(victim.Slot);
+        RemoveGear(victim.Slot);
         if (attacker == null || ReferenceEquals(attacker, victim) || attacker.Controller is not { IsValid: true } ac) return;
         var o = victim.Controller?.Origin() ?? _lastAlive[victim.Slot];
         if (o == null) return;
@@ -939,7 +1004,7 @@ public sealed partial class StoreModule : JbModule
             if (_tick % 7 == 0)
             {
                 ApplyBody(c);
-                UpdateHat(c, allowed);
+                foreach (var kind in GearTypes) UpdateGear(c, allowed, kind);
             }
         }
     }
@@ -1047,49 +1112,66 @@ public sealed partial class StoreModule : JbModule
         }
     }
 
-    // ================================================================= hats (workshop models)
+    // ================================================================= hats, face and back equipment (workshop models)
 
-    private void UpdateHat(CCSPlayerController c, bool allowed)
+    private void UpdateGear(CCSPlayerController c, bool allowed, StoreItemType kind)
     {
-        var item = allowed ? Equipped(c.Slot, StoreItemType.Hat) : null;
+        var item = allowed ? Equipped(c.Slot, kind) : null;
         if (item == null || item.Data.Length == 0 || !Available(item))
         {
-            RemoveHat(c.Slot);
+            RemoveGear(c.Slot, kind);
             return;
         }
 
-        if (_hat[c.Slot] is { IsValid: true } && _hatId[c.Slot] == item.Id) return;
-        RemoveHat(c.Slot);
+        if (_gear[kind][c.Slot] is { IsValid: true } && _gearId[kind][c.Slot] == item.Id) return;
+        RemoveGear(c.Slot, kind);
         var pawn = c.PawnOrNull();
         if (pawn == null) return;
         try
         {
-            var hat = Utilities.CreateEntityByName<CBaseModelEntity>("prop_dynamic");
-            if (hat == null) return;
-            hat.Spawnflags = 256; // no collision
-            if (!item.Color.Equals("255,255,255", StringComparison.Ordinal)) hat.Render = ColorOf(item.Color, Random.Shared);
-            Fx.SpawnWithModel(hat, item.Data);
-            // Upright on top of the head first, then parented to the head attachment keeping that offset: the attachment's
-            // own axes point along the head bone, so snapping onto it would lay the hat on its side.
-            var eye = c.EyePosition();
-            hat.Teleport(new Vector(eye.X, eye.Y, eye.Z + Cfg.HatHeight), new QAngle(0, pawn.EyeAngles.Y, 0), new Vector(0, 0, 0));
-            hat.AcceptInput("SetParent", pawn, hat, "!activator");
-            if (Cfg.HatAttachment.Length > 0) hat.AcceptInput("SetParentAttachmentMaintainOffset", null, null, Cfg.HatAttachment);
+            var gear = Utilities.CreateEntityByName<CBaseModelEntity>("prop_dynamic");
+            if (gear == null) return;
+            gear.Spawnflags = 256; // no collision
+            if (!item.Color.Equals("255,255,255", StringComparison.Ordinal)) gear.Render = ColorOf(item.Color, Random.Shared);
+            Fx.SpawnWithModel(gear, item.Data);
+            // Upright where it belongs first, then parented to the attachment keeping that offset: the attachment's own
+            // axes point along the bone, so snapping onto it would lay the model on its side.
+            var (at, attachment) = GearPlacement(c.EyePosition(), pawn.EyeAngles.Y, kind);
+            gear.Teleport(at, new QAngle(0, pawn.EyeAngles.Y, 0), new Vector(0, 0, 0));
+            gear.AcceptInput("SetParent", pawn, gear, "!activator");
+            if (attachment.Length > 0) gear.AcceptInput("SetParentAttachmentMaintainOffset", null, null, attachment);
             // Not drawn for the wearer (it would sit in front of their eyes) and honouring everyone's settings.
-            Visibility.OnlyFor(hat, ViewFilter(c, true)!);
-            _hat[c.Slot] = hat;
-            _hatId[c.Slot] = item.Id;
+            Visibility.OnlyFor(gear, ViewFilter(c, true)!);
+            _gear[kind][c.Slot] = gear;
+            _gearId[kind][c.Slot] = item.Id;
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "[Store] hat {Model} could not be attached", item.Data);
+            Logger.LogWarning(ex, "[Store] {Kind} {Model} could not be attached", kind, item.Data);
         }
     }
 
-    private void RemoveHat(int slot)
+    /// <summary>Where a piece of equipment goes for a player with these eyes, and the attachment it then follows.</summary>
+    private (Vector At, string Attachment) GearPlacement(Vector eye, float yaw, StoreItemType kind)
     {
-        Fx.SafeRemove(_hat[slot]);
-        _hat[slot] = null;
-        _hatId[slot] = null;
+        var (fx, fy) = (MathF.Cos(yaw * MathF.PI / 180f), MathF.Sin(yaw * MathF.PI / 180f));
+        return kind switch
+        {
+            StoreItemType.Face => (new Vector(eye.X + fx * Cfg.FaceForward, eye.Y + fy * Cfg.FaceForward, eye.Z + Cfg.FaceHeight), Cfg.FaceAttachment),
+            StoreItemType.Back => (new Vector(eye.X - fx * Cfg.BackDepth, eye.Y - fy * Cfg.BackDepth, eye.Z - Cfg.BackBelowEye), Cfg.BackAttachment),
+            _ => (new Vector(eye.X, eye.Y, eye.Z + Cfg.HatHeight), Cfg.HatAttachment)
+        };
+    }
+
+    private void RemoveGear(int slot)
+    {
+        foreach (var kind in GearTypes) RemoveGear(slot, kind);
+    }
+
+    private void RemoveGear(int slot, StoreItemType kind)
+    {
+        Fx.SafeRemove(_gear[kind][slot]);
+        _gear[kind][slot] = null;
+        _gearId[kind][slot] = null;
     }
 }

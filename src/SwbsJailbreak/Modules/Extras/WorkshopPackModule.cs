@@ -71,6 +71,16 @@ public sealed class WorkshopPackConfig
     /// <summary>For your reference: the Steam Workshop id of the store pack.</summary>
     public string StoreWorkshopId { get; set; } = "";
 
+    /// <summary>
+    /// Turn on once SWBS store pack 2 (addon swbs_store2, tools/store-pack-2, its own Workshop item, also in
+    /// mm_extra_addons) is uploaded: the store's Face and Back categories appear (glasses, masks, wings, jetpack, ...).
+    /// Off, those items stay hidden (missing models would show as ERROR).
+    /// </summary>
+    public bool Store2Equipment { get; set; } = false;
+
+    /// <summary>For your reference: the Steam Workshop id of store pack 2.</summary>
+    public string Store2WorkshopId { get; set; } = "";
+
     /// <summary>Set by the plugin after it added the store pack's models to the store; set false to add them again.</summary>
     public bool StoreModelsAdded { get; set; } = false;
 
@@ -166,6 +176,9 @@ public sealed class WorkshopPackModule : JbModule
 
     /// <summary>True when the pack's store hats are compiled in and turned on (WorkshopPack.HatModels).</summary>
     internal static bool HatModelsOn => _instance?.Cfg is { Enabled: true, HatModels: true };
+
+    /// <summary>True when store pack 2 (face and back equipment) is uploaded and turned on (WorkshopPack.Store2Equipment).</summary>
+    internal static bool Store2EquipmentOn => _instance?.Cfg is { Store2Equipment: true };
 
     /// <summary>True when the pack and its models are on (trail pieces, splats, props can be used).</summary>
     internal static bool PackModelsOn => _instance?.Cfg is { Enabled: true, UseModels: true };
