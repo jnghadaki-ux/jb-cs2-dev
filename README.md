@@ -262,7 +262,8 @@ A vote also starts by itself 3 minutes before the time limit, with an "Extend th
 1. Put your jailbreak maps in a Steam Workshop collection and set `MapVote.WorkshopCollectionId` to its id (the number in the collection's Steam link). The plugin reads the collection and every map's **name** from Steam, so you never type map ids by hand.
 2. `!mapsetup` (Level 3+): every map by name with **[ON]/[OFF]** switches, and "Refresh map names from Steam".
 3. `!mapadd <id or Steam link>` adds a single map (its name loads from Steam); `!mapremove <name or id>` switches one off.
-4. `!startjb` (Level 3+): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
+4. `!mapchange [name, id or Steam link]` (Level 3+, also `!changemap` and `!map`): changes the map **right away**, ending the round and the map. No name opens a menu of your maps by name. It loads Workshop maps with `host_workshop_map`, checks the map really changed, and tries another way (or tells you) if not.
+5. `!startjb` (Level 3+): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
 
 **MultiAddonManager** (required, see [Requirements](#requirements)): `!mapadd` also downloads the map to the server ahead of time, and `!addon add|remove|list <id or link>` (Lead+) mounts Workshop addons such as the store pack, with names from Steam.
 
@@ -295,7 +296,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (172 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (173 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -404,7 +405,7 @@ Every command of the plugin (172 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (20)</summary>
+<details><summary><b>Extras</b> (21)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -416,6 +417,7 @@ Every command of the plugin (172 commands, generated from the code). Type them i
 | `!currentmap` |  | Everyone | show the current map |
 | `!giveparachute` |  | Level 3 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
 | `!mapadd` |  | Level 3 | &lt;workshop id\|url&gt; - (admin) add a Workshop map to the vote list (its name comes from Steam) |
+| `!mapchange` | !changemap | Level 3 | [map name\|workshop id\|link] - (admin) change the map now (no name = pick from a menu) |
 | `!maplist` | !maps | Everyone | list the maps you can vote for |
 | `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |

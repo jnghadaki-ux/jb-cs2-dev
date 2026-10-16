@@ -35,6 +35,11 @@ public sealed class MapVoteConfig
     public bool RtvEndsGame { get; set; } = true;
     /// <summary>mp_timelimit set on every map start (minutes; a map normally lasts 30). 0 = keep the server's value.</summary>
     public int MapTimeLimitMinutes { get; set; } = 30;
+    /// <summary>
+    /// Seconds to wait for a map change before trying the next way to load it (a big Workshop map that is not on the server
+    /// yet downloads first, so this is generous).
+    /// </summary>
+    public float ChangeCheckSeconds { get; set; } = 60f;
     /// <summary>Seconds after the game ends (end-of-match scoreboard) before the next map loads.</summary>
     public float ChangeDelaySeconds { get; set; } = 8f;
     /// <summary>Start a map vote automatically this many minutes before mp_timelimit runs out (0 = off).</summary>
@@ -153,6 +158,27 @@ internal static class MapVoteRules
         }
 
         return titles;
+    }
+
+    /// <summary>
+    /// Commands to load a map, in the order to try them: host_workshop_map &lt;id&gt; first for a Workshop map (then
+    /// ds_workshop_changelevel &lt;name&gt; when its bsp name is known); changelevel for a stock map.
+    /// </summary>
+    public static List<string> ChangeCommands(VoteMap m, string knownName, Func<string, bool> isStockMap)
+    {
+        var list = new List<string>();
+        if (m.WorkshopId != 0)
+        {
+            list.Add($"host_workshop_map {m.WorkshopId}");
+            if (knownName.Length > 0) list.Add($"ds_workshop_changelevel {knownName}");
+        }
+        else if (m.Name.Length > 0)
+        {
+            if (isStockMap(m.Name)) list.Add($"changelevel {m.Name}");
+            list.Add($"ds_workshop_changelevel {m.Name}");
+        }
+
+        return list;
     }
 
     public static string FormatTime(float seconds)
@@ -648,8 +674,26 @@ public sealed class MapVoteModule : JbModule
         }
     }
 
+    private DateTime _nextNameCheck = DateTime.MinValue;
+
+    /// <summary>
+    /// Every 10 s (also right after a mid-map plugin load, which gets no map start): look up maps that still show as
+    /// "workshop &lt;id&gt;", at most every 10 minutes while some are unnamed.
+    /// </summary>
+    private void NameCheck()
+    {
+        if (!Cfg.FetchNamesFromSteam || _refreshing || DateTime.UtcNow < _nextNameCheck) return;
+        var collection = ulong.TryParse(Cfg.WorkshopCollectionId.Trim(), out var cid) ? cid : 0;
+        var collectionMissing = collection != 0 && Storage.Get<List<ulong>>(Ns, "collection") == null;
+        var unnamed = AllMaps().Any(m => m.WorkshopId != 0 && m.Name.Length == 0 && Storage.Get<string>(Ns, "title:" + m.WorkshopId) is not { Length: > 0 });
+        if (!collectionMissing && !unnamed) return;
+        _nextNameCheck = DateTime.UtcNow.AddMinutes(10);
+        RefreshFromSteam(null);
+    }
+
     private void CheckEndVote()
     {
+        NameCheck();
         if (_voting || _voted || Cfg.EndVoteMinutesBefore <= 0 || Pool().Count == 0) return;
         if (TimeLeft() is { } left && left <= Cfg.EndVoteMinutesBefore * 60f) StartVote(false);
     }
@@ -749,19 +793,111 @@ public sealed class MapVoteModule : JbModule
         return HookResult.Continue;
     }
 
-    private void ChangeTo(VoteMap m)
+    private void ChangeTo(VoteMap m) => ChangeTo(m, Math.Clamp(Cfg.ChangeDelaySeconds, 1f, 60f), null);
+
+    /// <summary>
+    /// Load a map: a Workshop map with host_workshop_map &lt;id&gt; (works for any Workshop map, subscribed or not), a stock
+    /// map with changelevel. If the map has not changed ChangeCheckSeconds later the next command is tried, and the admin is told when
+    /// none worked (timers stop on a map change, so a successful load cancels the check).
+    /// </summary>
+    private void ChangeTo(VoteMap m, float delay, CCSPlayerController? admin)
     {
         _next = null;
         _changing = true;
-        string command;
-        if (m.WorkshopId != 0)
+        if (m.WorkshopId != 0) _loadingId = m.WorkshopId;
+        var attempts = MapVoteRules.ChangeCommands(m, KnownName(m), Server.IsMapValid);
+        var label = Label(m);
+        var adminSlot = admin?.Slot ?? -1;
+        Chat.TellAll("mapvote.changing", label);
+        Logger.LogInformation("[MapVote] changing map to {Map}: {Command}", label, attempts[0]);
+        void Attempt(int i)
         {
-            _loadingId = m.WorkshopId;
-            command = $"host_workshop_map {m.WorkshopId}";
+            Server.ExecuteCommand(attempts[i]);
+            Plugin.AddTimer(Math.Clamp(Cfg.ChangeCheckSeconds, 15f, 600f), () =>
+            {
+                if (i + 1 < attempts.Count)
+                {
+                    Logger.LogWarning("[MapVote] map did not change after \"{Command}\", trying \"{Next}\"", attempts[i], attempts[i + 1]);
+                    Attempt(i + 1);
+                    return;
+                }
+
+                _changing = false;
+                Logger.LogError("[MapVote] could not change map to {Map} (tried: {Commands})", label, string.Join("; ", attempts));
+                if (adminSlot >= 0 && Players.Get(adminSlot).Controller is { IsValid: true } a) Chat.Tell(a, "mapvote.change_failed", label);
+                else Chat.TellAll("mapvote.change_failed", label);
+            }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
         }
-        else command = Server.IsMapValid(m.Name) ? $"changelevel {m.Name}" : $"ds_workshop_changelevel {m.Name}";
-        Chat.TellAll("mapvote.changing", Label(m));
-        Plugin.AddTimer(Math.Clamp(Cfg.ChangeDelaySeconds, 1f, 60f), () => Server.ExecuteCommand(command), CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+
+        if (delay <= 0.05f) Attempt(0);
+        else Plugin.AddTimer(delay, () => Attempt(0), CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+    }
+
+    /// <summary>The map's real (bsp) name if it has loaded here before, for ds_workshop_changelevel.</summary>
+    private static string KnownName(VoteMap m) =>
+        m.WorkshopId != 0 ? Storage.Get<string>(Ns, m.WorkshopId.ToString()) ?? "" : m.Name;
+
+    // ================================================================= !mapchange (admin, instant)
+
+    [ConsoleCommand("css_mapchange", "sm_mapchange [map name|workshop id|link] - (admin) change the map now (no name = pick from a menu)")]
+    [ConsoleCommand("css_changemap", "sm_changemap [map] - (admin) change the map now")]
+    public void CmdMapChange(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 2)
+        {
+            if (caller == null) { info.ReplyToCommand("Usage: css_mapchange <map name|workshop id|link>"); return; }
+            OpenChangeMenu(caller);
+            return;
+        }
+
+        ChangeNow(caller, info.ArgString, info);
+    }
+
+    /// <summary>Change the map right away (ends the round and the map). Used by !mapchange, !map and the admin menu.</summary>
+    internal bool ChangeNow(CCSPlayerController? admin, string query, CommandInfo? info)
+    {
+        var m = Resolve(query);
+        if (m == null)
+        {
+            if (info != null) Chat.ReplyT(admin, info, "mapvote.not_found", query.Trim());
+            else if (admin != null) Chat.Tell(admin, "mapvote.not_found", query.Trim());
+            return false;
+        }
+
+        var who = admin?.PlayerName ?? "Console";
+        Jb.Log.LogEvent($"{who} changed the map to {Label(m.Value)}", admin?.Jb(), null, LogType.Admin);
+        ChangeTo(m.Value, 1f, admin); // 1 s so the chat line reaches everyone, then the map loads
+        return true;
+    }
+
+    /// <summary>A Workshop id or link, a map from the list by name (also switched-off ones), or a stock map name.</summary>
+    private VoteMap? Resolve(string query)
+    {
+        query = query.Trim().Trim('"');
+        if (query.Length == 0) return null;
+        var id = WorkshopIdFrom(query);
+        var all = AllMaps();
+        if (id != 0) return all.FirstOrDefault(x => x.WorkshopId == id) is { WorkshopId: > 0 } known ? known : new VoteMap("", id);
+        var byLearned = all.Where(x => x.WorkshopId != 0 && string.Equals(KnownName(x), query, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (byLearned.Count == 1) return byLearned[0];
+        if (FindIn(all, query) is { } found) return found;
+        return Server.IsMapValid(query) ? new VoteMap(query, 0) : null;
+    }
+
+    private void OpenChangeMenu(CCSPlayerController admin)
+    {
+        var maps = AllMaps().OrderBy(Label, StringComparer.OrdinalIgnoreCase).ToList();
+        if (maps.Count == 0) { Chat.Tell(admin, "mapvote.no_maps"); return; }
+        var m = new JbMenu(Lang.T("mapvote.change_title")) { Subtitle = Hud.Escape(Lang.T("mapvote.current_short", Server.MapName)) };
+        foreach (var map in maps)
+        {
+            var v = map;
+            var current = string.Equals(KnownName(v), Server.MapName, StringComparison.OrdinalIgnoreCase);
+            m.Add(Hud.Escape(Label(v)), a => ChangeNow(a, v.WorkshopId != 0 ? v.WorkshopId.ToString() : v.Name, null), !current);
+        }
+
+        m.Open(admin);
     }
 }
 

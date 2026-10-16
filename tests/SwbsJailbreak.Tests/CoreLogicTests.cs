@@ -165,6 +165,21 @@ public class ConfigAndStorageTests
         Assert.NotEmpty(Directory.GetFiles(dir, "cfg.json.invalid-*"));
     }
 
+    [Fact]
+    public void InvalidSection_UsesDefaults_ButKeepsTheOwnersTextInTheFile()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var path = Path.Combine(dir, "cfg.json");
+        File.WriteAllText(path, "{ \"Sample\": { \"Seconds\": \"not a number\" } }");
+        var cfg = new JailbreakConfig();
+        cfg.Load(path, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        Assert.Equal(30, cfg.Section<SampleSection>("Sample").Seconds);
+        cfg.Update<SampleSection>("Sample", x => x.Seconds = 5); // a migration or in-game change
+        _ = cfg.General;
+        cfg.SaveIfDirty(Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        Assert.Contains("not a number", File.ReadAllText(path));
+    }
+
     private sealed class Ban
     {
         public string Reason { get; set; } = "";

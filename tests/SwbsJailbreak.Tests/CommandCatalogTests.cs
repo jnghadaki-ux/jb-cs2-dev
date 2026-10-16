@@ -133,6 +133,7 @@ public class CommandCatalogTests
     [InlineData("noclip", "noclip", "@swbs/noclip")]
     [InlineData("startjb", "map", "@css/changemap")]
     [InlineData("mapsetup", "map", "@css/changemap")]
+    [InlineData("mapchange", "map", "@css/changemap")]
     [InlineData("mapadd", "map", "@css/changemap")]
     [InlineData("mapremove", "map", "@css/changemap")]
     [InlineData("addon", "config", "@css/config")]

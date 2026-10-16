@@ -58,6 +58,7 @@ public sealed class GeneralConfig
 public sealed class JailbreakConfig
 {
     private readonly Dictionary<string, object> _sections = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _invalid = new(StringComparer.OrdinalIgnoreCase);
     private JsonObject _root = new();
     private bool _dirty;
 
@@ -79,6 +80,7 @@ public sealed class JailbreakConfig
     {
         FilePath = path;
         _sections.Clear();
+        _invalid.Clear();
         _root = new JsonObject();
         _dirty = false;
         try
@@ -120,8 +122,12 @@ public sealed class JailbreakConfig
         }
         catch (Exception ex)
         {
-            JailbreakPlugin.Instance?.Logger.LogError(ex, "Config section {Section} is invalid - using defaults", name);
+            // Keep the owner's section in the file untouched (fix the typo and restart): defaults only in memory.
+            JailbreakPlugin.Instance?.Logger.LogError(ex, "Config section {Section} is invalid - using defaults until it is fixed (the file keeps your section)", name);
             value = new T();
+            _sections[name] = value;
+            _invalid.Add(name);
+            return value;
         }
 
         var normalized = JsonSerializer.SerializeToNode(value, Options);
@@ -140,6 +146,7 @@ public sealed class JailbreakConfig
     {
         var value = Section<T>(name);
         change(value);
+        if (_invalid.Contains(name)) return; // never write defaults over a section the owner still has to fix
         _root[name] = JsonSerializer.SerializeToNode(value, Options);
         _dirty = true;
     }

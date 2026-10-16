@@ -43,5 +43,8 @@
   "mapvote.addon_added": "{olive}Mounting Workshop addon {green}{0}{olive} ({1}). Players download it on their next connect / map change.",
   "mapvote.addon_removed": "{olive}Removed Workshop addon {green}{0}{olive} ({1}). It unmounts on the next map change.",
   "mapvote.addon_none": "{olive}MultiAddonManager mounts no Workshop addons.",
-  "mapvote.addon_line": "{olive}- {green}{0}{olive} ({1})"
+  "mapvote.addon_line": "{olive}- {green}{0}{olive} ({1})",
+  "mapvote.change_title": "Change map now",
+  "mapvote.current_short": "Current: {0}",
+  "mapvote.change_failed": "{red}The map did not change to {0}. {olive}Check the server console; the map may be missing or still downloading."
 }
