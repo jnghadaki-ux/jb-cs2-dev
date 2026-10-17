@@ -27,6 +27,9 @@ public sealed class JbMenuItem
 
     /// <summary>F (inspect) on this item: a preview (try a trail, show a hat ...). Null = F does nothing.</summary>
     public Action<CCSPlayerController>? OnPreview { get; set; }
+
+    /// <summary>A/D on this item changes its value (-1 / +1): a ◄ value ► setting. Takes precedence over tabs.</summary>
+    public Action<CCSPlayerController, int>? OnAdjust { get; set; }
 }
 
 /// <summary>
@@ -56,6 +59,9 @@ public sealed class JbMenu
 
     /// <summary>Optional line under the title (e.g. instructions).</summary>
     public string? Subtitle { get; set; }
+
+    /// <summary>Item the cursor starts on (a menu rebuilt after a change keeps its place).</summary>
+    public int StartCursor { get; set; }
 
     /// <summary>Tabs along the top (A/D switches): see <see cref="MenuTabs{TMenu}"/>.</summary>
     public MenuTabs<JbMenu>? Tabs { get; set; }
@@ -186,6 +192,12 @@ public static class MenuService
 
         MenuManager.CloseActiveMenu(player);
         var inst = new JbMenuInstance(player, menu);
+        if (menu.StartCursor > 0 && menu.Items.Count > 0)
+        {
+            inst.Cursor = Math.Clamp(menu.StartCursor, 0, menu.Items.Count - 1);
+            inst.PageIndex = inst.Cursor / JbMenuInstance.ItemsPerPage;
+        }
+
         Active[player.Slot] = inst;
         MenuManager.GetActiveMenus()[player.Handle] = inst;
         Render(inst, true);
@@ -346,6 +358,16 @@ public static class MenuService
             if (menu.Parent != null) GoBack(inst);
             else if (menu.ExitButton) Close(player);
         }
+        else if ((pressed & (PlayerButtons.Moveleft | PlayerButtons.Moveright)) != 0 && count > 0
+                 && menu.Items[Math.Clamp(inst.Cursor, 0, count - 1)] is { Enabled: true, OnAdjust: { } adjust })
+        {
+            inst.LastInput = Server.CurrentTime;
+            WorldMenus.Feedback(player, "move");
+            var dir = (pressed & PlayerButtons.Moveleft) != 0 ? -1 : 1;
+            try { adjust(player, dir); }
+            catch (Exception ex) { Microsoft.Extensions.Logging.LoggerExtensions.LogError(JailbreakPlugin.Instance!.Logger, ex, "Menu adjust failed"); }
+            if (!inst.Closed && ReferenceEquals(Active[player.Slot], inst)) Render(inst, true);
+        }
         else if ((pressed & (PlayerButtons.Moveleft | PlayerButtons.Moveright)) != 0 && menu.Tabs is { Titles.Count: > 1 } tabs)
         {
             SwitchTab(inst, tabs, (pressed & PlayerButtons.Moveleft) != 0 ? -1 : 1);
@@ -433,7 +455,11 @@ public static class MenuService
             view.ActiveTab = tabs.Active;
         }
 
-        if (menu.Items.Count > 0 && inst.Cursor >= 0 && inst.Cursor < menu.Items.Count) view.Details = menu.Items[inst.Cursor].Details;
+        if (menu.Items.Count > 0 && inst.Cursor >= 0 && inst.Cursor < menu.Items.Count)
+        {
+            view.Details = menu.Items[inst.Cursor].Details;
+            view.Adjustable = menu.Items[inst.Cursor].OnAdjust != null;
+        }
 
         var start = inst.PageIndex * JbMenuInstance.ItemsPerPage;
         var end = Math.Min(start + JbMenuInstance.ItemsPerPage, menu.Items.Count);
@@ -495,7 +521,8 @@ public static class MenuService
         if (inst.PageIndex + 1 < inst.PageCount) footer.Add("8.Next");
         if (menu.ExitButton) footer.Add("9.Exit");
         var keys = string.Join(" ", footer);
-        var hint = wasd ? "W/S move, E select, R back" : "type !1-!9";
+        var adjustable = wasd && menu.Items.Count > 0 && inst.Cursor < menu.Items.Count && menu.Items[inst.Cursor].OnAdjust != null;
+        var hint = wasd ? (adjustable ? "A/D change, W/S move, E select, R back" : "W/S move, E select, R back") : "type !1-!9";
         sb.Append($"<font color='#AAAAAA' class='fontSize-s'>{keys} | {hint}</font>");
         return sb.ToString();
     }

@@ -45,6 +45,9 @@ internal sealed class Rocket
     public float Born;
     public int Tick;
 
+    /// <summary>Height of the floor the shooter stood on (null when they fired in the air).</summary>
+    public float? FloorZ;
+
     /// <summary>The workshop pack missile model flying along with the rocket (null = beam trail only).</summary>
     public CBaseModelEntity? Prop;
 }
@@ -223,7 +226,9 @@ public sealed class RpgDay : JbModule
         var c = p.Controller;
         if (c == null || !c.IsAliveP()) return;
         c.SetArmor(0, false);
-        var w = DayUtil.Give(p, "weapon_knife", true);
+        // CS2 does not give a second knife (the strip keeps one): the launcher is the knife the player has.
+        var w = c.Weapons().FirstOrDefault(x => Weapons.IsKnife(x.DesignerName)) ?? DayUtil.Give(p, "weapon_knife");
+        DayUtil.Select(p, "weapon_knife");
         var s = S(p);
         s.Launcher = w?.EntityHandle.Raw ?? 0;
         s.Clip = MaxClip;
@@ -246,9 +251,11 @@ public sealed class RpgDay : JbModule
         {
             var c = p.Controller!;
             var s = S(p);
-            if (!c.IsAliveP() || s.Launcher == 0 || !Launches(p)) continue;
+            if (!c.IsAliveP() || !Launches(p)) continue;
             var active = c.ActiveWeapon();
-            if (active == null || active.EntityHandle.Raw != s.Launcher) continue;
+            // Any knife in hand is the launcher (a knife picked up or given again keeps working).
+            if (active == null || !Weapons.IsKnife(active.DesignerName)) continue;
+            s.Launcher = active.EntityHandle.Raw;
             // The knife itself never attacks.
             if (active.NextPrimaryAttackTick != int.MaxValue)
             {
@@ -301,7 +308,7 @@ public sealed class RpgDay : JbModule
         var len = MathF.Max(0.001f, dir.Length());
         var rocket = new Rocket
         {
-            OwnerSlot = c.Slot, Pos = spawn, Born = now,
+            OwnerSlot = c.Slot, Pos = spawn, Born = now, FloorZ = c.OnGround() ? pawn.AbsOrigin?.Z : null,
             Vel = new Vector(dir.X / len * Cfg.RocketSpeed, dir.Y / len * Cfg.RocketSpeed, dir.Z / len * Cfg.RocketSpeed)
         };
         if (Extras.WorkshopPackModule.Model(m => m.MissileModel) is { } missile)
@@ -354,6 +361,10 @@ public sealed class RpgDay : JbModule
             }
 
             Vector? impact = direct != null ? next : WorldImpact(r.Pos, next, owner);
+            // No world trace (CounterStrikeSharp out of date for this CS2 build): the floor the shooter stood on still
+            // stops the rocket, so rocket jumps keep working.
+            if (impact == null && Aim.TraceBroken && r.FloorZ is { } floor && r.Vel.Z < 0f && next.Z <= floor + 2f)
+                impact = new Vector(next.X, next.Y, floor + 2f);
             if (impact == null && now - r.Born > 6f) impact = next; // flew out of the map
 
             if (impact == null)

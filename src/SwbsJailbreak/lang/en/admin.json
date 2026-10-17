@@ -157,5 +157,16 @@
   "admin.levels.root": "{green}Root{default} {grey}(@css/root, immunity 100){default}: everything, including rcon and server setup.",
   "admin.levels.none": "{grey}You are not an admin.",
   "admin.levels.mine": "{olive}Your admin tier: {green}{0}",
-  "admin.menu.jb.warden_beacon": "Warden pointer & beacon"
+  "admin.menu.jb.warden_beacon": "Warden pointer & beacon",
+  "admin.manage.roles": "{grey}Levels: {default}{0}{grey}, or root, a #group or an @flag.",
+  "admin.manage.bad_role": "{red}Unknown admin level '{0}'.",
+  "admin.manage.no_steamid": "{red}{0} has no SteamID (a bot?).",
+  "admin.manage.added": "{green}Admin added: {default}{0} {grey}({1}){default} as {gold}{2}{default}. Admins reloaded.",
+  "admin.manage.removed": "{green}Admin removed: {default}{0}{default}. Admins reloaded.",
+  "admin.manage.not_found": "{red}No admin '{0}' in admins.json.",
+  "admin.manage.none": "{grey}admins.json has no admins.",
+  "admin.manage.list_title": "{gold}admins.json{default} - {0} admin(s):",
+  "admin.manage.list_line": "{default}{0} {grey}{1}{default} {2}",
+  "admin.manage.failed": "{red}Could not update admins.json: {0}",
+  "admin.manage.reloading": "{default}Reloading {gold}{0}{default} (config, language files, admins)..."
 }

@@ -26,6 +26,10 @@ public sealed class GameDaysConfig
     /// <summary>Played from a flying player about once a second (the original jetpack sound; workshop pack).</summary>
     public string JetpackSound { get; set; } = "";
 
+    /// <summary>Jetpack sound volume (0-1) and seconds between plays while flying (the pack sound is loud and long).</summary>
+    public float JetpackVolume { get; set; } = 0.3f;
+    public float JetpackSoundInterval { get; set; } = 1.6f;
+
     /// <summary>NoScopeRounds noscope_chance: % chance (0–100) that a normal round is no-scope only. 0 = off.</summary>
     public int NoScopeChance { get; set; } = 0;
 }
@@ -226,8 +230,8 @@ public sealed class GameDaysModule : JbModule
                 _fuel[slot] = Math.Max(0f, _fuel[slot] - dt);
                 if (Cfg.JetpackSound.Length > 0 && Server.CurrentTime >= _nextJetSound[slot])
                 {
-                    _nextJetSound[slot] = Server.CurrentTime + 0.9f;
-                    Sound.PlayAt(c, Cfg.JetpackSound, 0.7f);
+                    _nextJetSound[slot] = Server.CurrentTime + Math.Max(0.3f, Cfg.JetpackSoundInterval);
+                    Sound.PlayAt(c, Cfg.JetpackSound, Math.Clamp(Cfg.JetpackVolume, 0f, 1f));
                 }
             }
 

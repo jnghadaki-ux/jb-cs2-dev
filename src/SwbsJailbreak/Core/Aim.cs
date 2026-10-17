@@ -115,16 +115,31 @@ public static class Aim
         try
         {
             var t = CounterStrikeSharp.API.Modules.Utils.Trace.TraceEndShape(from, to, ignore, WorldOptions);
+            TraceBroken = false;
             if (!t.DidHit() || t.Fraction >= 1f) return null;
             var end = t.EndPos;
             return new Vector(end.X, end.Y, end.Z);
         }
         catch (Exception ex)
         {
-            JailbreakPlugin.Instance?.Logger.LogDebug(ex, "[Aim] world trace failed");
+            // A CS2 update can break the trace until CounterStrikeSharp is updated: rockets and knives then use their
+            // fallbacks (the shooter's floor height). Say so once a minute instead of hiding it.
+            TraceBroken = true;
+            var now = Server.CurrentTime;
+            if (now >= _nextTraceWarning)
+            {
+                _nextTraceWarning = now + 60f;
+                JailbreakPlugin.Instance?.Logger.LogWarning(ex, "[Aim] the world trace failed - update CounterStrikeSharp if this keeps happening (rockets use a floor fallback)");
+            }
+
             return null;
         }
     }
+
+    /// <summary>The last world trace threw (CounterStrikeSharp out of date for this CS2 build): use fallbacks.</summary>
+    public static bool TraceBroken { get; private set; }
+
+    private static float _nextTraceWarning;
 
     private static Vector? Chest(CCSPlayerController c)
     {
