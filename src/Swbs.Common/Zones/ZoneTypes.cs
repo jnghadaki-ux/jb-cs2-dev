@@ -4,17 +4,17 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
-using SwbsJailbreak.Core;
-using SwbsJailbreak.Modules.Cells;
 using CssVector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
-namespace SwbsJailbreak.Modules.Zones;
+namespace Swbs.Common;
 
 public sealed partial class ZonesModule
 {
     /// <summary>
-    /// The SMPlugins Plugins/ZoneTypes set, rebuilt on CSS. Not registered: Flashlight (EF_DIMLIGHT has no CS2 meaning)
-    /// and Hide Toggle (needs the HidePlayers plugin, not ported). Push, Notify and Cell Block are additions.
+    /// The SMPlugins Plugins/ZoneTypes set, rebuilt on CSS (from SWBS Jailbreak). Not registered: Flashlight (EF_DIMLIGHT has
+    /// no CS2 meaning). Hide Toggle is registered by the HidePlayers module where a game mode has one. Push, Spawn and Map Input are
+    /// additions. Game modes register their own types (timer start / end, notify, cell block, ...) with <see cref="RegisterType"/>,
+    /// usually from CommonHost.OnZonesLoaded.
     /// </summary>
     private void RegisterBuiltInTypes()
     {
@@ -28,8 +28,6 @@ public sealed partial class ZonesModule
         RegisterType(new WeaponStripZone());
         RegisterType(new DamageBlockerZone(this));
         RegisterType(new NamedZone());
-        RegisterType(new NotifyZone(this));
-        RegisterType(new CellBlockZone());
         RegisterType(new SpawnZone());
         RegisterType(new MapInputZone(this));
     }
@@ -159,7 +157,7 @@ internal sealed class BlockadeZone : ZoneType
             }
 
             var from = _lastFeet.TryGetValue(c.Slot, out var lf) ? lf : feet;
-            // A jump of more than 64 units in one tick is a teleport (LR, rebel points, days, respawn), not movement:
+            // A jump of more than 64 units in one tick is a teleport (respawn, map and game mode teleports), not movement:
             // never sweep across the map, only check where the player landed.
             var teleported = System.Numerics.Vector3.DistanceSquared(from, feet) > 64f * 64f;
             Zone? hit = null;
@@ -306,17 +304,17 @@ internal sealed class TeleportZone : ZoneType
     public override string Summary(Zone zone) => zone.Name.Length > 0 ? "→ " + zone.Name : "no destination";
 }
 
-/// <summary>ZONE_TYPE_TELEPORT_DESTINATION: a named spot; the jailbreak uses "lr_tele", Capture the Flag "ctf_flag" / "ctf_capture".</summary>
+/// <summary>ZONE_TYPE_TELEPORT_DESTINATION: a named arrival spot for Teleport zones.</summary>
 internal sealed class TeleportDestinationZone : ZoneType
 {
     public override string Key => ZoneTypeKeys.TeleportDestination;
     public override string DisplayName => "Teleport Destination";
     public override int LegacyId => 11;
-    public override string Description => "Arrival point (floor centre, facing the zone's angles). lr_tele = LR teleport, ctf_flag / ctf_capture = Capture the Flag.";
+    public override string Description => "Arrival point (floor centre, facing the zone's angles) for Teleport zones.";
 
     public override IReadOnlyList<ZoneField> Fields { get; } = new[]
     {
-        new ZoneField("Name", ZoneFieldKind.Text, 1, "(lr_tele, ctf_flag, ctf_capture or your own)")
+        new ZoneField("Name", ZoneFieldKind.Text, 1, "(any name; Teleport zones use it)")
     };
 
     public override string Summary(Zone zone) => zone.Name.Length > 0 ? zone.Name : "unnamed";
@@ -401,7 +399,7 @@ internal sealed class DamageBlockerZone : ZoneType
     }
 }
 
-/// <summary>ZoneType_Named: a named area other modules look up by name (ZoneTypeNamed_OnStartTouch → Jb.Zones.Entered).</summary>
+/// <summary>ZoneType_Named: a named area other modules look up by name (ZoneTypeNamed_OnStartTouch → Zones.Entered).</summary>
 internal sealed class NamedZone : ZoneType
 {
     public override string Key => ZoneTypeKeys.Named;
@@ -413,63 +411,6 @@ internal sealed class NamedZone : ZoneType
     public override string Summary(Zone zone) => zone.Name.Length > 0 ? zone.Name : "unnamed";
 }
 
-/// <summary>ADDITION: tells guards (or everyone / admins) when a prisoner (or guard / anyone) enters, e.g. the armory or vents.</summary>
-internal sealed class NotifyZone : ZoneType
-{
-    private readonly ZonesModule _m;
-    private readonly Dictionary<(int Zone, int Slot), float> _next = new();
-
-    public NotifyZone(ZonesModule m) => _m = m;
-
-    public override string Key => ZoneTypeKeys.Notify;
-    public override string DisplayName => "Notify (area alert)";
-    public override string Description => "Announces when a player enters this area. No punishment, information only.";
-
-    public override IReadOnlyList<ZoneField> Fields { get; } = new[]
-    {
-        new ZoneField("Area name", ZoneFieldKind.Text, 1, "(shown in the alert, e.g. Armory)"),
-        new ZoneField("Triggered by", ZoneFieldKind.Choice, 1) { Options = new[] { ("Prisoners", 0), ("Guards", 1), ("Everyone", 2) } },
-        new ZoneField("Alert goes to", ZoneFieldKind.Choice, 2) { Options = new[] { ("Guards", 0), ("Everyone", 1), ("Admins", 2) } }
-    };
-
-    public override void OnRoundStart() => _next.Clear();
-
-    public override void OnEnter(Zone zone, CCSPlayerController player)
-    {
-        var who = zone.GetInt(1);
-        if (who == 0 && player.Team != CsTeam.Terrorist) return;
-        if (who == 1 && player.Team != CsTeam.CounterTerrorist) return;
-        var now = Server.CurrentTime;
-        if (_next.TryGetValue((zone.Id, player.Slot), out var t) && now < t) return;
-        _next[(zone.Id, player.Slot)] = now + Math.Max(0f, _m.Cfg.NotifyCooldown);
-        var area = zone.Name.Length > 0 ? zone.Name : zone.Title;
-        var msg = Lang.T("zones.notify.entered", Chat.Name(player), area);
-        foreach (var c in Players.Humans())
-        {
-            var send = zone.GetInt(2) switch
-            {
-                1 => true,
-                2 => Perms.IsAdmin(c),
-                _ => c.Team == CsTeam.CounterTerrorist
-            };
-            if (send) Chat.Print(c, msg);
-        }
-    }
-
-    public override string Summary(Zone zone) => (zone.Name.Length > 0 ? zone.Name : "unnamed") + " alert";
-}
-
-/// <summary>ADDITION: marks a cell block (data string 1 = block name). Crews claim cell blocks as turf.</summary>
-internal sealed class CellBlockZone : ZoneType
-{
-    public override string Key => ZoneTypeKeys.CellBlock;
-    public override string DisplayName => "Cell Block";
-    public override string Description => "A block of cells. Crews claim cell blocks as turf.";
-
-    public override IReadOnlyList<ZoneField> Fields { get; } = new[] { new ZoneField("Block name", ZoneFieldKind.Text, 1, "(e.g. A, B, Upper)") };
-    public override string Summary(Zone zone) => zone.Name.Length > 0 ? "block " + zone.Name : "unnamed block";
-}
-
 /// <summary>
 /// ADDITION: a custom spawn area. At round start every player of the zone's team is moved to a random spot inside one
 /// of their team's spawn zones (feet on the zone floor, facing the zone's angles). Maps with bad or too few spawns can
@@ -477,21 +418,21 @@ internal sealed class CellBlockZone : ZoneType
 /// </summary>
 internal sealed class SpawnZone : ZoneType
 {
-    internal const int Prisoners = 0, Guards = 1, Everyone = 2;
+    internal const int Terrorists = 0, CounterTerrorists = 1, Everyone = 2;
 
     public override string Key => ZoneTypeKeys.Spawn;
     public override string DisplayName => "Spawn";
-    public override string Description => "Round-start spawn area: players of the chosen team spawn at a random spot inside it (facing the zone's angles).";
+    public override string Description => "Spawn area: players of the chosen team spawn at a random spot inside it (facing the zone's angles).";
 
     public override IReadOnlyList<ZoneField> Fields { get; } = new[]
     {
-        new ZoneField("Team", ZoneFieldKind.Choice, 1) { Options = new[] { ("Prisoners", Prisoners), ("Guards", Guards), ("Everyone", Everyone) } }
+        new ZoneField("Team", ZoneFieldKind.Choice, 1) { Options = new[] { (CommonHost.TeamNameT, Terrorists), (CommonHost.TeamNameCT, CounterTerrorists), ("Everyone", Everyone) } }
     };
 
     internal static bool ForTeam(Zone zone, CsTeam team) => zone.GetInt(1) switch
     {
-        Prisoners => team == CsTeam.Terrorist,
-        Guards => team == CsTeam.CounterTerrorist,
+        Terrorists => team == CsTeam.Terrorist,
+        CounterTerrorists => team == CsTeam.CounterTerrorist,
         _ => team is CsTeam.Terrorist or CsTeam.CounterTerrorist
     };
 
@@ -506,8 +447,8 @@ internal sealed class SpawnZone : ZoneType
 
     public override string Summary(Zone zone) => zone.GetInt(1) switch
     {
-        Prisoners => "prisoners",
-        Guards => "guards",
+        Terrorists => CommonHost.TeamNameT.ToLowerInvariant(),
+        CounterTerrorists => CommonHost.TeamNameCT.ToLowerInvariant(),
         _ => "everyone"
     };
 }
@@ -518,11 +459,11 @@ internal enum MapInputTrigger { PressUse, Enter, RoundStart }
 /// <summary>Map Input rules that need no engine (unit-tested).</summary>
 internal static class MapInputRules
 {
-    /// <summary>Activation choices: (label, value). Team 0 = anyone, 2 = prisoners, 3 = guards (CsTeam numbers).</summary>
+    /// <summary>Activation choices: (label, value). Team 0 = anyone, 2 = T, 3 = CT (CsTeam numbers).</summary>
     public static readonly (string Name, int Value)[] Activations =
     {
-        ("Press E inside (anyone)", 0), ("Press E inside (guards)", 1), ("Press E inside (prisoners)", 2),
-        ("Enter (anyone)", 3), ("Enter (guards)", 4), ("Enter (prisoners)", 5), ("Round start", 6)
+        ("Press E inside (anyone)", 0), ($"Press E inside ({CommonHost.TeamNameCT})", 1), ($"Press E inside ({CommonHost.TeamNameT})", 2),
+        ("Enter (anyone)", 3), ($"Enter ({CommonHost.TeamNameCT})", 4), ($"Enter ({CommonHost.TeamNameT})", 5), ("Round start", 6)
     };
 
     public static (MapInputTrigger Trigger, int Team) Activation(int value) => value switch

@@ -6,11 +6,9 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
-using SwbsJailbreak.Core;
-using SwbsJailbreak.Modules.Cells;
 using CssVector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
-namespace SwbsJailbreak.Modules.Zones;
+namespace Swbs.Common;
 
 internal enum ZoneEditMode { None, Position, Size }
 
@@ -24,7 +22,7 @@ internal sealed class ZoneEditor
     public bool PositionHold; // after move-to-feet/ping: stay put until attack or attack2
     public bool ShowAll;
     public bool Active;
-    public JbMenu? Menu;
+    public SwbsMenu? Menu;
     public float NextMove, NextDraw, NextNearby;
     public Vector3? CornerA;
     public readonly Dictionary<int, List<CBeam>> Boxes = new();
@@ -70,8 +68,8 @@ public sealed partial class ZonesModule
         int team;
         switch (arg)
         {
-            case "t" or "prisoners" or "prisoner": team = SpawnZone.Prisoners; break;
-            case "ct" or "guards" or "guard": team = SpawnZone.Guards; break;
+            case "t" or "terrorists" or "terrorist" or "prisoners" or "prisoner": team = SpawnZone.Terrorists; break;
+            case "ct" or "cts" or "counter-terrorists" or "guards" or "guard": team = SpawnZone.CounterTerrorists; break;
             case "all" or "both" or "everyone": team = SpawnZone.Everyone; break;
             default: Chat.ReplyT(caller, info, "core.usage", "!spawnzone [t|ct|all]"); return;
         }
@@ -173,22 +171,22 @@ public sealed partial class ZonesModule
     }
 
     /// <summary>
-    /// Zone menus never use JbMenu.Parent: every screen is rebuilt by its Show* method (with explicit Back / Done items),
+    /// Zone menus never use SwbsMenu.Parent: every screen is rebuilt by its Show* method (with explicit Back / Done items),
     /// so the editor mode always matches the menu on screen.
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex ValidMapName = new(@"^[a-z0-9_.\-]{1,64}$");
 
-    private JbMenu NewMenu(CCSPlayerController c, string title)
+    private SwbsMenu NewMenu(CCSPlayerController c, string title)
     {
         var ed = Editor(c);
         ChatInput.Forget(c.Slot);
-        var m = new JbMenu(title) { Timeout = -1, OnCancel = p => OnMenuCancelled(p) };
+        var m = new SwbsMenu(title) { Timeout = -1, OnCancel = p => OnMenuCancelled(p) };
         ed.Menu = m;
         ed.Active = true;
         return m;
     }
 
-    private void Open(CCSPlayerController c, JbMenu m)
+    private void Open(CCSPlayerController c, SwbsMenu m)
     {
         Editor(c).Menu = m;
         m.Open(c);

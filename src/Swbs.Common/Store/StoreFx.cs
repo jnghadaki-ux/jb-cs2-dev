@@ -1,9 +1,8 @@
 using System.Drawing;
 using CounterStrikeSharp.API.Core;
-using SwbsJailbreak.Core;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
-namespace SwbsJailbreak.Modules.PlayerExtras;
+namespace Swbs.Common;
 
 /// <summary>
 /// Store effects drawn with beams only, so they always render (particles need precaching and exact CS2 paths; the

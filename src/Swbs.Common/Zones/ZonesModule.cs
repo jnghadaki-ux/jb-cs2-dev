@@ -4,19 +4,23 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
-using SwbsJailbreak.Core;
-using SwbsJailbreak.Modules.Cells;
 using CssVector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
-namespace SwbsJailbreak.Modules.Zones;
+namespace Swbs.Common;
 
 /// <summary>Section "Zones" (API_ZoneManager.sp constants and cvars).</summary>
 public sealed class ZonesConfig
 {
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Polling rate for enter/exit/touch: every N server ticks (4 = 16 checks/s on 64 tick). Blockades run every tick.</summary>
-    public int CheckEveryTicks { get; set; } = 4;
+    /// <summary>
+    /// Polling rate for enter/exit/touch: every N server ticks (1 = every tick, needed for exact timer starts and ends).
+    /// Players moving fast enough to cross a zone between two checks still enter and leave it (swept hull test).
+    /// </summary>
+    public int CheckEveryTicks { get; set; } = CommonHost.ZoneCheckEveryTicksDefault;
+
+    /// <summary>Spawn zones place players on every spawn (deathmatch respawns), not only in the first seconds of a round.</summary>
+    public bool SpawnZonesOnEverySpawn { get; set; } = CommonHost.SpawnZonesOnEverySpawnDefault;
 
     /// <summary>MAX_ZONES.</summary>
     public int MaxZones { get; set; } = 256;
@@ -40,13 +44,16 @@ public sealed class ZonesConfig
 }
 
 /// <summary>
-/// Remake of SMPlugins Libraries/ZoneManager (API_ZoneManager.sp) for CS2. Zones are per-map axis-aligned boxes with a
+/// Remake of SMPlugins Libraries/ZoneManager (API_ZoneManager.sp) for CS2, shared by the SWBS game modes (from SWBS Jailbreak). Zones are per-map axis-aligned boxes with a
 /// type, 2 data ints and 5 data strings, saved as JSON instead of MySQL. CSS has no SDKHooks touch, and spawning trigger
 /// entities from managed code is unverified on CS2, so enter / exit / touch come from polling player hulls against the
 /// boxes (exact, cheap, and unit-tested). Types are registered by name like ZoneManager_RegisterZoneType.
 /// </summary>
-public sealed partial class ZonesModule : JbModule, IZoneService
+public sealed partial class ZonesModule : SwbsModule, IZoneService
 {
+    /// <summary>The live zone service (null until the module loaded, or when Zones.Enabled is off).</summary>
+    public static ZonesModule? Instance { get; private set; }
+
     internal ZonesConfig Cfg => Section<ZonesConfig>("Zones");
 
     public override string Name => "Zones";
@@ -74,20 +81,20 @@ public sealed partial class ZonesModule : JbModule, IZoneService
 
     public override void OnLoad(bool hotReload)
     {
-        Jb.Zones = this;
+        Instance = this;
         RegisterBuiltInTypes();
-        Plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        CommonHost.OnZonesLoaded(this);
+        Plugin.RegisterListener<Listeners.OnTick>(OwnTick);
         if (!hotReload) return; // Cold start: no map yet, and Server.* reads the engine globals natively (crashes the server); OnMapStart covers it.
         var map = Server.MapName;
         if (!string.IsNullOrEmpty(map)) LoadMap(map);
         _roundStart = Server.CurrentTime;
     }
 
-    public override void OnAllModulesLoaded(bool hotReload) => JbEvents.SettingsSpawnPost += PlaceAtSpawnZone;
-
     public override void OnUnload(bool hotReload)
     {
-        JbEvents.SettingsSpawnPost -= PlaceAtSpawnZone;
+        CommonHost.OnZonesUnloaded(this);
+        if (ReferenceEquals(Instance, this)) Instance = null;
         if (_dirty) Save();
         EndAllEditors();
         foreach (var t in _typeList)
@@ -125,36 +132,52 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         foreach (var t in _typeList) SafeCall(t.OnRoundStart);
     }
 
-    public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
+    public override void OnPlayerDeath(SwbsPlayer victim, SwbsPlayer? attacker, EventPlayerDeath ev)
     {
         if (victim.Controller is { IsValid: true } c) ExitAll(c);
     }
 
+    public override void OnPlayerSpawn(SwbsPlayer player)
+    {
+        _lastFeet.Remove(player.Slot);
+        if (HostPlacesSpawns) return;
+        if (Cfg.SpawnZonesOnEverySpawn || Server.CurrentTime - _roundStart <= 3f) TryPlaceAtSpawnZone(player);
+    }
+
     /// <summary>
-    /// Spawn zones: a round-start spawn (after the Settings module placed the player) moves the player into a random
-    /// spawn zone of their team. Respawns later in the round (days, !respawn, !1up) keep their own position.
+    /// Spawn zones: moves the player to a random spot of a random spawn zone of their team. False when the map has none.
     /// </summary>
-    private void PlaceAtSpawnZone(JbPlayer player)
+    /// <summary>
+    /// True when the game mode calls <see cref="TryPlaceAtSpawnZone"/> itself (after its own spawn placement), so the
+    /// player spawn event does not.
+    /// </summary>
+    public bool HostPlacesSpawns { get; set; }
+
+    /// <summary>Seconds since the round started (spawn zones only move round-start spawns unless SpawnZonesOnEverySpawn).</summary>
+    public bool InRoundStartWindow => Server.CurrentTime - _roundStart <= 3f;
+
+    public bool TryPlaceAtSpawnZone(SwbsPlayer player)
     {
         var c = player.Controller;
-        if (c == null || !c.IsValid || !c.IsAliveP()) return;
-        if (Server.CurrentTime - _roundStart > 3f) return;
+        if (c == null || !c.IsValid || !c.IsAliveP()) return false;
         var team = c.Team;
         var zones = _zones.Where(z => z.TypeKey == ZoneTypeKeys.Spawn && SpawnZone.ForTeam(z, team)).ToList();
-        if (zones.Count == 0) return;
+        if (zones.Count == 0) return false;
         var zone = zones[Random.Shared.Next(zones.Count)];
         var spot = SpawnZone.RandomSpot(zone.Box, Random.Shared);
         c.TeleportTo(new CounterStrikeSharp.API.Modules.Utils.Vector(spot.X, spot.Y, spot.Z + 1f), new QAngle(0, zone.Angles.Y, 0));
+        return true;
     }
 
-    public override void OnPlayerDisconnect(JbPlayer player)
+    public override void OnPlayerDisconnect(SwbsPlayer player)
     {
         if (player.Controller is { IsValid: true } c) ExitAll(c);
         _inside.Remove(player.Slot);
+        _lastFeet.Remove(player.Slot);
         EndEditor(player.Slot);
     }
 
-    public override void OnPlayerTeam(JbPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
+    public override void OnPlayerTeam(SwbsPlayer player, CsTeam oldTeam, CsTeam newTeam, bool disconnect)
     {
         if (newTeam is not (CsTeam.Terrorist or CsTeam.CounterTerrorist) && player.Controller is { IsValid: true } c) ExitAll(c);
     }
@@ -388,7 +411,7 @@ public sealed partial class ZonesModule : JbModule, IZoneService
 
     // ====================================================================== tracking
 
-    private void OnTick()
+    private void OwnTick()
     {
         _tick++;
         if (_zones.Count > 0)
@@ -412,6 +435,12 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         }
     }
 
+    /// <summary>Feet position at the previous check (swept enter/exit for players crossing a thin zone between checks).</summary>
+    private readonly Dictionary<int, Vector3> _lastFeet = new();
+
+    /// <summary>A move longer than this between two checks is a teleport, not movement: no sweep across the map.</summary>
+    private const float MaxSweep = 256f;
+
     private void Poll()
     {
         foreach (var c in Players.Alive().ToList())
@@ -425,6 +454,26 @@ public sealed partial class ZonesModule : JbModule, IZoneService
             var before = _inside.TryGetValue(c.Slot, out var b) ? b : new HashSet<int>();
             var (entered, exited) = ZoneDiff.Compute(before, now);
             _inside[c.Slot] = now;
+
+            // Passed straight through a zone between two checks (fast bhop / surf through a thin start or end zone): it
+            // counts as entering and leaving it, in that order, like the original's trigger touch.
+            var passed = new List<Zone>();
+            if (_lastFeet.TryGetValue(c.Slot, out var from) && Vector3.DistanceSquared(from, feet.Value) <= MaxSweep * MaxSweep)
+            {
+                foreach (var z in _zones)
+                    if (z.Type != null && !now.Contains(z.Id) && !before.Contains(z.Id) && z.Box.HullSweepHits(from, feet.Value)) passed.Add(z);
+            }
+
+            _lastFeet[c.Slot] = feet.Value;
+            foreach (var z in passed)
+            {
+                if (!c.IsValid || !c.IsAliveP()) break;
+                SafeCall(() => z.Type!.OnEnter(z, c));
+                RaiseEntered(z, c);
+                if (!c.IsValid) break;
+                SafeCall(() => z.Type!.OnExit(z, c));
+                RaiseExited(z, c);
+            }
 
             foreach (var id in exited)
             {
@@ -450,8 +499,12 @@ public sealed partial class ZonesModule : JbModule, IZoneService
         }
     }
 
+    /// <summary>Forget where the player was (call after teleporting a player so no sweep runs across the jump).</summary>
+    public void ForgetPosition(int slot) => _lastFeet.Remove(slot);
+
     private void ExitAll(CCSPlayerController c)
     {
+        _lastFeet.Remove(c.Slot);
         if (!_inside.Remove(c.Slot, out var set)) return;
         foreach (var id in set)
         {

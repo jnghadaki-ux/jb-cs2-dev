@@ -5,10 +5,9 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
-using SwbsJailbreak.Core;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
-namespace SwbsJailbreak.Modules.PlayerExtras;
+namespace Swbs.Common;
 
 /// <summary>Store item kinds, in menu order. One item of each kind can be equipped.</summary>
 public enum StoreItemType
@@ -52,15 +51,15 @@ public sealed class StoreItem
     public int Price { get; set; }
 
     /// <summary>
-    /// Player models only: who may wear it. "ct" = guards only (a CT agent on a prisoner would pass as a guard),
-    /// "t" = prisoners only, empty = the PlayerModelsForGuards rule.
+    /// Player models only: who may wear it. "ct" = counter-terrorists only, "t" = terrorists only, empty = the
+    /// PlayerModelsForGuards rule.
     /// </summary>
     public string Team { get; set; } = "";
 }
 
 /// <summary>
 /// Section "Store" (SMPlugins Store library + StoreItems, and the old donator items Colored Chat, Titles, Body
-/// Transparency and Body Size, now sold here for jailbreak points instead of being donator perks).
+/// Transparency and Body Size, now sold here for points instead of being donator perks).
 /// </summary>
 public sealed class StoreConfig
 {
@@ -79,7 +78,7 @@ public sealed class StoreConfig
 
     /// <summary>
     /// See-through body and body size change how easy a player is to see and hit (CS2 cannot scale hitboxes). Off: they
-    /// only apply in warmup, on freedays and in freeday LRs. On: always.
+    /// only apply when the game mode allows them (see CommonHost.StoreBodyAllowed). On: always.
     /// </summary>
     public bool BodyItemsAnytime { get; set; } = false;
 
@@ -98,8 +97,8 @@ public sealed class StoreConfig
     public float HatHeight { get; set; } = 7.5f;
 
     /// <summary>
-    /// Player model items can be worn by both teams (default). False keeps them for prisoners only, so guards always
-    /// look like guards. An item's own Team ("ct" / "t") still wins.
+    /// Player model items can be worn by both teams (default). False keeps them for terrorists only, so CTs always
+    /// look like CTs. An item's own Team ("ct" / "t") still wins.
     /// </summary>
     public bool PlayerModelsForGuards { get; set; } = true;
 
@@ -182,7 +181,7 @@ public sealed class StoreConfig
         new() { Id = "killsound_zap", Name = "Teleport zap", Type = StoreItemType.KillSound, Data = "sounds/swbs/misc/teleport.vsnd", Price = 800 },
         new() { Id = "killsound_boom", Name = "Rocket boom", Type = StoreItemType.KillSound, Data = "sounds/swbs/rpg/explode1.vsnd", Price = 900 },
         new() { Id = "killsound_scream", Name = "Death scream", Type = StoreItemType.KillSound, Data = "sounds/swbs/rpg/death.vsnd", Price = 900 },
-        new() { Id = "killsound_alarm", Name = "Freekill alarm", Type = StoreItemType.KillSound, Data = "sounds/swbs/jailbreak/freekill.vsnd", Price = 1000 },
+        new() { Id = "killsound_alarm", Name = "Alarm", Type = StoreItemType.KillSound, Data = "sounds/swbs/jailbreak/freekill.vsnd", Price = 1000 },
         // ---- version 8: hats (workshop pack models/swbs/hats, white and tinted here; shown once WorkshopPack.HatModels is on)
         Hat("top_hat", "Top hat", "30,30,30", 1500),
         Hat("crown", "Gold crown", "255,200,40", 3000),
@@ -245,16 +244,16 @@ public sealed class StoreInventory
 }
 
 /// <summary>
-/// Port of the SMPlugins Store and StoreItems, plus the old donator items, all bought with jailbreak points (!points)
+/// Port of the SMPlugins Store and StoreItems, plus the old donator items, all bought with server points (!points)
 /// from !store / !shop and kept forever (one item per kind equipped):
 /// bullet tracers, paintballs, kill effects (shockwave / fire / explosion; the original's ragdoll "force" cannot be done
 /// on CS2's client-side ragdolls), trails, auras, sparkles, swirls, chat colours, a chat title (!title), see-through body
 /// and body size (fair-play limited, see <see cref="StoreConfig.BodyItemsAnytime"/>), and - once your workshop pack has
 /// the files - kill sounds, grenade sounds and hats (EquipmentColors = the hat tint). The original's per-player
-/// visibility settings are in !store > Settings. Player effects and hats are off during wardays and non-freeday LRs, so
+/// visibility settings are in !store > Settings. Player effects and hats follow the game mode (CommonHost.StoreEffectsAllowed), so
 /// they never give a hiding player away.
 /// </summary>
-public sealed partial class StoreModule : JbModule
+public sealed partial class StoreModule : SwbsModule
 {
     private const string Ns = "store";
 
@@ -288,17 +287,19 @@ public sealed partial class StoreModule : JbModule
             foreach (var it in Cfg.Items.Where(i => i.Type is StoreItemType.Hat or StoreItemType.PlayerModel && i.Data.Length > 0 && Available(i)))
                 m.AddResource(it.Data.Trim());
             foreach (var particle in Particles) m.AddResource(particle); // kill effect extras: unprecached particles never show
-            if (Extras.WorkshopPackModule.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
+            if (CommonHost.PackModelsOn && Cfg.Items.Any(i => i.Type == StoreItemType.Trail && StoreTrails.StyleOf(i) != null))
                 foreach (var model in StoreTrails.AllModels()) m.AddResource(model);
         });
-        JbEvents.PlayerModelsApplied += ApplyPlayerModel;
+        CommonHost.PlayerModelsApplied += ApplyPlayerModel;
+        SharedPlayerData.Reloaded += ReloadInventory;
         ChatDecor.AddPrefix(Name, TitlePrefix);
         ChatDecor.AddColor(Name, ChatColor);
     }
 
     public override void OnUnload(bool hotReload)
     {
-        JbEvents.PlayerModelsApplied -= ApplyPlayerModel;
+        CommonHost.PlayerModelsApplied -= ApplyPlayerModel;
+        SharedPlayerData.Reloaded -= ReloadInventory;
         ChatDecor.Remove(Name);
         for (var i = 0; i < Players.MaxSlots; i++) RemoveHat(i);
     }
@@ -338,19 +339,26 @@ public sealed partial class StoreModule : JbModule
         return list;
     }
 
-    public override void OnPlayerConnected(JbPlayer player)
+    public override void OnPlayerConnected(SwbsPlayer player)
     {
         _inv[player.Slot] = player.IsBot || player.SteamId64 == 0 ? null : Storage.Get<StoreInventory>(Ns, player.SteamId64.ToString()) ?? new StoreInventory();
         ResetSlot(player.Slot);
     }
 
-    public override void OnPlayerDisconnect(JbPlayer player)
+    /// <summary>Shared store items could only be read late (the backend was down at connect): load them now.</summary>
+    private void ReloadInventory(ulong steamId)
+    {
+        foreach (var c in Players.Humans())
+            if (c.SteamID == steamId && c.Swbs() is { } p) OnPlayerConnected(p);
+    }
+
+    public override void OnPlayerDisconnect(SwbsPlayer player)
     {
         _inv[player.Slot] = null;
         ResetSlot(player.Slot);
     }
 
-    public override void OnPlayerSpawn(JbPlayer player)
+    public override void OnPlayerSpawn(SwbsPlayer player)
     {
         // A new pawn starts opaque and full size: re-apply on the next effects tick.
         _alpha[player.Slot] = 0;
@@ -359,7 +367,7 @@ public sealed partial class StoreModule : JbModule
         _dropLast[player.Slot] = null;
         RemoveHat(player.Slot);
         // Without the PlayerModels module nobody raises PlayerModelsApplied: apply the store model from here.
-        if (Jb.Models is NullServices) SchedulePlayerModel(player.Slot);
+        if (!CommonHost.PlayerModelsModuleActive) SchedulePlayerModel(player.Slot);
     }
 
     public override void OnMapStart(string mapName)
@@ -383,7 +391,7 @@ public sealed partial class StoreModule : JbModule
     }
 
     /// <summary>After PlayerModels gave the player their team model: the equipped store player model replaces it.</summary>
-    private void ApplyPlayerModel(JbPlayer player) => SchedulePlayerModel(player.Slot);
+    private void ApplyPlayerModel(SwbsPlayer player) => SchedulePlayerModel(player.Slot);
 
     /// <summary>
     /// Set the equipped store model next frame and once more a moment later: the game (agent loadout) and other modules
@@ -510,11 +518,10 @@ public sealed partial class StoreModule : JbModule
     }
 
     /// <summary>Body items (see-through, size) are fair-play limited unless <see cref="StoreConfig.BodyItemsAnytime"/>.</summary>
-    internal static bool BodyItemsAllowed(bool anytime, bool warmup, bool freedayDay, bool freedayLr) => anytime || warmup || freedayDay || freedayLr;
 
     /// <summary>Pack hats only exist once the pack is compiled with them (WorkshopPack.HatModels).</summary>
     internal static bool Available(StoreItem i) =>
-        !(i.Type == StoreItemType.Hat && i.Data.Trim().StartsWith(StoreConfig.PackHatFolder, StringComparison.OrdinalIgnoreCase) && !Extras.WorkshopPackModule.HatModelsOn);
+        !(i.Type == StoreItemType.Hat && i.Data.Trim().StartsWith(StoreConfig.PackHatFolder, StringComparison.OrdinalIgnoreCase) && !CommonHost.HatModelsOn);
 
     private StoreItem? Find(string id) => Cfg.Items.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
@@ -547,44 +554,34 @@ public sealed partial class StoreModule : JbModule
         if (e != null && filter != null) Visibility.OnlyFor(e, filter);
     }
 
-    /// <summary>Player effects and hats are off during wardays and in LRs other than freedays (they would give hiding players away).</summary>
-    private static bool EffectsAllowed(CCSPlayerController c)
-    {
-        if (Jb.Days.CurrentType == DayType.Warday) return false;
-        var p = c.Jb();
-        if (p == null) return false;
-        var prisoner = c.Team == CsTeam.Terrorist ? p : Jb.LastRequests.GetOpponent(p);
-        if (prisoner == null || !Jb.LastRequests.HasStartedLastRequest(prisoner)) return true;
-        return (Jb.LastRequests.GetFlags(prisoner) & LrFlags.Freeday) != 0;
-    }
+    /// <summary>Player effects and hats: the game mode decides (e.g. off while they would give a hiding player away).</summary>
+    private static bool EffectsAllowed(CCSPlayerController c) => CommonHost.StoreEffectsAllowed(c);
 
-    private bool BodyAllowed(CCSPlayerController c)
-    {
-        var p = c.Jb();
-        var freedayLr = p != null && (Jb.LastRequests.GetFlags(p) & LrFlags.Freeday) != 0;
-        return BodyItemsAllowed(Cfg.BodyItemsAnytime, Round.IsWarmup, Jb.Days.CurrentType == DayType.Freeday, freedayLr)
-               && (Cfg.BodyItemsAnytime || EffectsAllowed(c) || freedayLr);
-    }
+    /// <summary>
+    /// Body items (see-through, size) change hitboxes or visibility: the game mode decides when they apply, or always
+    /// with <see cref="StoreConfig.BodyItemsAnytime"/>.
+    /// </summary>
+    private bool BodyAllowed(CCSPlayerController c) => CommonHost.StoreBodyAllowed(c, Cfg.BodyItemsAnytime);
 
     // ================================================================= menus
 
-    [ConsoleCommand("css_store", "sm_store - spend jailbreak points on effects, chat colours, titles and more")]
-    [ConsoleCommand("css_shop", "sm_shop - spend jailbreak points on effects, chat colours, titles and more")]
+    [ConsoleCommand("css_store", "sm_store - spend your points on effects, chat colours, titles and more")]
+    [ConsoleCommand("css_shop", "sm_shop - spend your points on effects, chat colours, titles and more")]
     public void CmdStore(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null || caller.IsBot) return;
-        if (Jb.Points is NullServices) { Chat.Tell(caller, "store.no_points_system"); return; }
+        if (!CommonHost.PointsAvailable) { Chat.Tell(caller, "store.no_points_system"); return; }
         if (_inv[caller.Slot] == null) { Chat.Tell(caller, "store.not_ready"); return; }
         ShowMain(caller);
     }
 
     private void ShowMain(CCSPlayerController c) => BuildMain(c)?.Open(c);
 
-    private JbMenu? BuildMain(CCSPlayerController c)
+    private SwbsMenu? BuildMain(CCSPlayerController c)
     {
-        var p = c.Jb();
+        var p = c.Swbs();
         if (p == null) return null;
-        var m = new JbMenu(Lang.T("store.title")) { Subtitle = Lang.T("store.balance", Jb.Points.GetPoints(p)) };
+        var m = new SwbsMenu(Lang.T("store.title")) { Subtitle = Lang.T("store.balance", CommonHost.GetPoints(p)) };
         foreach (var type in Enum.GetValues<StoreItemType>())
         {
             var t = type;
@@ -601,12 +598,12 @@ public sealed partial class StoreModule : JbModule
 
     private void ShowCategory(CCSPlayerController c, StoreItemType type)
     {
-        var p = c.Jb();
+        var p = c.Swbs();
         var inv = _inv[c.Slot];
         if (p == null || inv == null) return;
-        var m = new JbMenu(Lang.T("store.cat." + type.ToString().ToLowerInvariant()))
+        var m = new SwbsMenu(Lang.T("store.cat." + type.ToString().ToLowerInvariant()))
         {
-            Subtitle = Lang.T("store.balance", Jb.Points.GetPoints(p)),
+            Subtitle = Lang.T("store.balance", CommonHost.GetPoints(p)),
             Parent = BuildMain(c) // 7 / R goes back to the categories
         };
 
@@ -626,13 +623,13 @@ public sealed partial class StoreModule : JbModule
 
     private void OnItem(CCSPlayerController c, StoreItem item)
     {
-        var p = c.Jb();
+        var p = c.Swbs();
         var inv = _inv[c.Slot];
         if (p == null || inv == null) return;
 
         if (!inv.Owned.Contains(item.Id, StringComparer.OrdinalIgnoreCase))
         {
-            var balance = Jb.Points.GetPoints(p);
+            var balance = CommonHost.GetPoints(p);
             switch (CanBuy(item, inv, balance))
             {
                 case BuyResult.NotEnoughPoints:
@@ -640,12 +637,12 @@ public sealed partial class StoreModule : JbModule
                     ShowCategory(c, item.Type);
                     return;
                 case BuyResult.Ok:
-                    Jb.Points.AddPoints(p, -item.Price, "store");
+                    CommonHost.AddPoints(p, -item.Price, "store");
                     inv.Owned.Add(item.Id);
                     inv.Equipped[item.Type.ToString()] = item.Id;
                     Save(c);
                     Chat.Tell(c, "store.bought", item.Name, item.Price);
-                    Jb.Log.LogEvent($"{c.PlayerName} bought {item.Name} for {item.Price} points", p, null, LogType.Item);
+                    CommonHost.Log($"{c.PlayerName} bought {item.Name} for {item.Price} points", p, null, CommonLogType.Item);
                     if (item.Type == StoreItemType.ChatTitle) Chat.Tell(c, "store.title.how", Cfg.TitleMaxLength);
                     if (item.Type is StoreItemType.Transparency or StoreItemType.BodySize && !Cfg.BodyItemsAnytime) Chat.Tell(c, "store.body.when");
                     if (item.Type == StoreItemType.PlayerModel) TellModel(c);
@@ -681,7 +678,7 @@ public sealed partial class StoreModule : JbModule
     {
         var inv = _inv[c.Slot];
         if (inv == null) return;
-        var m = new JbMenu(Lang.T("store.settings")) { Parent = BuildMain(c) };
+        var m = new SwbsMenu(Lang.T("store.settings")) { Parent = BuildMain(c) };
         m.Add(Lang.T("store.settings.others", Lang.T("store.view." + Math.Clamp(inv.OthersView, 0, 2))), x =>
         {
             inv.OthersView = (inv.OthersView + 1) % 3;
@@ -746,7 +743,7 @@ public sealed partial class StoreModule : JbModule
             inv.Equipped[StoreItemType.ChatTitle.ToString()] = t.Id;
         Save(caller);
         Chat.Tell(caller, "store.title.set", title);
-        Jb.Log.LogEvent($"{caller.PlayerName} set their chat title to \"{title}\"", caller.Jb(), null, LogType.Any);
+        CommonHost.Log($"{caller.PlayerName} set their chat title to \"{title}\"", caller.Swbs(), null, CommonLogType.Any);
     }
 
     [ConsoleCommand("css_cleartitle", "sm_cleartitle <player> - remove a player's chat title")]
@@ -762,7 +759,7 @@ public sealed partial class StoreModule : JbModule
         Save(target);
         Chat.ReplyT(caller, info, "store.title.cleared", target.PlayerName);
         Chat.Tell(target, "store.title.cleared_you");
-        Jb.Log.LogEvent($"{(caller?.PlayerName ?? "Console")} cleared {target.PlayerName}'s chat title", caller?.Jb(), target.Jb(), LogType.Admin);
+        CommonHost.Log($"{(caller?.PlayerName ?? "Console")} cleared {target.PlayerName}'s chat title", caller?.Swbs(), target.Swbs(), CommonLogType.Admin);
     }
 
     // ================================================================= tracers / paintballs
@@ -794,7 +791,7 @@ public sealed partial class StoreModule : JbModule
         var filter = ViewFilter(c);
         CEntityInstance?[] parts;
         var feet = c.Origin();
-        if (Core.Paint.Splat(impact, c.EyePosition(), feet?.Z ?? float.NaN, color, Extras.WorkshopPackModule.PaintballModels()) is { } splat)
+        if (SwbsPaint.Splat(impact, c.EyePosition(), feet?.Z ?? float.NaN, color, CommonHost.PaintballModels()) is { } splat)
         {
             Restrict(splat, filter);
             Fx.RemoveLater(splat, Math.Max(1f, Cfg.PaintSeconds));
@@ -828,7 +825,7 @@ public sealed partial class StoreModule : JbModule
 
     // ================================================================= kill effects + kill sounds
 
-    public override void OnPlayerDeath(JbPlayer victim, JbPlayer? attacker, EventPlayerDeath ev)
+    public override void OnPlayerDeath(SwbsPlayer victim, SwbsPlayer? attacker, EventPlayerDeath ev)
     {
         _trailLast[victim.Slot] = null;
         RemoveHat(victim.Slot);

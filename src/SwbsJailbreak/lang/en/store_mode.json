@@ -1,0 +1,5 @@
+{
+  "store.body.when": "{olive}Ghost skin and body size only show in warmup, on freedays and in freeday last requests.",
+  "store.model.when_guard": "{olive}This player model is for guards: it shows from your next spawn as a guard.",
+  "store.model.when_prisoner": "{olive}Your new player model shows from your next spawn as a prisoner (guards keep their uniform)."
+}

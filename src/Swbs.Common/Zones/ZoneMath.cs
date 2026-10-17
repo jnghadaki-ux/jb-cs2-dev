@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace SwbsJailbreak.Core;
+namespace Swbs.Common;
 
 /// <summary>
 /// Zone geometry, engine-free so it is unit-tested. Like the SMPlugins ZoneManager a zone is an axis-aligned box

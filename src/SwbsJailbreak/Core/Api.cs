@@ -159,7 +159,11 @@ public static class JbEvents
     public static void RaiseWardayFreezeEnded() => Invoke(WardayFreezeEnded);
     public static void RaiseDayEnded() => Invoke(DayEnded);
     public static void RaiseDaySpawnPost(JbPlayer p) => Invoke(DaySpawnPost, p);
-    public static void RaisePlayerModelsApplied(JbPlayer p) => Invoke(PlayerModelsApplied, p);
+    public static void RaisePlayerModelsApplied(JbPlayer p)
+    {
+        Invoke(PlayerModelsApplied, p);
+        Swbs.Common.CommonHost.RaisePlayerModelsApplied(p);
+    }
     public static void RaiseSettingsSpawnPost(JbPlayer p) => Invoke(SettingsSpawnPost, p);
     public static void RaiseRebelMarked(JbPlayer p) => Invoke(RebelMarked, p);
     public static void RaiseFreedayGranted(JbPlayer p) => Invoke(FreedayGranted, p);

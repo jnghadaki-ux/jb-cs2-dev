@@ -2,12 +2,12 @@ using System.Numerics;
 using System.Text.Json.Serialization;
 using CounterStrikeSharp.API.Core;
 
-namespace SwbsJailbreak.Core;
+namespace Swbs.Common;
 
 /// <summary>
 /// One saved zone, the same fields as the SMPlugins plugin_zonemanager_data row (origin, mins, maxs, angles, type,
 /// 2 data ints, 5 data strings, imported trigger name) plus an optional admin label. Stored per map in
-/// configs/plugins/SwbsJailbreak/maps/zones/&lt;map&gt;.json.
+/// configs/plugins/&lt;Plugin&gt;/maps/zones/&lt;map&gt;.json.
 /// </summary>
 public sealed class ZoneRecord
 {
@@ -186,7 +186,7 @@ public abstract class ZoneType
     public virtual string Summary(Zone zone) => $"{zone.GetInt(1)} -- {zone.GetInt(2)}";
 }
 
-/// <summary>Zone Manager service (`Jb.Zones`). The null object answers "no zones" so modules work without it.</summary>
+/// <summary>Zone Manager service (<see cref="ZonesModule.Instance"/>, or the game mode's service locator). The null object answers "no zones" so modules work without it.</summary>
 public interface IZoneService
 {
     bool Available { get; }

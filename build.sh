@@ -17,6 +17,7 @@ mkdir -p "$PLUGIN_DIR"
 cp "$BIN/SwbsJailbreak.dll" "$PLUGIN_DIR/"
 [ -f "$BIN/SwbsJailbreak.pdb" ] && cp "$BIN/SwbsJailbreak.pdb" "$PLUGIN_DIR/"
 [ -f "$BIN/SwbsJailbreak.deps.json" ] && cp "$BIN/SwbsJailbreak.deps.json" "$PLUGIN_DIR/"
+cp "$BIN/MySqlConnector.dll" "$PLUGIN_DIR/" # shared points / store items on MySQL (configs/swbs_shared.json)
 cp -r "$BIN/lang" "$PLUGIN_DIR/"
 if [ -d package ]; then cp -r package/. "$OUT/"; fi
 ZIP="SwbsJailbreak-$VERSION-net10.zip"

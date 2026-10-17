@@ -1,10 +1,9 @@
 using System.Drawing;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
-using SwbsJailbreak.Core;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
-namespace SwbsJailbreak.Modules.PlayerExtras;
+namespace Swbs.Common;
 
 /// <summary>Where a trail's pieces go.</summary>
 public enum TrailPlacement
@@ -111,7 +110,7 @@ public sealed partial class StoreModule
     /// <summary>Drops a model trail's pieces behind the player. False when the pack's models are not available.</summary>
     private bool ModelTrail(CCSPlayerController c, Vector o, TrailStyle style, StoreItem item)
     {
-        if (!Extras.WorkshopPackModule.PackModelsOn) return false;
+        if (!CommonHost.PackModelsOn) return false;
         var here = (o.X, o.Y, o.Z);
         if (_dropLast[c.Slot] is not { } last)
         {

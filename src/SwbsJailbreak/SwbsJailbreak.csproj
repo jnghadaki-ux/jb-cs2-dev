@@ -26,6 +26,8 @@
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Shared points / store items on MySQL (configs/swbs_shared.json); MySqlConnector.dll ships next to the plugin -->
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,6 +36,9 @@
 
   <ItemGroup>
     <None Update="lang\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- src/Swbs.Common: the Store, Zone Manager and BhopCheck shared byte-for-byte with the other SWBS repos -->
+    <Compile Include="..\Swbs.Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="..\Swbs.Common\lang\**\*.json" Link="lang\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
