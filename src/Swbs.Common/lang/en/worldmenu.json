@@ -1,0 +1,20 @@
+{
+  "worldmenu.title": "Menu settings",
+  "worldmenu.subtitle": "How your menus look - changes show right away",
+  "worldmenu.item.style": "Style",
+  "worldmenu.item.theme": "Theme",
+  "worldmenu.item.position": "Position",
+  "worldmenu.item.size": "Size",
+  "worldmenu.item.reset": "Reset to the server default",
+  "worldmenu.style.world": "World panel",
+  "worldmenu.style.center": "Classic (centre)",
+  "worldmenu.position.left": "Left",
+  "worldmenu.position.center": "Centre",
+  "worldmenu.position.right": "Right",
+  "worldmenu.size.small": "Small",
+  "worldmenu.size.normal": "Normal",
+  "worldmenu.size.large": "Large",
+  "worldmenu.style_set": "{default}Menu style: {gold}{0}{default}. Type {green}!menustyle{default} for themes, position and size.",
+  "worldmenu.theme_set": "{default}Menu theme: {gold}{0}{default}.",
+  "worldmenu.reset_done": "{default}Your menu settings are back to the server default."
+}

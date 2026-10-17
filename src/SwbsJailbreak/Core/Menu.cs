@@ -12,6 +12,15 @@ public sealed class JbMenuItem
 
     /// <summary>Keep the menu open (re-rendered) after this item is chosen.</summary>
     public bool KeepOpen { get; set; }
+
+    /// <summary>Right-hand value in world menus (price, level, state). Optional: a trailing "(...)" or coloured part also works.</summary>
+    public string? Tag { get; set; }
+
+    /// <summary>"#RRGGBB" text colour in world menus (optional).</summary>
+    public string? Color { get; set; }
+
+    /// <summary>A section heading inside the list (not selectable).</summary>
+    public bool IsHeader { get; set; }
 }
 
 /// <summary>
@@ -49,6 +58,14 @@ public sealed class JbMenu
         return item;
     }
 
+    /// <summary>A section heading (accent colour in world menus, bold in the centre menu).</summary>
+    public JbMenuItem AddHeader(string text)
+    {
+        var item = Add(text, null, false);
+        item.IsHeader = true;
+        return item;
+    }
+
     /// <summary>Disabled informational line.</summary>
     public JbMenuItem AddInfo(string text) => Add(text, null, false);
 
@@ -81,6 +98,9 @@ internal sealed class JbMenuInstance : IMenuInstance
     public int PageIndex { get; set; }
     public int Cursor { get; set; } // absolute item index
     public bool Closed { get; set; }
+
+    /// <summary>Currently drawn as a world menu.</summary>
+    internal bool World;
     public float LastInput { get; set; }
 
     public int PageCount => Math.Max(1, (JbMenu.Items.Count + ItemsPerPage - 1) / ItemsPerPage);
@@ -177,6 +197,7 @@ public static class MenuService
         Active[player.Slot] = null;
         if (MenuManager.GetActiveMenus().TryGetValue(player.Handle, out var m) && ReferenceEquals(m, inst))
             MenuManager.GetActiveMenus().Remove(player.Handle);
+        WorldMenus.Hide(player);
         Hud.Send(player, Hud.Compose(player), true);
         if (cancelled) SafeInvoke(inst.JbMenu.OnCancel, player);
     }
@@ -185,12 +206,14 @@ public static class MenuService
     {
         var slot = inst.Player.IsValid ? inst.Player.Slot : -1;
         if (slot >= 0 && ReferenceEquals(Active[slot], inst)) Active[slot] = null;
+        if (inst.Player.IsValid && !HasMenu(inst.Player)) WorldMenus.Hide(inst.Player);
         if (inst.Player.IsValid) SafeInvoke(inst.JbMenu.OnCancel, inst.Player);
     }
 
     internal static void ResetSlot(int slot)
     {
         if (slot is >= 0 and < Players.MaxSlots) Active[slot] = null;
+        WorldMenuRenderer.Hide(slot);
     }
 
     internal static void HandleKey(JbMenuInstance inst, int key)
@@ -247,7 +270,11 @@ public static class MenuService
 
         SafeInvoke(item.OnSelect, player);
         if (item.KeepOpen && !inst.Closed) Render(inst, true);
-        else if (!HasMenu(player)) Hud.Send(player, Hud.Compose(player), true);
+        else if (!HasMenu(player))
+        {
+            WorldMenus.Hide(player);
+            Hud.Send(player, Hud.Compose(player), true);
+        }
     }
 
     /// <summary>WASD navigation, driven by OnPlayerButtonsChanged from the core.</summary>
@@ -261,6 +288,7 @@ public static class MenuService
         if ((pressed & PlayerButtons.Forward) != 0 && count > 0)
         {
             inst.Cursor = (inst.Cursor - 1 + count) % count;
+            WorldMenus.Feedback(player, "move");
             inst.PageIndex = inst.Cursor / JbMenuInstance.ItemsPerPage;
             inst.LastInput = Server.CurrentTime;
             Render(inst, true);
@@ -268,6 +296,7 @@ public static class MenuService
         else if ((pressed & PlayerButtons.Back) != 0 && count > 0)
         {
             inst.Cursor = (inst.Cursor + 1) % count;
+            WorldMenus.Feedback(player, "move");
             inst.PageIndex = inst.Cursor / JbMenuInstance.ItemsPerPage;
             inst.LastInput = Server.CurrentTime;
             Render(inst, true);
@@ -275,6 +304,7 @@ public static class MenuService
         else if ((pressed & PlayerButtons.Use) != 0 && count > 0)
         {
             inst.LastInput = Server.CurrentTime;
+            WorldMenus.Feedback(player, "select");
             Select(inst, Math.Clamp(inst.Cursor, 0, count - 1));
         }
         else if ((pressed & PlayerButtons.Reload) != 0)
@@ -315,8 +345,66 @@ public static class MenuService
     {
         if (inst.Closed || !inst.Player.IsValid) return;
         var style = Style;
-        if (style != MenuStyle.Chat) Hud.Send(inst.Player, BuildHtml(inst), force);
+        if (style != MenuStyle.Chat)
+        {
+            // World menus: the panel in front of the player; the centre HUD keeps showing the mode's own HUD.
+            if (WorldMenus.Wants(inst.Player) && WorldMenus.Draw(inst.Player, WorldView(inst)))
+            {
+                if (!inst.World && force) WorldMenus.Feedback(inst.Player, "open");
+                inst.World = true;
+                Hud.Send(inst.Player, Hud.Compose(inst.Player), force);
+            }
+            else
+            {
+                if (inst.World) WorldMenus.Hide(inst.Player);
+                inst.World = false;
+                Hud.Send(inst.Player, BuildHtml(inst), force);
+            }
+        }
+
         if (style != MenuStyle.Center && force) EchoToChat(inst);
+    }
+
+    /// <summary>The current page as a world menu view (breadcrumb from the parent menus).</summary>
+    private static WorldMenuView WorldView(JbMenuInstance inst)
+    {
+        var menu = inst.JbMenu;
+        var view = new WorldMenuView
+        {
+            Title = menu.Title,
+            Subtitle = menu.Subtitle,
+            Page = inst.PageIndex,
+            Pages = inst.PageCount,
+            CanGoBack = inst.PageIndex > 0 || menu.Parent != null,
+            HasNext = inst.PageIndex + 1 < inst.PageCount,
+            CanExit = menu.ExitButton,
+            RowsPerPage = JbMenuInstance.ItemsPerPage
+        };
+        var crumbs = new List<string>();
+        for (var p = menu.Parent; p != null && crumbs.Count < 3; p = p.Parent) crumbs.Insert(0, p.Title);
+        if (crumbs.Count > 0) view.Breadcrumb = string.Join(" › ", crumbs.Select(WorldMenuText.Plain)) + " ›";
+        if (!UsesKeys) view.Footer = "Type !1-!6   !7 Back   !8 Next   !9 Exit";
+
+        var start = inst.PageIndex * JbMenuInstance.ItemsPerPage;
+        var end = Math.Min(start + JbMenuInstance.ItemsPerPage, menu.Items.Count);
+        for (var i = start; i < end; i++)
+        {
+            var item = menu.Items[i];
+            var selectable = item.Enabled && item.OnSelect != null;
+            view.Rows.Add(new WorldMenuRow
+            {
+                Text = item.Text,
+                Tag = item.Tag,
+                Color = item.Color,
+                Number = selectable ? (i - start + 1).ToString() : null,
+                State = item.IsHeader ? WorldMenuRowState.Header
+                    : !item.Enabled ? WorldMenuRowState.Disabled
+                    : UsesKeys && selectable && i == inst.Cursor ? WorldMenuRowState.Selected
+                    : WorldMenuRowState.Normal
+            });
+        }
+
+        return view;
     }
 
     private static string BuildHtml(JbMenuInstance inst)
@@ -337,7 +425,7 @@ public static class MenuService
             var item = menu.Items[i];
             var num = i - start + 1;
             var selected = wasd && i == inst.Cursor;
-            var color = !item.Enabled ? "#777777" : selected ? "#00FF7F" : "#FFFFFF";
+            var color = item.IsHeader ? "#FFB000" : !item.Enabled ? "#777777" : selected ? "#00FF7F" : "#FFFFFF";
             sb.Append($"<font color='{color}'>");
             sb.Append(selected ? "&#9658; " : "");
             if (item.Enabled && item.OnSelect != null) sb.Append($"{num}. ");

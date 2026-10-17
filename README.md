@@ -135,6 +135,7 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 | `!games` | Warden games | Warden |
 | `!lr` | Last request | Last prisoner alive |
 | `!store` | Store, points and player extras | Everyone |
+| `!menustyle` | Your menu look: world panel or classic, theme, position, size | Everyone |
 | `!admin` | Admin menu | Admins |
 | `!zm` (`!zones`) | Zone manager, [see below](#zone-manager) | Lead / root |
 | `!celldoors_edit` | Cell door editor | Lead / root |
@@ -147,6 +148,39 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 - The item with **►** in green is the one under your cursor.
 - **Grey items with no number** are locked: not available right now, or you lack the rank, points or permission.
 - The footer lists the keys you can use on that menu.
+
+**World menus**
+
+While you are alive, every menu is drawn as a **themed panel floating in front of you**. It is made of point_worldtext
+in the world, not the centre-screen text. What the panel shows:
+
+- coloured text on a translucent backing plate, with an accent bar;
+- numbered rows and a gently pulsing **►** cursor;
+- values lined up on the right: green ON / red OFF, prices, levels and counts;
+- page dots, the menus you came from, and key hints.
+
+The panel follows you as you move and turn, and re-centres when you look up or down. Only you can see it. When you are
+dead or spectating, the classic centre menu shows instead, and the centre HUD keeps showing the mode's own panels while
+a world menu is open. The keys are the same.
+
+`!menustyle` (`!menutheme`, `!menusettings`) sets your own look, and it is saved:
+
+| Setting | Choices |
+|---|---|
+| Style | World panel, Classic (centre). `!menustyle world` / `!menustyle center` switch directly. |
+| Theme | SWBS Gold, Crimson, Azure, Emerald, Violet, Ember, Coop, Neon, Mono (`!menutheme azure`). By default each server uses its mode's theme: DM crimson, Surf and Bhop azure, KZ and Course emerald, Jailbreak ember, 1v1 violet, the others gold. |
+| Position | Left, Centre, Right |
+| Size | Small, Normal, Large |
+
+Server owners set the defaults in the `WorldMenu` config section:
+
+- `Enabled`, `DefaultStyle`, `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- Font: `FontName` and `FontSize`.
+- Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
+- Appearance: `CharWidth`, `PanelBorder`, and the animation, pulse and fade settings.
+- Optional move, select and open sounds.
+
+Plugin code can give an item a right-hand `Tag`, a `Color`, or add a section heading with `AddHeader`.
 
 **Controls**
 
@@ -481,7 +515,7 @@ Every command of the plugin (182 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (26)</summary>
+<details><summary><b>Extras</b> (27)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -500,6 +534,7 @@ Every command of the plugin (182 commands, generated from the code). Type them i
 | `!maplist` | !maps | Everyone | list the maps you can vote for |
 | `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
+| `!menustyle` | !menutheme, !menusettings | Everyone | [world\|center] - your menu style, theme, position and size |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!nextmap` |  | Everyone | show the next map |
 | `!nominate` | !nom | Everyone | [map] - put a map on the next map vote |
