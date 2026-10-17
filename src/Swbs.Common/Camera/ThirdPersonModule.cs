@@ -26,6 +26,7 @@ public sealed class ThirdPersonModule : SwbsModule
         Plugin.RegisterListener<Listeners.OnTick>(ThirdPerson.Tick);
         Plugin.RegisterListener<Listeners.OnServerPreEntityThink>(ThirdPerson.PreThink);
         Plugin.RegisterListener<Listeners.OnServerPostEntityThink>(ThirdPerson.PostThink);
+        Plugin.RegisterListener<Listeners.CheckTransmit>(ThirdPerson.FilterTransmit);
     }
 
     public override void OnUnload(bool hotReload) => ThirdPerson.RemoveAll();

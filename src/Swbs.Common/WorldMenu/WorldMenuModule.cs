@@ -37,6 +37,7 @@ public sealed class WorldMenuModule : SwbsModule
     {
         Instance = this;
         WorldMenuSettingsHolder.Current = Cfg;
+        WorldMenuRenderer.Spectators = Cfg.Spectators;
         WorldMenuRenderer.LogError = ex => Logger.LogWarning(ex, "[WorldMenu] a world menu could not be drawn (the classic menu is shown instead)");
         _autoTheme = WorldMenuThemes.ForPlugin(Plugin.ModuleName);
         Plugin.RegisterListener<Listeners.CheckTransmit>(WorldMenuRenderer.FilterTransmit);
@@ -58,7 +59,17 @@ public sealed class WorldMenuModule : SwbsModule
     {
         var c = player.Controller;
         if (c == null || c.IsBot || c.SteamID == 0 || player.Slot is < 0 or >= 65) return;
-        _saved[player.Slot] = Storage.Get<WorldMenuPrefs>(Ns, c.SteamID.ToString()) ?? new WorldMenuPrefs();
+        var key = c.SteamID.ToString();
+        var saved = Storage.Get<WorldMenuPrefs>(Ns, key) ?? new WorldMenuPrefs { Version = WorldMenuPrefs.CurrentVersion };
+        if (saved.Version < WorldMenuPrefs.CurrentVersion)
+        {
+            // Older settings: the style goes back to the server default (the world panel); theme, position and size stay.
+            saved.Style = null;
+            saved.Version = WorldMenuPrefs.CurrentVersion;
+            Storage.Set(Ns, key, saved);
+        }
+
+        _saved[player.Slot] = saved;
         _draft[player.Slot] = null;
         _toldFailure[player.Slot] = false;
     }
@@ -71,7 +82,7 @@ public sealed class WorldMenuModule : SwbsModule
         _draft[player.Slot] = null;
     }
 
-    // The menu cores re-draw on the next tick: dead players fall back to the centre menu.
+    // The menu cores re-draw on the next tick: from the spectator view, or as the centre menu in views it cannot follow.
     public override void OnPlayerDeath(SwbsPlayer victim, SwbsPlayer? attacker, EventPlayerDeath ev) => WorldMenuRenderer.Hide(victim.Slot);
 
     // ---- preferences (the draft while !menustyle is open, else the saved ones)
@@ -84,7 +95,7 @@ public sealed class WorldMenuModule : SwbsModule
 
     private WorldMenuPrefs Draft(CCSPlayerController c) => _draft[c.Slot] ??= Copy(_saved[c.Slot] ??= new WorldMenuPrefs());
 
-    private static WorldMenuPrefs Copy(WorldMenuPrefs p) => new() { Style = p.Style, Theme = p.Theme, Position = p.Position, Size = p.Size, Details = p.Details };
+    private static WorldMenuPrefs Copy(WorldMenuPrefs p) => new() { Version = WorldMenuPrefs.CurrentVersion, Style = p.Style, Theme = p.Theme, Position = p.Position, Size = p.Size, Details = p.Details };
 
     private static bool Same(WorldMenuPrefs a, WorldMenuPrefs b) =>
         a.Style == b.Style && a.Theme == b.Theme && a.Position == b.Position && a.Size == b.Size && a.Details == b.Details;
@@ -94,6 +105,7 @@ public sealed class WorldMenuModule : SwbsModule
     private void SaveDraft(CCSPlayerController c)
     {
         if (_draft[c.Slot] is not { } d) return;
+        d.Version = WorldMenuPrefs.CurrentVersion;
         _saved[c.Slot] = d;
         _draft[c.Slot] = null;
         if (c.SteamID != 0) Storage.Set(Ns, c.SteamID.ToString(), d);

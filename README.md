@@ -151,17 +151,21 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 
 **World menus**
 
-While you are alive, every menu is drawn as a **themed panel floating in front of you**. It is made of point_worldtext
-in the world, not the centre-screen text. What the panel shows:
+Every menu is drawn as a **themed panel floating in front of you** by default. It is made of point_worldtext in the
+world, not the centre-screen text. What the panel shows:
 
 - coloured text on a translucent backing plate, with an accent bar;
 - numbered rows and a gently pulsing **►** cursor;
 - values lined up on the right: green ON / red OFF, prices, levels and counts;
 - page dots, the menus you came from, and key hints.
 
-The panel follows you as you move and turn, and re-centres when you look up or down. Only you can see it. When you are
-dead or spectating, the classic centre menu shows instead, and the centre HUD keeps showing the mode's own panels while
-a world menu is open. The keys are the same.
+The panel follows you as you move and turn, and re-centres when you look up or down. Only you can see it. While you
+spectate someone in first person or fly the free camera, it floats in front of that view. In chase view and on fixed
+cameras the classic centre menu shows instead. The centre HUD keeps showing the mode's own panels while a world menu is
+open. The keys are the same.
+
+Players whose style was saved before this version get the world panel again once. Anyone who then picks Classic keeps
+it.
 
 `!menustyle` (`!menutheme`, `!menusettings`) sets your own look, and it is saved:
 
@@ -174,7 +178,10 @@ a world menu is open. The keys are the same.
 
 Server owners set the defaults in the `WorldMenu` config section:
 
-- `Enabled`, `DefaultStyle`, `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- `Enabled`, `DefaultStyle` (`world`), `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- `Spectators`: the world panel for players who spectate in first person or with the free camera (default on).
+- `OpenDelay`: seconds before a new panel is created (0.1). A chat command and a burst of new entities in the same tick
+  can stall the client's connection.
 - Font: `FontName` and `FontSize`.
 - Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
 - Appearance: `CharWidth`, `PanelBorder`, and the animation, pulse and fade settings.
@@ -538,7 +545,7 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 | `!maplist` | !maps | Everyone | list the maps you can vote for |
 | `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
-| `!3p` | !thirdperson, !camera | Level 1 | third person camera on or off, to look at player models, hats and store effects (`ThirdPerson.Command`: admin by default) |
+| `!3p` | !thirdperson, !camera | Level 1 | third person camera on or off, to look at player models, hats and store effects (`ThirdPerson.Command`: admin by default; `ThirdPerson.Entity`: `point_camera`, or `prop_dynamic` for the older camera) |
 | `!menutest` |  | Everyone | show a sample world menu and say whether it could be drawn |
 | `!menustyle` | !menutheme, !menusettings | Everyone | [world\|center] - your menu style, theme, position and size |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
