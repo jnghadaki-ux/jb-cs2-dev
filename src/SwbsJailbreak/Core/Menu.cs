@@ -427,7 +427,8 @@ public static class MenuService
             }
         }
 
-        if (style != MenuStyle.Center && force) EchoToChat(inst);
+        // The chat copy is for the centre menu: a world panel needs none.
+        if (style != MenuStyle.Center && force && !inst.World) EchoToChat(inst);
     }
 
     /// <summary>The current page as a world menu view (breadcrumb from the parent menus).</summary>
