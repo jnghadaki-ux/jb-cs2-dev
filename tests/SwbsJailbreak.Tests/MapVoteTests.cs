@@ -95,8 +95,69 @@ public class MapVoteTests
     {
         Assert.Equal(new[] { "host_workshop_map 42", "ds_workshop_changelevel jb_x" },
             MapVoteRules.ChangeCommands(new VoteMap("", 42), "jb_x", _ => false));
-        Assert.Equal(new[] { "host_workshop_map 42" }, MapVoteRules.ChangeCommands(new VoteMap("Pretty Name", 42), "", _ => false));
+        // One way to load it: tried twice.
+        Assert.Equal(new[] { "host_workshop_map 42", "host_workshop_map 42" }, MapVoteRules.ChangeCommands(new VoteMap("Pretty Name", 42), "", _ => false));
         Assert.Equal(new[] { "changelevel de_dust2", "ds_workshop_changelevel de_dust2" },
             MapVoteRules.ChangeCommands(new VoteMap("de_dust2", 0), "de_dust2", n => n == "de_dust2"));
     }
+
+    [Theory]
+    [InlineData(null, 15, 15)]
+    [InlineData(" ", 15, 15)]
+    [InlineData("20", 15, 20)]
+    [InlineData("0", 15, null)]
+    [InlineData("abc", 15, null)]
+    [InlineData("500", 15, null)]
+    public void ExtendBy_DefaultOrValidMinutes(string? arg, int def, int? expected) =>
+        Assert.Equal(expected, MapVoteRules.ExtendBy(arg, def));
+
+    [Fact]
+    public void ChangeCommands_SubscribedMapByName_AndNoCommandInjection()
+    {
+        Assert.Equal(new[] { "ds_workshop_changelevel jb_x", "ds_workshop_changelevel jb_x" }, MapVoteRules.ChangeCommands(new VoteMap("jb_x", 0), "jb_x", _ => false));
+        Assert.Empty(MapVoteRules.ChangeCommands(new VoteMap("jb_x; quit", 0), "", _ => true));
+        Assert.Equal(new[] { "host_workshop_map 7", "host_workshop_map 7" }, MapVoteRules.ChangeCommands(new VoteMap("", 7), "x;quit", _ => false));
+        Assert.False(MapVoteRules.IsMapName("3070212801"));
+        Assert.True(MapVoteRules.IsMapName("ba_jail_electric_v2.1"));
+    }
+
+    [Theory]
+    [InlineData(1, 0.6, 0, 1)]
+    [InlineData(3, 0.6, 0, 2)]
+    [InlineData(5, 0.6, 0, 3)]
+    [InlineData(16, 0.6, 0, 10)]
+    [InlineData(2, 0.6, 10, 2)]  // the minimum never needs more votes than there are players
+    [InlineData(20, 0.1, 4, 4)]
+    [InlineData(0, 0.6, 3, 1)]
+    public void RtvNeeded_RatioOfPlayers_MinimumCappedAtPlayers(int players, double ratio, int min, int needed) =>
+        Assert.Equal(needed, MapVoteRules.RtvNeeded(players, ratio, min));
+
+    [Theory]
+    [InlineData(4, 0, 16, 4)]  // 12 AFK spectators do not count
+    [InlineData(4, 1, 16, 5)]  // a spectator who voted does
+    [InlineData(0, 0, 3, 3)]   // nobody on a team: everyone counts
+    public void RtvEligible_PlayersOnATeam_PlusSpectatorsWhoVoted(int onTeam, int specVoters, int humans, int expected) =>
+        Assert.Equal(expected, MapVoteRules.RtvEligible(onTeam, specVoters, humans));
+
+    [Fact]
+    public void TimeMath_TimeLeft_TimeLimitFor_ChangeDelay()
+    {
+        Assert.Null(MapVoteRules.TimeLeft(0f, 10f, 100f));
+        Assert.Equal(30f * 60f + 10f - 100f, MapVoteRules.TimeLeft(30f, 10f, 100f));
+        Assert.Equal(15f, MapVoteRules.TimeLimitFor(600f, 5f), 3);
+        Assert.True(MapVoteRules.TimeLimitFor(0f, 0f) > 0f);
+        Assert.Equal("45.5", MapVoteRules.Minutes(45.5f));
+        Assert.Equal(8f, MapVoteRules.ChangeDelay(8f, 15f));
+        Assert.Equal(3f, MapVoteRules.ChangeDelay(8f, 5f));
+        Assert.True(MapVoteRules.ForceEnd(120f, 120));
+        Assert.False(MapVoteRules.ForceEnd(30f, 120));
+    }
+
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData(" 25 ", 25)]
+    [InlineData("-1", null)]
+    [InlineData("601", null)]
+    [InlineData(null, null)]
+    public void ParseMinutes_ZeroTo600(string? arg, int? expected) => Assert.Equal(expected, MapVoteRules.ParseMinutes(arg));
 }

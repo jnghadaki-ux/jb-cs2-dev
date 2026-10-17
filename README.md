@@ -135,6 +135,7 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 | `!games` | Warden games | Warden |
 | `!lr` | Last request | Last prisoner alive |
 | `!store` | Store, points and player extras | Everyone |
+| `!menustyle` | Your menu look: world panel or classic, theme, position, size | Everyone |
 | `!admin` | Admin menu | Admins |
 | `!zm` (`!zones`) | Zone manager, [see below](#zone-manager) | Lead / root |
 | `!celldoors_edit` | Cell door editor | Lead / root |
@@ -147,6 +148,39 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 - The item with **►** in green is the one under your cursor.
 - **Grey items with no number** are locked: not available right now, or you lack the rank, points or permission.
 - The footer lists the keys you can use on that menu.
+
+**World menus**
+
+While you are alive, every menu is drawn as a **themed panel floating in front of you**. It is made of point_worldtext
+in the world, not the centre-screen text. What the panel shows:
+
+- coloured text on a translucent backing plate, with an accent bar;
+- numbered rows and a gently pulsing **►** cursor;
+- values lined up on the right: green ON / red OFF, prices, levels and counts;
+- page dots, the menus you came from, and key hints.
+
+The panel follows you as you move and turn, and re-centres when you look up or down. Only you can see it. When you are
+dead or spectating, the classic centre menu shows instead, and the centre HUD keeps showing the mode's own panels while
+a world menu is open. The keys are the same.
+
+`!menustyle` (`!menutheme`, `!menusettings`) sets your own look, and it is saved:
+
+| Setting | Choices |
+|---|---|
+| Style | World panel, Classic (centre). `!menustyle world` / `!menustyle center` switch directly. |
+| Theme | SWBS Gold, Crimson, Azure, Emerald, Violet, Ember, Coop, Neon, Mono (`!menutheme azure`). By default each server uses its mode's theme: DM crimson, Surf and Bhop azure, KZ and Course emerald, Jailbreak ember, 1v1 violet, the others gold. |
+| Position | Left, Centre, Right |
+| Size | Small, Normal, Large |
+
+Server owners set the defaults in the `WorldMenu` config section:
+
+- `Enabled`, `DefaultStyle`, `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- Font: `FontName` and `FontSize`.
+- Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
+- Appearance: `CharWidth`, `PanelBorder`, and the animation, pulse and fade settings.
+- Optional move, select and open sounds.
+
+Plugin code can give an item a right-hand `Tag`, a `Color`, or add a section heading with `AddHeader`.
 
 **Controls**
 
@@ -254,28 +288,29 @@ Limits: Map Input repairs map *logic* (buttons, relays, doors, triggers). It can
 
 ## Map voting
 
-Players vote on the next map; maps are **Workshop maps**. The map only ever changes when the game ends. By default a map lasts **30 minutes** (`MapVote.MapTimeLimitMinutes`).
+Players vote on the next map; maps are **Workshop maps**. By default a map lasts **30 minutes** (`MapVote.MapTimeLimitMinutes`, set as `mp_timelimit`). When the time is up the map changes at the end of the round, or at most `MapVote.MapEndMaxWaitSeconds` (120 s) later when the round does not end (a long last request, a special day).
 
 **Player commands**
 
 | Command | What it does |
 |---|---|
-| `!rtv` (`!votechange`, `!rockthevote`) | Vote to change the map. When 60% of players have typed it, a map vote starts; the winner loads when the game ends (the game ends after the current round). |
-| `!nominate [map]` | Put a map on the next ballot (no name = pick from a menu). |
+| `!rtv` (`!votechange`, `!rockthevote`) | Vote to change the map. When 60% of the players on a team have typed it (`MapVote.RtvRatio`; AFK players moved to spectators do not count, a spectator who votes does; `MapVote.RtvMinVotes` sets a minimum), a map vote starts with a "Don't change the map" option. The winner loads at the end of the current round. |
+| `!nominate [map]` (`!nom`) | Put a map on the next ballot (no name = pick from a menu). One per player, as many as the ballot has places; recently played maps are left out. |
+| `!revote` | Change your vote while the map vote is open. |
 | `!nextmap` | The next map, once voted. |
-| `!timeleft` | Time left on this map. |
+| `!timeleft` | Time left on this map (or that it ends at the end of this round). |
 | `!maplist` (`!maps`) | Every map you can vote for. |
 | `!currentmap` | The map you are on. |
 
-A vote also starts by itself 3 minutes before the time limit, with an "Extend this map" option.
+A vote also starts by itself 3 minutes before the time limit (`MapVote.EndVoteMinutesBefore`), with an "Extend this map" option (`MapVote.MaxExtends`). Every map change counts down on screen ("Changing to X in 5..."), loads a Workshop map with `host_workshop_map <id>` and a stock map with `changelevel`, and tries the other way (or the same command again) if the map has not changed `MapVote.ChangeCheckSeconds` later.
 
 **Setting up the maps (admins)**
 
 1. Put your jailbreak maps in a Steam Workshop collection and set `MapVote.WorkshopCollectionId` to its id (the number in the collection's Steam link). The plugin reads the collection and every map's **name** from Steam, so you never type map ids by hand.
 2. `!mapsetup` (Level 3+): every map by name with **[ON]/[OFF]** switches, and "Refresh map names from Steam".
 3. `!mapadd <id or Steam link>` adds a single map (its name loads from Steam); `!mapremove <name or id>` switches one off.
-4. `!mapchange [name, id or Steam link]` (Level 3+, also `!changemap` and `!map`): changes the map **right away**, ending the round and the map. No name opens a menu of your maps by name. It loads Workshop maps with `host_workshop_map`, checks the map really changed, and tries another way (or tells you) if not.
-5. `!startjb` (Level 3+): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
+4. `!mapchange [name, id or Steam link]` (Level 3+, also `!changemap` and `!map`): changes the map after a short countdown (`MapVote.AdminChangeCountdownSeconds`), ending the round and the map. Any map of the server's Workshop collection also works by name. No name opens a menu of your maps by name. It loads Workshop maps with `host_workshop_map`, checks the map really changed, and tries another way (or tells you) if not. `!setnextmap <map>` picks the next map (loaded when the map ends), `!extendmap [minutes]` adds time to this map (up to `MapVote.MaxExtends` times; `!extend` stays the warden's round extend), and `!setmapend <minutes>` (also `!settimeleft`) ends the map that many minutes from now (`0` = at the end of this round). Map changes go to the admin log.
+5. `!startjb` (Level 3+, also `!jbstart` and `!startmode`): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
 
 **MultiAddonManager** (required, see [Requirements](#requirements)): `!mapadd` also downloads the map to the server ahead of time, and `!addon add|remove|list <id or link>` (Lead+) mounts Workshop addons such as the store pack, with names from Steam.
 
@@ -371,7 +406,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (179 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (183 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -480,7 +515,7 @@ Every command of the plugin (179 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (23)</summary>
+<details><summary><b>Extras</b> (28)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -492,19 +527,24 @@ Every command of the plugin (179 commands, generated from the code). Type them i
 | `!currentmap` |  | Everyone | show the current map |
 | `!demo` |  | Everyone | the demo being recorded and the time in it (quote it in reports) |
 | `!demos` |  | Level 1 | (admin) the last recorded games (console) |
+| `!extendmap` |  | Level 3 | [minutes] - (admin) extend the map |
 | `!giveparachute` |  | Level 3 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
 | `!mapadd` |  | Level 3 | &lt;workshop id\|url&gt; - (admin) add a Workshop map to the vote list (its name comes from Steam) |
 | `!mapchange` | !changemap | Level 3 | [map name\|workshop id\|link] - (admin) change the map now (no name = pick from a menu) |
 | `!maplist` | !maps | Everyone | list the maps you can vote for |
 | `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
+| `!menustyle` | !menutheme, !menusettings | Everyone | [world\|center] - your menu style, theme, position and size |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!nextmap` |  | Everyone | show the next map |
-| `!nominate` |  | Everyone | [map] - put a map on the next map vote |
+| `!nominate` | !nom | Everyone | [map] - put a map on the next map vote |
 | `!perfsound` |  | Everyone | toggle the perfect-jump sound |
 | `!removeparachute` |  | Level 3 | &lt;target&gt; - remove a parachute |
+| `!revote` |  | Everyone | change your map vote while the vote is open |
 | `!rtv` | !rockthevote, !votechange | Everyone | rock the vote: vote to change the map |
-| `!startjb` | !jbstart | Level 3 | [collection id\|map] - (admin) start jailbreak: from a default map, load the Workshop jailbreak maps |
+| `!setmapend` | !settimeleft | Level 3 | &lt;minutes&gt; - (admin) end the map this many minutes from now (0 = at the end of this round) |
+| `!setnextmap` |  | Level 3 | &lt;map\|workshop id\|link&gt; - (admin) set the next map |
+| `!startjb` | !jbstart, !startmode | Level 3 | [collection id\|map] - (admin) start jailbreak: from a default map, load the Workshop jailbreak maps |
 | `!timeleft` |  | Everyone | time left on this map |
 | `!workshoppack` |  | Root | point the sound settings at the SWBS workshop pack again |
 
