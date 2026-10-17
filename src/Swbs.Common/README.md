@@ -1,6 +1,6 @@
 # Swbs.Common
 
-The Store, the Zone Manager, BhopCheck (`!bhc`) and shared player data. They are compiled into every SWBS CS2 plugin:
+The Store, the Zone Manager, BhopCheck (`!bhc`), shared player data and the round variations. They are compiled into every SWBS CS2 plugin:
 Bhop, Surf, Kz, Course, SurfRpgDm (`cs2-bhop-dev`), Minigames, Deathmatch, PUG, 1v1 (`cs2-mg-dev`) and Jailbreak
 (`jb-cs2-dev`).
 
@@ -29,6 +29,26 @@ its own file. A missing member is a build error.
 
 Per-mode wording goes in a language file that loads after the shared one (for example `lang/en/store_mode.json`).
 Files load in name order, and a later file overrides an earlier one key by key.
+
+## Round variations
+
+`Rounds/` holds the round variations: timed rounds with a vote, and 16 variations such as RPG Arena, Throwing Knives,
+Dodgeball, Gun Game and Bounty Hunter. They are the jailbreak days, rebuilt as deathmatch rounds. The module loads
+only when the plugin implements `IRoundsHost`, which SwbsDeathmatch (tag `dm`) and SwbsSurfRpgDm (tag `surf`) do. On
+every other plugin it is disabled, and its config sections are never written.
+
+What the host gives the module:
+
+- `RoundTags`, which decide the variations it runs.
+- `AddRoundStat`, which records the round MVP in the mode's stats.
+- `HighlightPlayer`, which marks the bounty or the juggernaut (a glow on DM, a tint on SurfRPGDM).
+
+What the mode's code checks in return:
+
+- `Rounds.OwnsLoadout`: skip the spawn loadout.
+- `Rounds.AllowRespawn(player)`: skip a respawn.
+
+A mode can add its own variation by subclassing `RoundVariation` and passing it to `RoundsModule.Instance.Register`.
 
 ## Shared points and store items
 
