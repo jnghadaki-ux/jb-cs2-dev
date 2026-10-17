@@ -21,6 +21,9 @@ public sealed class RocketLauncher
         public Vector Vel = new(0, 0, 0);
         public float Born;
         public int Tick;
+
+        /// <summary>Height of the floor the shooter stood on (null when they fired in the air).</summary>
+        public float? FloorZ;
     }
 
     private sealed class Holder
@@ -114,9 +117,11 @@ public sealed class RocketLauncher
         foreach (var c in Players.Alive().ToList())
         {
             var h = _holders[c.Slot];
-            if (!h.Armed || h.Launcher == 0) continue;
+            if (!h.Armed) continue;
             var active = c.ActiveWeapon();
-            if (active == null || active.EntityHandle.Raw != h.Launcher) continue;
+            // Any knife in hand is the launcher (CS2 may hand out a new knife entity).
+            if (active == null || !Weapons.IsKnife(active.DesignerName)) continue;
+            h.Launcher = active.EntityHandle.Raw;
             if (active.NextPrimaryAttackTick != int.MaxValue)
             {
                 active.NextPrimaryAttackTick = int.MaxValue;
@@ -176,7 +181,7 @@ public sealed class RocketLauncher
         var speed = T.RpgRocketSpeed;
         _rockets.Add(new Rocket
         {
-            OwnerSlot = c.Slot, Pos = spawn, Born = now,
+            OwnerSlot = c.Slot, Pos = spawn, Born = now, FloorZ = c.OnGround() ? pawn.AbsOrigin?.Z : null,
             Vel = new Vector(dir.X / len * speed, dir.Y / len * speed, dir.Z / len * speed)
         });
         if (T.RpgShootSound.Length > 0) Sound.PlayAt(c, T.RpgShootSound);
@@ -209,6 +214,10 @@ public sealed class RocketLauncher
             }
 
             var impact = direct != null ? next : WorldImpact(r.Pos, next, owner);
+            // No world trace (CounterStrikeSharp out of date for this CS2 build): the floor the shooter stood on still
+            // stops the rocket, so rocket jumps keep working.
+            if (impact == null && Aim.TraceBroken && r.FloorZ is { } floor && r.Vel.Z < 0f && next.Z <= floor + 2f)
+                impact = new Vector(next.X, next.Y, floor + 2f);
             if (impact == null && now - r.Born > 6f) impact = next; // flew out of the map
             if (impact == null)
             {

@@ -34,11 +34,27 @@ public static class ThirdPerson
 {
     private const int Slots = 65;
     private static readonly HashSet<string>?[] Reasons = new HashSet<string>?[Slots];
-    private static readonly CDynamicProp?[] Cameras = new CDynamicProp?[Slots];
+    /// <summary>Camera entity handles (never stored entity objects: the round restart removes the camera, and touching a removed entity crashes the server).</summary>
+    private static readonly uint[] Cameras = new uint[Slots];
     private static readonly uint[] HiddenView = new uint[Slots];
     private static int _active;
 
     public static ThirdPersonConfig Settings { get; set; } = new();
+
+    private static CDynamicProp? Cam(int slot)
+    {
+        var raw = Cameras[slot];
+        if (raw == 0) return null;
+        try
+        {
+            var e = new CHandle<CDynamicProp>(raw).Value;
+            return e is { IsValid: true } ? e : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>Extra rule for the !3p command (KZ: not during a timed run). Styles that force the camera ignore it.</summary>
     public static Func<CCSPlayerController, bool> Allowed { get; set; } = _ => true;
@@ -76,7 +92,13 @@ public static class ThirdPerson
             return;
         }
 
-        if (Cameras[c.Slot] is { IsValid: true }) return;
+        if (Cam(c.Slot) != null) return;
+        if (Cameras[c.Slot] != 0)
+        {
+            Cameras[c.Slot] = 0; // removed by the round restart
+            _active = Math.Max(0, _active - 1);
+        }
+
         var cam = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic");
         if (cam == null) return;
         cam.Spawnflags = 256; // no collisions
@@ -87,7 +109,7 @@ public static class ThirdPerson
         cam.RenderMode = RenderMode_t.kRenderTransAlpha;
         cam.Render = Color.FromArgb(0, 255, 255, 255);
         Utilities.SetStateChanged(cam, "CBaseModelEntity", "m_clrRender");
-        Cameras[c.Slot] = cam;
+        Cameras[c.Slot] = cam.EntityHandle.Raw;
         _active++;
         Place(c, pawn!, cam);
         SetView(pawn!, cam.EntityHandle.Raw);
@@ -95,14 +117,15 @@ public static class ThirdPerson
 
     private static void Remove(int slot)
     {
-        var cam = Cameras[slot];
-        if (cam == null) return;
-        Cameras[slot] = null;
+        var raw = Cameras[slot];
+        if (raw == 0) return;
+        var cam = Cam(slot);
+        Cameras[slot] = 0;
         _active = Math.Max(0, _active - 1);
         HiddenView[slot] = 0;
-        var pawn = Players.Get(slot).Controller?.PlayerPawn.Value;
-        if (pawn is { IsValid: true } && pawn.CameraServices is { } cs && cs.ViewEntity.Raw == cam.EntityHandle.Raw) SetView(pawn, uint.MaxValue);
-        try { if (cam.IsValid) cam.Remove(); }
+        var pawn = Utilities.GetPlayerFromSlot(slot)?.PlayerPawn.Value;
+        if (pawn is { IsValid: true } && pawn.CameraServices is { } cs && cs.ViewEntity.Raw == raw) SetView(pawn, uint.MaxValue);
+        try { cam?.Remove(); }
         catch { /* gone with the map */ }
     }
 
@@ -132,18 +155,28 @@ public static class ThirdPerson
         if (_active == 0) return;
         for (var slot = 0; slot < Slots; slot++)
         {
-            var cam = Cameras[slot];
-            if (cam == null) continue;
-            var c = Players.Get(slot).Controller;
+            if (Cameras[slot] == 0) continue;
+            var c = Utilities.GetPlayerFromSlot(slot);
             var pawn = c?.PlayerPawn.Value;
-            if (c is not { IsValid: true } || pawn is not { IsValid: true } || pawn.LifeState != (byte)LifeState_t.LIFE_ALIVE || !cam.IsValid)
+            if (c is not { IsValid: true } || pawn is not { IsValid: true } || pawn.LifeState != (byte)LifeState_t.LIFE_ALIVE)
             {
                 Remove(slot);
                 continue;
             }
 
+            // The round restart removes the camera: make a new one (the reasons still hold).
+            var cam = Cam(slot);
+            if (cam == null)
+            {
+                Cameras[slot] = 0;
+                _active = Math.Max(0, _active - 1);
+                if (pawn.CameraServices is { } stale && stale.ViewEntity.Raw != uint.MaxValue) SetView(pawn, uint.MaxValue);
+                Update(c);
+                continue;
+            }
+
             Place(c, pawn, cam);
-            if (pawn.CameraServices is { } cs && cs.ViewEntity.Raw != cam.EntityHandle.Raw) SetView(pawn, cam.EntityHandle.Raw);
+            if (pawn.CameraServices is { } cs && cs.ViewEntity.Raw != Cameras[slot]) SetView(pawn, Cameras[slot]);
         }
     }
 
@@ -186,9 +219,10 @@ public static class ThirdPerson
         if (_active == 0) return;
         for (var slot = 0; slot < Slots; slot++)
         {
-            if (Cameras[slot] is not { } cam) continue;
-            var pawn = Players.Get(slot).Controller?.PlayerPawn.Value;
-            if (pawn is not { IsValid: true } || pawn.CameraServices is not { } cs || cs.ViewEntity.Raw != cam.EntityHandle.Raw) continue;
+            var raw = Cameras[slot];
+            if (raw == 0) continue;
+            var pawn = Utilities.GetPlayerFromSlot(slot)?.PlayerPawn.Value;
+            if (pawn is not { IsValid: true } || pawn.CameraServices is not { } cs || cs.ViewEntity.Raw != raw) continue;
             HiddenView[slot] = cs.ViewEntity.Raw;
             cs.ViewEntity.Raw = uint.MaxValue;
         }
@@ -203,7 +237,7 @@ public static class ThirdPerson
             var raw = HiddenView[slot];
             if (raw == 0) continue;
             HiddenView[slot] = 0;
-            var pawn = Players.Get(slot).Controller?.PlayerPawn.Value;
+            var pawn = Utilities.GetPlayerFromSlot(slot)?.PlayerPawn.Value;
             if (pawn is { IsValid: true } && pawn.CameraServices is { } cs) cs.ViewEntity.Raw = raw;
         }
     }

@@ -408,13 +408,15 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 Every command of the plugin (183 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
-<details><summary><b>Admin</b> (60)</summary>
+<details><summary><b>Admin</b> (64)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
+| `!addadmin` |  | Root | &lt;steamid64\|#userid\|name&gt; &lt;level1\|level2\|level3\|lead\|root\|#group\|@flag&gt; [name] - add or change an admin in admins.json (reloads admins) |
 | `!addban` |  | Level 3 | &lt;minutes\|0&gt; &lt;steamid&gt; [reason] |
 | `!admin` | !adminmenu | Level 1 | Open the admin menu |
 | `!adminlevels` |  | Level 1 | the SWBS admin tiers and what each can do |
+| `!adminlist` |  | Root | the admins in admins.json |
 | `!adminlog` |  | Level 2 | [lines] [filter] - recent admin activity (console) |
 | `!admins` |  | Everyone | List online admins |
 | `!armor` |  | Level 3 | Set player armour: !armor &lt;target&gt; &lt;amount&gt; [helmet 0/1] |
@@ -449,6 +451,8 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 | `!psay` |  | Level 1 | &lt;player&gt; &lt;message&gt; - private message |
 | `!rcon` |  | Root | &lt;args&gt; - run a server command |
 | `!reloadadmins` |  | Level 2 | reload CSS admins, groups and overrides |
+| `!reloadconfig` | !reloadplugin | Config | re-read this plugin's config, language files and the admin files |
+| `!removeadmin` | !deladmin | Root | &lt;steamid64\|#userid\|name&gt; - remove an admin from admins.json |
 | `!rename` |  | Level 1 | &lt;#userid\|name&gt; &lt;new name&gt; |
 | `!respawn` |  | Level 1 | &lt;#steamid\|#userid\|name&gt; - respawn a dead player |
 | `!rr` | !restartround | Level 3 | Restart the round (mp_restartgame 1) |
@@ -515,7 +519,7 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (29)</summary>
+<details><summary><b>Extras</b> (30)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -535,6 +539,7 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 | `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
 | `!3p` | !thirdperson, !camera | Level 1 | third person camera on or off, to look at player models, hats and store effects (`ThirdPerson.Command`: admin by default) |
+| `!menutest` |  | Everyone | show a sample world menu and say whether it could be drawn |
 | `!menustyle` | !menutheme, !menusettings | Everyone | [world\|center] - your menu style, theme, position and size |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!nextmap` |  | Everyone | show the next map |
