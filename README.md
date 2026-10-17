@@ -135,7 +135,7 @@ Every menu in the plugin (warden, admin, store, LR, days, games, zones, …) wor
 | `!games` | Warden games | Warden |
 | `!lr` | Last request | Last prisoner alive |
 | `!store` | Store, points and player extras | Everyone |
-| `!menustyle` | Your menu look: world panel or classic, theme, position, size | Everyone |
+| `!menustyle` | Your menu look: HUD panel, world panel or classic, theme, position, size | Everyone |
 | `!admin` | Admin menu | Admins |
 | `!zm` (`!zones`) | Zone manager, [see below](#zone-manager) | Lead / root |
 | `!celldoors_edit` | Cell door editor | Lead / root |
@@ -167,11 +167,28 @@ open. The keys are the same.
 Players whose style was saved before this version get the world panel again once. Anyone who then picks Classic keeps
 it.
 
+**HUD menus (Panorama)**
+
+The best-looking style is the **HUD panel**: a real game UI panel on your screen, drawn by CS2's `custom_hud_layout`.
+It shows a solid dark card with an accent bar, tabs, rows with values on the right and a details pane, in the server's
+theme. It works the same alive, dead or spectating. It needs two files in the SWBS Workshop pack, so it is off until
+the pack has them:
+
+1. Copy the `panorama` folder from `src/Swbs.Common/Workshop/` into the pack's content folder, so you get
+   `content/csgo_addons/<pack>/panorama/layout/custom_game/swbs_menu.xml` and
+   `content/csgo_addons/<pack>/panorama/styles/custom_game/swbs_menu.css`.
+2. Compile them with the CS2 Workshop Tools (the same way as the pack's models and sounds) and upload the pack.
+3. Restart the server so MultiAddonManager mounts the new pack. Players download it when they join.
+4. Set `"Panorama": true` in the `WorldMenu` config section, then `!reloadconfig`.
+
+From then on, players who have not picked a style get the HUD panel. `!menustyle hud`, `!menustyle world` and
+`!menustyle center` switch directly. If a HUD menu cannot be shown, the classic menu takes over and `!menutest` says why.
+
 `!menustyle` (`!menutheme`, `!menusettings`) sets your own look, and it is saved:
 
 | Setting | Choices |
 |---|---|
-| Style | World panel, Classic (centre). `!menustyle world` / `!menustyle center` switch directly. |
+| Style | HUD panel (when the server has it), World panel, Classic (centre). `!menustyle hud` / `world` / `center` switch directly. |
 | Theme | SWBS Gold, Crimson, Azure, Emerald, Violet, Ember, Coop, Neon, Mono (`!menutheme azure`). By default each server uses its mode's theme: DM crimson, Surf and Bhop azure, KZ and Course emerald, Jailbreak ember, 1v1 violet, the others gold. |
 | Position | Left, Centre, Right |
 | Size | Small, Normal, Large |
@@ -180,7 +197,8 @@ Server owners set the defaults in the `WorldMenu` config section:
 
 - `Enabled`, `DefaultStyle` (`world`), `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
 - `Spectators`: the world panel for players who spectate in first person or with the free camera (default on).
-- `OpenDelay`: seconds before a new panel is created (0.1). A chat command and a burst of new entities in the same tick
+- `Panorama` (HUD panel on, see above) and `PanoramaLayout` (the layout file in the pack).
+- `OpenDelay`: seconds before a new panel is created (0.2). A chat command and a burst of new entities in the same tick
   can stall the client's connection.
 - Font: `FontName` and `FontSize`.
 - Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
@@ -547,7 +565,7 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
 | `!3p` | !thirdperson, !camera | Level 1 | third person camera on or off, to look at player models, hats and store effects (`ThirdPerson.Command`: admin by default; `ThirdPerson.Entity`: `point_camera`, or `prop_dynamic` for the older camera) |
 | `!menutest` |  | Everyone | show a sample world menu and say whether it could be drawn |
-| `!menustyle` | !menutheme, !menusettings | Everyone | [world\|center] - your menu style, theme, position and size |
+| `!menustyle` | !menutheme, !menusettings | Everyone | [hud\|world\|center] - your menu style, theme, position and size |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!nextmap` |  | Everyone | show the next map |
 | `!nominate` | !nom | Everyone | [map] - put a map on the next map vote |

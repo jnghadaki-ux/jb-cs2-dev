@@ -8,10 +8,10 @@ namespace Swbs.Common;
 
 /// <summary>
 /// World menus for every SWBS server: the game mode's menus (help, admin, store, guns, zones, votes ...) are drawn as a
-/// themed panel in front of the player instead of the centre-screen HTML. The menu system itself (items, numbers,
-/// W/S/E/R, pages) is unchanged; only the drawing is. Dead players, spectators and anyone who prefers it get the classic
-/// centre menu. Players choose their style, theme, position and size with !menustyle (changes preview live and are kept
-/// with Save); !menutest shows a sample panel and says what happened.
+/// themed panel instead of the centre-screen HTML: the Panorama HUD panel when the server has it (WorldMenu.Panorama),
+/// else a panel in front of the player. The menu system itself (items, numbers, W/S/E/R, pages) is unchanged; only the
+/// drawing is. Anyone who prefers it gets the classic centre menu. Players choose their style, theme, position and size
+/// with !menustyle (changes preview live and are kept with Save); !menutest shows a sample menu and says what happened.
 /// </summary>
 public sealed class WorldMenuModule : SwbsModule
 {
@@ -39,6 +39,8 @@ public sealed class WorldMenuModule : SwbsModule
         WorldMenuSettingsHolder.Current = Cfg;
         WorldMenuRenderer.Spectators = Cfg.Spectators;
         WorldMenuRenderer.LogError = ex => Logger.LogWarning(ex, "[WorldMenu] a world menu could not be drawn (the classic menu is shown instead)");
+        PanoramaMenuRenderer.LayoutPath = Cfg.PanoramaLayout;
+        PanoramaMenuRenderer.LogError = ex => Logger.LogWarning(ex, "[WorldMenu] the HUD menu could not be drawn (the classic menu is shown instead)");
         _autoTheme = WorldMenuThemes.ForPlugin(Plugin.ModuleName);
         Plugin.RegisterListener<Listeners.CheckTransmit>(WorldMenuRenderer.FilterTransmit);
         Plugin.RegisterListener<Listeners.OnTick>(WorldMenuRenderer.Tick);
@@ -49,11 +51,23 @@ public sealed class WorldMenuModule : SwbsModule
     public override void OnUnload(bool hotReload)
     {
         WorldMenuRenderer.HideAll();
+        for (var i = 0; i < 65; i++) PanoramaMenuRenderer.Hide(i);
         WorldMenuRenderer.LogError = null;
+        PanoramaMenuRenderer.LogError = null;
         if (ReferenceEquals(Instance, this)) Instance = null;
     }
 
-    public override void OnMapEnd() => WorldMenuRenderer.Forget();
+    public override void OnMapStart(string mapName)
+    {
+        // The HUD layout is made early, so players' clients have it loaded before the first menu opens.
+        if (Cfg.Panorama) Plugin.AddTimer(1f, () => PanoramaMenuRenderer.Ensure());
+    }
+
+    public override void OnMapEnd()
+    {
+        WorldMenuRenderer.Forget();
+        PanoramaMenuRenderer.Forget();
+    }
 
     public override void OnPlayerConnected(SwbsPlayer player)
     {
@@ -63,7 +77,7 @@ public sealed class WorldMenuModule : SwbsModule
         var saved = Storage.Get<WorldMenuPrefs>(Ns, key) ?? new WorldMenuPrefs { Version = WorldMenuPrefs.CurrentVersion };
         if (saved.Version < WorldMenuPrefs.CurrentVersion)
         {
-            // Older settings: the style goes back to the server default (the world panel); theme, position and size stay.
+            // Older settings: the style goes back to the server default; theme, position and size stay.
             saved.Style = null;
             saved.Version = WorldMenuPrefs.CurrentVersion;
             Storage.Set(Ns, key, saved);
@@ -72,17 +86,21 @@ public sealed class WorldMenuModule : SwbsModule
         _saved[player.Slot] = saved;
         _draft[player.Slot] = null;
         _toldFailure[player.Slot] = false;
+        PanoramaMenuRenderer.Reset(c);
     }
 
     public override void OnPlayerDisconnect(SwbsPlayer player)
     {
         WorldMenuRenderer.Hide(player.Slot);
+        PanoramaMenuRenderer.Hide(player.Slot);
+        PanoramaMenuRenderer.Clear(player.Slot);
         if (player.Slot is < 0 or >= 65) return;
         _saved[player.Slot] = null;
         _draft[player.Slot] = null;
     }
 
-    // The menu cores re-draw on the next tick: from the spectator view, or as the centre menu in views it cannot follow.
+    // World panels are re-drawn on the next tick from the spectator view (or as the centre menu in views they cannot
+    // follow). The HUD panel stays: it works the same for the dead.
     public override void OnPlayerDeath(SwbsPlayer victim, SwbsPlayer? attacker, EventPlayerDeath ev) => WorldMenuRenderer.Hide(victim.Slot);
 
     // ---- preferences (the draft while !menustyle is open, else the saved ones)
@@ -106,6 +124,7 @@ public sealed class WorldMenuModule : SwbsModule
     {
         if (_draft[c.Slot] is not { } d) return;
         d.Version = WorldMenuPrefs.CurrentVersion;
+        d.Style = NullIfDefault(d.Style);
         _saved[c.Slot] = d;
         _draft[c.Slot] = null;
         if (c.SteamID != 0) Storage.Set(Ns, c.SteamID.ToString(), d);
@@ -113,7 +132,26 @@ public sealed class WorldMenuModule : SwbsModule
 
     private void Discard(CCSPlayerController c) => _draft[c.Slot] = null;
 
-    internal string StyleOf(CCSPlayerController c) => Norm(Prefs(c).Style, Cfg.DefaultStyle, "world", "center");
+    /// <summary>The styles this server offers: the HUD panel only when the Workshop pack has it (WorldMenu.Panorama).</summary>
+    private string[] Styles => Cfg.Panorama ? PanoramaStyles : WorldStyles;
+
+    private static readonly string[] PanoramaStyles = { "panorama", "world", "center" };
+    private static readonly string[] WorldStyles = { "world", "center" };
+
+    /// <summary>The style of players who did not pick one ("world" means the HUD panel when the server has it).</summary>
+    internal string DefaultStyle
+    {
+        get
+        {
+            var d = (Cfg.DefaultStyle ?? "").Trim().ToLowerInvariant();
+            if (d is "center" or "centre" or "classic") return "center";
+            return Cfg.Panorama && d is "world" or "panorama" or "auto" or "" ? "panorama" : "world";
+        }
+    }
+
+    private string? NullIfDefault(string? style) => style == null || style == DefaultStyle ? null : style;
+
+    internal string StyleOf(CCSPlayerController c) => Norm(Prefs(c).Style, DefaultStyle, Styles);
     internal string ThemeOf(CCSPlayerController c)
     {
         var t = Prefs(c).Theme ?? Cfg.DefaultTheme;
@@ -133,7 +171,6 @@ public sealed class WorldMenuModule : SwbsModule
 
     internal static float SizeScale(string size) => size switch { "small" => 0.85f, "large" => 1.2f, _ => 1f };
 
-    private static readonly string[] Styles = { "world", "center" };
     private static readonly string[] Positions = { "left", "center", "right" };
     private static readonly string[] Sizes = { "small", "normal", "large" };
 
@@ -143,26 +180,33 @@ public sealed class WorldMenuModule : SwbsModule
         return values[((i + step) % values.Length + values.Length) % values.Length];
     }
 
-    /// <summary>The first time a world menu cannot be drawn for a living player, say so (the classic menu is shown).</summary>
-    internal void TellFailure(CCSPlayerController c)
+    /// <summary>The first time a menu panel cannot be drawn for a player, say so (the classic menu is shown).</summary>
+    internal void TellFailure(CCSPlayerController c, string? error)
     {
-        if (c.Slot is < 0 or >= 65 || _toldFailure[c.Slot] || WorldMenuRenderer.LastError == null) return;
+        if (c.Slot is < 0 or >= 65 || _toldFailure[c.Slot] || error == null) return;
         _toldFailure[c.Slot] = true;
-        Chat.Tell(c, "worldmenu.failed", WorldMenuRenderer.LastError);
+        Chat.Tell(c, "worldmenu.failed", error);
     }
 
     // ---- !menustyle
 
-    [ConsoleCommand("css_menustyle", "sm_menustyle [world|center] - your menu style, theme, position and size")]
+    [ConsoleCommand("css_menustyle", "sm_menustyle [hud|world|center] - your menu style, theme, position and size")]
     [ConsoleCommand("css_menutheme", "sm_menutheme [theme] - your menu style, theme, position and size")]
     [ConsoleCommand("css_menusettings", "sm_menusettings - your menu style, theme, position and size")]
     public void CmdMenuStyle(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller == null || !caller.IsValid || caller.IsBot) return;
         var arg = info.ArgCount > 1 ? info.GetArg(1).Trim().ToLowerInvariant() : "";
-        if (arg is "world" or "center" or "centre" or "classic")
+        if (arg is "hud" or "panorama" or "world" or "center" or "centre" or "classic")
         {
-            Draft(caller).Style = arg == "world" ? "world" : "center";
+            var want = arg switch { "hud" or "panorama" => "panorama", "world" => "world", _ => "center" };
+            if (!Styles.Contains(want))
+            {
+                Chat.Tell(caller, "worldmenu.no_panorama");
+                return;
+            }
+
+            Draft(caller).Style = want;
             SaveDraft(caller);
             Chat.Tell(caller, "worldmenu.style_set", Lang.T("worldmenu.style." + StyleOf(caller)));
             return;
@@ -190,7 +234,7 @@ public sealed class WorldMenuModule : SwbsModule
     {
         var theme = WorldMenuThemes.Get(ThemeOf(c));
         var style = StyleOf(c);
-        var world = style == "world";
+        var world = style != "center";
         var dirty = Dirty(c);
         var menu = new SwbsMenu(Lang.T("worldmenu.title"))
         {
@@ -215,7 +259,7 @@ public sealed class WorldMenuModule : SwbsModule
         }
 
         Setting(0, Lang.T("worldmenu.item.style"), Lang.T("worldmenu.style." + style),
-            (p, d) => Draft(p).Style = Cycle(Styles, StyleOf(p), d), true,
+            (p, d) => Draft(p).Style = NullIfDefault(Cycle(Styles, StyleOf(p), d)), true,
             new WorldMenuDetails { Title = Lang.T("worldmenu.item.style"), Body = Lang.T("worldmenu.help.style"), Actions = Lang.T("worldmenu.help.keys") });
         Setting(1, Lang.T("worldmenu.item.theme"), theme.Name,
             (p, d) => Draft(p).Theme = WorldMenuThemes.Cycle(ThemeOf(p), d).Key, true,
@@ -283,9 +327,11 @@ public sealed class WorldMenuModule : SwbsModule
         {
             if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } p) return;
             var alive = p.PlayerPawn.Value is { IsValid: true } pawn && pawn.LifeState == (byte)LifeState_t.LIFE_ALIVE;
-            var layers = WorldMenuRenderer.LayerCount(slot);
-            Chat.Tell(p, "worldmenu.test.result", Lang.T("worldmenu.style." + StyleOf(p)), Cfg.Follow, alive ? "yes" : "no", layers,
-                WorldMenuRenderer.LastError ?? "-");
+            var hud = StyleOf(p) == "panorama";
+            Chat.Tell(p, "worldmenu.test.result", Lang.T("worldmenu.style." + StyleOf(p)),
+                hud ? (PanoramaMenuRenderer.HasLayout ? "hud layout" : "no hud layout") : Cfg.Follow, alive ? "yes" : "no",
+                hud ? (PanoramaMenuRenderer.IsOpen(slot) ? 1 : 0) : WorldMenuRenderer.LayerCount(slot),
+                (hud ? PanoramaMenuRenderer.LastError : WorldMenuRenderer.LastError) ?? "-");
         });
     }
 
@@ -314,34 +360,47 @@ public sealed class WorldMenuModule : SwbsModule
     }
 }
 
-/// <summary>What the menu cores call: draw a menu in the world when the player wants it, else report false.</summary>
+/// <summary>What the menu cores call: draw a menu as a panel (HUD or world) when the player wants it, else report false.</summary>
 public static class WorldMenus
 {
-    /// <summary>The player has world menus on (the module is loaded and they did not pick the centre menu).</summary>
+    /// <summary>The player has panel menus on (the module is loaded and they did not pick the centre menu).</summary>
     public static bool Wants(CCSPlayerController? c) =>
-        c is { IsValid: true, IsBot: false } && WorldMenuModule.Instance is { } m && m.StyleOf(c) == "world";
+        c is { IsValid: true, IsBot: false } && WorldMenuModule.Instance is { } m && m.StyleOf(c) != "center";
 
-    /// <summary>Draw (or update) the menu. False: not possible right now (dead, spectating ...) - draw the centre menu.</summary>
+    /// <summary>Draw (or update) the menu. False: not possible right now - draw the centre menu.</summary>
     public static bool Draw(CCSPlayerController c, WorldMenuView view)
     {
         var m = WorldMenuModule.Instance;
         if (m == null || !Wants(c)) return false;
         var s = m.Cfg;
         if (!m.DetailsOf(c)) view.Details = null;
+        if (m.StyleOf(c) == "panorama")
+        {
+            if (WorldMenuRenderer.IsOpen(c.Slot)) WorldMenuRenderer.Hide(c.Slot);
+            var options = new PanoramaMenuModel.Options(m.ThemeOf(c), m.PositionOf(c), m.SizeOf(c), m.DetailsOf(c));
+            var shown = PanoramaMenuRenderer.Show(c, view, options, s.OpenDelay);
+            if (!shown) m.TellFailure(c, PanoramaMenuRenderer.LastError);
+            return shown;
+        }
+
+        if (PanoramaMenuRenderer.IsOpen(c.Slot)) PanoramaMenuRenderer.Hide(c.Slot);
         var theme = WorldMenuThemes.Get(m.ThemeOf(c));
         var pulse = s.Animations && s.PulseSeconds > 0 && (int)(Server.CurrentTime / s.PulseSeconds) % 2 == 1;
         var panel = WorldMenuLayout.Build(view, theme, s, pulse);
         var ok = WorldMenuRenderer.Show(c, panel, s, m.PositionOf(c), WorldMenuModule.SizeScale(m.SizeOf(c)));
-        if (!ok) m.TellFailure(c);
+        if (!ok) m.TellFailure(c, WorldMenuRenderer.LastError);
         return ok;
     }
 
     public static void Hide(CCSPlayerController? c)
     {
-        if (c != null && c.IsValid) WorldMenuRenderer.Hide(c.Slot);
+        if (c == null || !c.IsValid) return;
+        WorldMenuRenderer.Hide(c.Slot);
+        PanoramaMenuRenderer.Hide(c.Slot);
     }
 
-    public static bool IsOpen(CCSPlayerController? c) => c != null && c.IsValid && WorldMenuRenderer.IsOpen(c.Slot);
+    public static bool IsOpen(CCSPlayerController? c) =>
+        c != null && c.IsValid && (WorldMenuRenderer.IsOpen(c.Slot) || PanoramaMenuRenderer.IsOpen(c.Slot));
 
     /// <summary>Navigation feedback sound for world menus ("move", "select", "open").</summary>
     public static void Feedback(CCSPlayerController c, string what)
