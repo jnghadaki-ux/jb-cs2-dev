@@ -36,6 +36,7 @@ public static class ThirdPerson
     private static readonly HashSet<string>?[] Reasons = new HashSet<string>?[Slots];
     /// <summary>Camera entity handles (never stored entity objects: the round restart removes the camera, and touching a removed entity crashes the server).</summary>
     private static readonly uint[] Cameras = new uint[Slots];
+    private static readonly float[] CreatedAt = new float[Slots];
     private static readonly uint[] HiddenView = new uint[Slots];
     private static int _active;
 
@@ -93,6 +94,7 @@ public static class ThirdPerson
         }
 
         if (Cam(c.Slot) != null) return;
+        if (Cameras[c.Slot] != 0 && Server.CurrentTime - CreatedAt[c.Slot] < 1f) return; // just created, listed next frame
         if (Cameras[c.Slot] != 0)
         {
             Cameras[c.Slot] = 0; // removed by the round restart
@@ -110,6 +112,7 @@ public static class ThirdPerson
         cam.Render = Color.FromArgb(0, 255, 255, 255);
         Utilities.SetStateChanged(cam, "CBaseModelEntity", "m_clrRender");
         Cameras[c.Slot] = cam.EntityHandle.Raw;
+        CreatedAt[c.Slot] = Server.CurrentTime;
         _active++;
         Place(c, pawn!, cam);
         SetView(pawn!, cam.EntityHandle.Raw);
@@ -166,6 +169,8 @@ public static class ThirdPerson
 
             // The round restart removes the camera: make a new one (the reasons still hold).
             var cam = Cam(slot);
+            // Just created: the entity system lists it a frame later.
+            if (cam == null && Server.CurrentTime - CreatedAt[slot] < 1f) continue;
             if (cam == null)
             {
                 Cameras[slot] = 0;
