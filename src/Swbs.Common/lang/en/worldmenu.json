@@ -24,7 +24,7 @@
   "worldmenu.size.large": "Large",
   "worldmenu.help.keys": "A/D change · W/S move",
   "worldmenu.help.save_keys": "E select · R close",
-  "worldmenu.help.style": "World panel: menus float in front of you. Classic: the centre-screen menu. Dead players always get the classic one.",
+  "worldmenu.help.style": "World panel: menus float in front of you, also while you spectate in first person or fly the free camera. Classic: the centre-screen menu.",
   "worldmenu.help.theme": "The colours of your menus. Each server starts with its own theme.",
   "worldmenu.help.themes": "Themes",
   "worldmenu.help.position": "Where the panel sits: left of the crosshair, in the middle or on the right.",

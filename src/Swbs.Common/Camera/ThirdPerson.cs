@@ -21,14 +21,21 @@ public sealed class ThirdPersonConfig
 
     /// <summary>Pull the camera in front of walls instead of looking through them.</summary>
     public bool Collision { get; set; } = true;
+
+    /// <summary>
+    /// The camera entity: "point_camera" (no model at all) or "prop_dynamic" (an empty prop shrunk to nothing, the older
+    /// way; shrinking its skeleton has been seen to make players turn invisible).
+    /// </summary>
+    public string Entity { get; set; } = "point_camera";
 }
 
 /// <summary>
-/// A third person camera that works on current CS2 (the thirdperson console command is cheat-protected): an invisible,
-/// model-less prop_dynamic follows behind the player every frame and is set as their view entity (re-asserted every
-/// frame, since the game resets it on spawn and on some state changes). During the server's entity think the view entity
-/// is cleared, so shots and +use still come from the player's eyes, not from the camera. Several reasons can hold the
-/// camera on (the !3p command, the Third Person style ...); it stays until all are gone.
+/// A third person camera that works on current CS2 (the thirdperson console command is cheat-protected): a model-less
+/// point_camera follows behind the player every frame and is set as their view entity (re-asserted every frame, since the
+/// game resets it on spawn and on some state changes). Only its owner receives it (<see cref="FilterTransmit"/>).
+/// During the server's entity think the view entity is cleared, so shots and +use still come from the player's eyes, not
+/// from the camera. Several reasons can hold the camera on (the !3p command, the Third Person style ...); it stays until
+/// all are gone.
 /// </summary>
 public static class ThirdPerson
 {
@@ -37,24 +44,34 @@ public static class ThirdPerson
     /// <summary>Camera entity handles (never stored entity objects: the round restart removes the camera, and touching a removed entity crashes the server).</summary>
     private static readonly uint[] Cameras = new uint[Slots];
     private static readonly float[] CreatedAt = new float[Slots];
+    /// <summary>The camera as created, used only until the entity system lists it (the first frame or so).</summary>
+    private static readonly CBaseEntity?[] Fresh = new CBaseEntity?[Slots];
+    private static readonly uint[] Indices = new uint[Slots];
     private static readonly uint[] HiddenView = new uint[Slots];
     private static int _active;
 
     public static ThirdPersonConfig Settings { get; set; } = new();
 
-    private static CDynamicProp? Cam(int slot)
+    private static CBaseEntity? Cam(int slot)
     {
         var raw = Cameras[slot];
         if (raw == 0) return null;
         try
         {
-            var e = new CHandle<CDynamicProp>(raw).Value;
-            return e is { IsValid: true } ? e : null;
+            var e = new CHandle<CBaseEntity>(raw).Value;
+            if (e is { IsValid: true })
+            {
+                Fresh[slot] = null;
+                return e;
+            }
         }
         catch
         {
-            return null;
+            // fall through
         }
+
+        // Never longer than a moment: a stored entity object goes stale when the round restart removes it.
+        return Fresh[slot] != null && Server.CurrentTime - CreatedAt[slot] < 1f ? Fresh[slot] : null;
     }
 
     /// <summary>Extra rule for the !3p command (KZ: not during a timed run). Styles that force the camera ignore it.</summary>
@@ -94,15 +111,40 @@ public static class ThirdPerson
         }
 
         if (Cam(c.Slot) != null) return;
-        if (Cameras[c.Slot] != 0 && Server.CurrentTime - CreatedAt[c.Slot] < 1f) return; // just created, listed next frame
         if (Cameras[c.Slot] != 0)
         {
             Cameras[c.Slot] = 0; // removed by the round restart
+            Fresh[c.Slot] = null;
             _active = Math.Max(0, _active - 1);
         }
 
-        var cam = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic");
+        var cam = CreateCamera();
         if (cam == null) return;
+        Cameras[c.Slot] = cam.EntityHandle.Raw;
+        Indices[c.Slot] = cam.Index;
+        Fresh[c.Slot] = cam;
+        CreatedAt[c.Slot] = Server.CurrentTime;
+        _active++;
+        Place(c, pawn!, cam);
+        SetView(pawn!, cam.EntityHandle.Raw);
+    }
+
+    private static CBaseEntity? CreateCamera()
+    {
+        // Only a null entity is a failure here: from then on the camera is looked up by its handle (Cam).
+        if (!Settings.Entity.Equals("prop_dynamic", StringComparison.OrdinalIgnoreCase))
+        {
+            var point = Utilities.CreateEntityByName<CPointCamera>("point_camera");
+            if (point != null && point.Handle != IntPtr.Zero)
+            {
+                point.FOV = 90f;
+                point.DispatchSpawn();
+                return point;
+            }
+        }
+
+        var cam = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic");
+        if (cam == null || cam.Handle == IntPtr.Zero) return null;
         cam.Spawnflags = 256; // no collisions
         cam.DispatchSpawn();
         var skeleton = cam.CBodyComponent?.SceneNode?.GetSkeletonInstance();
@@ -111,11 +153,7 @@ public static class ThirdPerson
         cam.RenderMode = RenderMode_t.kRenderTransAlpha;
         cam.Render = Color.FromArgb(0, 255, 255, 255);
         Utilities.SetStateChanged(cam, "CBaseModelEntity", "m_clrRender");
-        Cameras[c.Slot] = cam.EntityHandle.Raw;
-        CreatedAt[c.Slot] = Server.CurrentTime;
-        _active++;
-        Place(c, pawn!, cam);
-        SetView(pawn!, cam.EntityHandle.Raw);
+        return cam;
     }
 
     private static void Remove(int slot)
@@ -124,6 +162,7 @@ public static class ThirdPerson
         if (raw == 0) return;
         var cam = Cam(slot);
         Cameras[slot] = 0;
+        Fresh[slot] = null;
         _active = Math.Max(0, _active - 1);
         HiddenView[slot] = 0;
         var pawn = Utilities.GetPlayerFromSlot(slot)?.PlayerPawn.Value;
@@ -141,6 +180,7 @@ public static class ThirdPerson
     public static void Forget()
     {
         Array.Clear(Cameras);
+        Array.Clear(Fresh);
         Array.Clear(HiddenView);
         _active = 0;
     }
@@ -169,11 +209,10 @@ public static class ThirdPerson
 
             // The round restart removes the camera: make a new one (the reasons still hold).
             var cam = Cam(slot);
-            // Just created: the entity system lists it a frame later.
-            if (cam == null && Server.CurrentTime - CreatedAt[slot] < 1f) continue;
             if (cam == null)
             {
                 Cameras[slot] = 0;
+                Fresh[slot] = null;
                 _active = Math.Max(0, _active - 1);
                 if (pawn.CameraServices is { } stale && stale.ViewEntity.Raw != uint.MaxValue) SetView(pawn, uint.MaxValue);
                 Update(c);
@@ -185,7 +224,7 @@ public static class ThirdPerson
         }
     }
 
-    private static void Place(CCSPlayerController c, CCSPlayerPawn pawn, CDynamicProp cam)
+    private static void Place(CCSPlayerController c, CCSPlayerPawn pawn, CBaseEntity cam)
     {
         var o = pawn.AbsOrigin;
         if (o == null) return;
@@ -216,6 +255,23 @@ public static class ThirdPerson
 
         var v = pawn.AbsVelocity;
         cam.Teleport(want, new QAngle(angles.X, angles.Y, 0), new Vector(v.X, v.Y, v.Z));
+    }
+
+    /// <summary>CheckTransmit listener: a camera goes only to its owner (nobody else needs it, or sees an ERROR model).</summary>
+    public static void FilterTransmit(CCheckTransmitInfoList infoList)
+    {
+        if (_active == 0) return;
+        // Only cameras that still exist: a removed camera's index may already belong to another entity.
+        List<(int Slot, uint Index)>? cams = null;
+        for (var slot = 0; slot < Slots; slot++)
+            if (Cameras[slot] != 0 && Cam(slot) != null) (cams ??= new()).Add((slot, Indices[slot]));
+        if (cams == null) return;
+        foreach (var (info, viewer) in infoList)
+        {
+            var own = viewer is { IsValid: true } ? viewer.Slot : -1;
+            foreach (var (slot, index) in cams)
+                if (slot != own) info.TransmitEntities.Remove(index);
+        }
     }
 
     /// <summary>OnServerPreEntityThink: no view entity while the game runs player thinks (shots, +use from the eyes).</summary>
