@@ -21,27 +21,45 @@ public sealed class MapVoteConfig
     /// </summary>
     public List<string> Maps { get; set; } = new();
 
-    /// <summary>Share of human players that must type !rtv to start a map vote (0.6 = 60%).</summary>
+    /// <summary>
+    /// Share of the players that must type !rtv to start a map vote (0.6 = 60%). Only humans on a team count (spectators,
+    /// e.g. AFK players moved there, only when they voted themselves).
+    /// </summary>
     public double RtvRatio { get; set; } = 0.6;
+    /// <summary>At least this many !rtv votes (never more than there are players). 0 = only RtvRatio.</summary>
+    public int RtvMinVotes { get; set; } = 0;
+    /// <summary>Count spectators who did not vote too (the old behaviour: every connected human).</summary>
+    public bool RtvCountSpectators { get; set; } = false;
     /// <summary>Seconds after the map starts before !rtv is allowed.</summary>
     public int RtvDelaySeconds { get; set; } = 120;
     public int VoteSeconds { get; set; } = 20;
     /// <summary>Maps on the ballot (nominations first, the rest random from the pool).</summary>
     public int VoteOptions { get; set; } = 5;
     /// <summary>
-    /// The map only ever changes when the game ends. A won !rtv vote ends the game at the end of the current round (the
-    /// time limit is cut to now), so the change still happens on game end. Off = !rtv only picks the next map.
+    /// A won !rtv vote ends the map at the end of the current round (the time limit is cut to now; see
+    /// MapEndMaxWaitSeconds). Off = !rtv only picks the next map.
     /// </summary>
     public bool RtvEndsGame { get; set; } = true;
-    /// <summary>mp_timelimit set on every map start (minutes; a map normally lasts 30). 0 = keep the server's value.</summary>
+    /// <summary>
+    /// The map lasts this many minutes (mp_timelimit is set on every map start). When the time is up the map changes at the
+    /// end of the round, or after MapEndMaxWaitSeconds when the round does not end. 0 = keep the server's mp_timelimit and
+    /// let the game end the match by itself (an admin's !setmapend still ends the map).
+    /// </summary>
     public int MapTimeLimitMinutes { get; set; } = 30;
     /// <summary>
-    /// Seconds to wait for a map change before trying the next way to load it (a big Workshop map that is not on the server
-    /// yet downloads first, so this is generous).
+    /// When the time is up, wait at most this many seconds for the round to end before changing the map anyway (modes whose
+    /// rounds never end, a long last round). 0 = change as soon as the time is up.
     /// </summary>
-    public float ChangeCheckSeconds { get; set; } = 60f;
-    /// <summary>Seconds after the game ends (end-of-match scoreboard) before the next map loads.</summary>
+    public int MapEndMaxWaitSeconds { get; set; } = 120;
+    /// <summary>
+    /// Seconds to wait for a map change before trying the next way to load it (a Workshop map that is not on the server yet
+    /// downloads first; the last try repeats the first command).
+    /// </summary>
+    public float ChangeCheckSeconds { get; set; } = 25f;
+    /// <summary>Seconds of "Changing to ..." countdown at the end of the map (end-of-match scoreboard) before the next map loads.</summary>
     public float ChangeDelaySeconds { get; set; } = 8f;
+    /// <summary>Countdown seconds before an admin's !map / !changemap loads the map.</summary>
+    public int AdminChangeCountdownSeconds { get; set; } = 5;
     /// <summary>Start a map vote automatically this many minutes before mp_timelimit runs out (0 = off).</summary>
     public int EndVoteMinutesBefore { get; set; } = 3;
     /// <summary>The end-of-map vote offers "Extend" by this many minutes, at most MaxExtends times per map.</summary>
@@ -94,8 +112,24 @@ internal readonly record struct VoteMap(string Name, ulong WorkshopId)
 /// <summary>Map vote rules that need no engine (unit-tested).</summary>
 internal static class MapVoteRules
 {
-    /// <summary>Votes needed for !rtv: at least one, ratio of the humans rounded up.</summary>
-    public static int RtvNeeded(int humans, double ratio) => Math.Max(1, (int)Math.Ceiling(Math.Max(0, humans) * Math.Clamp(ratio, 0.01, 1.0)));
+    /// <summary>
+    /// Votes needed for !rtv: the ratio of the eligible players rounded up, at least one, at least
+    /// <paramref name="minVotes"/> but never more than there are players.
+    /// </summary>
+    public static int RtvNeeded(int players, double ratio, int minVotes = 0)
+    {
+        players = Math.Max(0, players);
+        var needed = (int)Math.Ceiling(players * Math.Clamp(ratio, 0.01, 1.0) - 1e-9);
+        needed = Math.Max(needed, Math.Min(Math.Max(0, minVotes), players));
+        return Math.Max(1, needed);
+    }
+
+    /// <summary>
+    /// Players !rtv counts: the humans on a team plus spectators who voted themselves (AFK players moved to spectators do
+    /// not hold the vote back); everyone when nobody is on a team.
+    /// </summary>
+    public static int RtvEligible(int onTeam, int spectatorVoters, int humans) =>
+        onTeam > 0 ? Math.Min(humans, onTeam + spectatorVoters) : Math.Max(0, humans);
 
     /// <summary>The winning option index (most votes; ties broken by <paramref name="pick"/>); -1 with no votes.</summary>
     public static int Winner(IReadOnlyCollection<int> votes, int options, Func<int, int> pick)
@@ -161,8 +195,10 @@ internal static class MapVoteRules
     }
 
     /// <summary>
-    /// Commands to load a map, in the order to try them: host_workshop_map &lt;id&gt; first for a Workshop map (then
-    /// ds_workshop_changelevel &lt;name&gt; when its bsp name is known); changelevel for a stock map.
+    /// Commands to load a map, in the order to try them: host_workshop_map &lt;id&gt; for a Workshop map (then
+    /// ds_workshop_changelevel &lt;name&gt; when its bsp name is known); changelevel for a stock map, ds_workshop_changelevel
+    /// for a map of the server's Workshop collection by name. With a single way the command is tried twice. Names that are
+    /// not plain map names are never put into a command.
     /// </summary>
     public static List<string> ChangeCommands(VoteMap m, string knownName, Func<string, bool> isStockMap)
     {
@@ -170,16 +206,49 @@ internal static class MapVoteRules
         if (m.WorkshopId != 0)
         {
             list.Add($"host_workshop_map {m.WorkshopId}");
-            if (knownName.Length > 0) list.Add($"ds_workshop_changelevel {knownName}");
+            if (IsMapName(knownName)) list.Add($"ds_workshop_changelevel {knownName}");
         }
-        else if (m.Name.Length > 0)
+        else if (IsMapName(m.Name))
         {
             if (isStockMap(m.Name)) list.Add($"changelevel {m.Name}");
             list.Add($"ds_workshop_changelevel {m.Name}");
         }
 
+        if (list.Count == 1) list.Add(list[0]);
         return list;
     }
+
+    /// <summary>A bsp name that is safe in a server command (letters, digits, _ - .).</summary>
+    public static bool IsMapName(string? name) =>
+        name is { Length: > 0 and <= 64 } && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.') && !ulong.TryParse(name, out _);
+
+    /// <summary>Seconds left: game start + mp_timelimit minutes - now; null without a time limit.</summary>
+    public static float? TimeLeft(float limitMinutes, float gameStart, float now) =>
+        limitMinutes > 0f ? gameStart + limitMinutes * 60f - now : null;
+
+    /// <summary>The mp_timelimit (minutes) that ends the map <paramref name="minutesFromNow"/> from now.</summary>
+    public static float TimeLimitFor(float elapsedSeconds, float minutesFromNow) =>
+        MathF.Max(0.01f, MathF.Max(0f, elapsedSeconds) / 60f + MathF.Max(0f, minutesFromNow));
+
+    /// <summary>Minutes for admin !setmapend: 0 (end of this round) to <paramref name="max"/>; null for a bad argument.</summary>
+    public static int? ParseMinutes(string? arg, int max = 600) =>
+        int.TryParse((arg ?? "").Trim(), out var n) && n >= 0 && n <= max ? n : null;
+
+    /// <summary>
+    /// Countdown before the next map loads at the end of the match: the wanted seconds, but done before the game's own
+    /// mp_match_restart_delay runs out (it would load the map group's next map instead).
+    /// </summary>
+    public static float ChangeDelay(float wanted, float restartDelay)
+    {
+        wanted = Math.Max(1f, wanted);
+        return restartDelay > 0f ? Math.Min(wanted, Math.Max(1f, restartDelay - 2f)) : wanted;
+    }
+
+    /// <summary>Time is up and the round did not end for <paramref name="maxWait"/> seconds: end the map anyway.</summary>
+    public static bool ForceEnd(float secondsSinceTimeUp, int maxWait) => secondsSinceTimeUp >= Math.Max(0, maxWait);
+
+    /// <summary>A cvar value in minutes ("45.5", never "45,5").</summary>
+    public static string Minutes(float minutes) => minutes.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Minutes for admin !extend: the argument (1-180), the default without one; null for a bad argument.</summary>
     public static int? ExtendBy(string? arg, int defaultMinutes)
@@ -199,25 +268,35 @@ public sealed class MapVoteModule : JbModule
 {
     private MapVoteConfig Cfg => Section<MapVoteConfig>("MapVote");
     private const string Ns = "mapvote";
+    private const string HudKey = "mapvote.change";
 
     public override string Name => "MapVote";
     public override int Order => 95;
     public override bool Enabled => Cfg.Enabled;
 
+    private enum Choice { Map, Extend, Stay }
+
     private readonly HashSet<int> _rtv = new();
     private readonly Dictionary<int, VoteMap> _nominations = new(); // slot -> map
     private readonly Dictionary<int, int> _votes = new();           // slot -> option
-    private List<VoteMap?> _ballot = new();                          // null = extend
+    private List<(Choice Kind, VoteMap Map)> _ballot = new();
     private bool _voting, _voted, _fromRtv;
     private VoteMap? _next;
     private bool _changing;
     private int _extends;
     private float _mapStart;
     private ulong _loadingId;
+    private int _mapSerial, _changeId;
+    /// <summary>An admin set the map end (!setmapend / !extend) or a won !rtv cut it: end the map even with MapTimeLimitMinutes 0.</summary>
+    private bool _endForced;
+    private float? _timeUpAt;
+    private float _retryEndAt;
     private CounterStrikeSharp.API.Modules.Timers.Timer? _voteTimer;
 
     public override void OnMapStart(string mapName)
     {
+        _mapSerial++;
+        _changeId++;
         // Learn the real name of the workshop map we asked for (shown in !maplist and the ballot from now on).
         if (_loadingId != 0)
         {
@@ -233,7 +312,9 @@ public sealed class MapVoteModule : JbModule
         _rtv.Clear();
         _nominations.Clear();
         _votes.Clear();
-        _voting = _voted = _fromRtv = _changing = false;
+        _voting = _voted = _fromRtv = _changing = _endForced = false;
+        _timeUpAt = null;
+        _retryEndAt = 0;
         if (Cfg.MapTimeLimitMinutes > 0) Plugin.AddTimer(1f, () => Server.ExecuteCommand($"mp_timelimit {Cfg.MapTimeLimitMinutes}"));
         _next = null;
         _extends = 0;
@@ -252,7 +333,7 @@ public sealed class MapVoteModule : JbModule
     public override void OnLoad(bool hotReload)
     {
         // _mapStart stays 0 until the first map start (no engine reads while the plugin loads).
-        Plugin.AddTimer(10f, CheckEndVote, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT); // runs on every map
+        Plugin.AddTimer(1f, Tick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT); // runs on every map
     }
 
     public override void OnPlayerDisconnect(JbPlayer player)
@@ -260,8 +341,12 @@ public sealed class MapVoteModule : JbModule
         _rtv.Remove(player.Slot);
         _nominations.Remove(player.Slot);
         _votes.Remove(player.Slot);
-        if (!_voting && !_voted && _rtv.Count > 0 && _rtv.Count >= RtvNeeded) StartVote(true);
+        // The players who wanted a change may now be enough.
+        if (!_voting && !_changing && _rtv.Count > 0 && _rtv.Count >= RtvNeeded) RockTheVote();
     }
+
+    /// <summary>Admin map actions go to the admin log (daily files, Discord) like the admin suite's own.</summary>
+    private static void AdminLog(CCSPlayerController? admin, string text) => Jb.Log.LogEvent(text, admin?.Jb(), null, LogType.Admin);
 
     // ================================================================= pool
 
@@ -312,8 +397,20 @@ public sealed class MapVoteModule : JbModule
         return partial.Count == 1 ? partial[0] : null;
     }
 
-    private int Humans => Players.Humans().Count();
-    private int RtvNeeded => MapVoteRules.RtvNeeded(Humans, Cfg.RtvRatio);
+
+    private int RtvPlayers
+    {
+        get
+        {
+            var humans = Players.Humans().ToList();
+            if (Cfg.RtvCountSpectators) return humans.Count;
+            var onTeam = humans.Count(c => c.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist);
+            var spectatorVoters = humans.Count(c => c.Team is not (CsTeam.Terrorist or CsTeam.CounterTerrorist) && _rtv.Contains(c.Slot));
+            return MapVoteRules.RtvEligible(onTeam, spectatorVoters, humans.Count);
+        }
+    }
+
+    private int RtvNeeded => MapVoteRules.RtvNeeded(RtvPlayers, Cfg.RtvRatio, Cfg.RtvMinVotes);
 
     // ================================================================= commands
 
@@ -325,13 +422,28 @@ public sealed class MapVoteModule : JbModule
     {
         if (caller == null || !caller.IsValid || caller.IsBot) return;
         if (Pool().Count == 0) { Chat.Tell(caller, "mapvote.no_maps"); return; }
+        if (_changing) { Chat.Tell(caller, "mapvote.change_pending"); return; }
         if (_voting) { Chat.Tell(caller, "mapvote.in_progress"); return; }
-        if (_voted) { Chat.Tell(caller, "mapvote.already_decided", _next is { } n ? Label(n) : Lang.T("mapvote.extend")); return; }
+        // The next map is known: !rtv can still end this map early (SourceMod's sm_rtv_postvoteaction 0).
+        if (_voted && (_next == null || !Cfg.RtvEndsGame)) { Chat.Tell(caller, "mapvote.already_decided", _next is { } n ? Label(n) : Lang.T("mapvote.extend")); return; }
         var wait = Cfg.RtvDelaySeconds - (Server.CurrentTime - _mapStart);
         if (wait > 0) { Chat.Tell(caller, "mapvote.rtv_wait", (int)Math.Ceiling(wait)); return; }
         if (!_rtv.Add(caller.Slot)) { Chat.Tell(caller, "mapvote.rtv_already", _rtv.Count, RtvNeeded); return; }
         Chat.TellAll("mapvote.rtv_added", Chat.Name(caller), _rtv.Count, RtvNeeded);
-        if (_rtv.Count >= RtvNeeded) StartVote(true);
+        if (_rtv.Count >= RtvNeeded) RockTheVote();
+    }
+
+    private void RockTheVote()
+    {
+        if (_voted && _next is { } next)
+        {
+            _rtv.Clear();
+            Chat.TellAll("mapvote.rtv_next", Label(next));
+            EndMapSoon();
+            return;
+        }
+
+        if (!_voted) StartVote(true);
     }
 
     [ConsoleCommand("css_nominate", "sm_nominate [map] - put a map on the next map vote")]
@@ -361,13 +473,18 @@ public sealed class MapVoteModule : JbModule
         menu.Open(caller);
     }
 
+    private int NominationLimit => Math.Clamp(Cfg.VoteOptions, 2, 6);
+
     private void Nominate(CCSPlayerController c, VoteMap m)
     {
         if (_voting || _voted) { Chat.Tell(c, "mapvote.nominate_closed"); return; }
         if (IsCurrentOrRecent(m)) { Chat.Tell(c, "mapvote.recent", Label(m)); return; }
         if (_nominations.Any(kv => kv.Key != c.Slot && kv.Value.Equals(m))) { Chat.Tell(c, "mapvote.already_nominated", Label(m)); return; }
+        var replaced = _nominations.TryGetValue(c.Slot, out var old);
+        if (!replaced && _nominations.Count >= NominationLimit) { Chat.Tell(c, "mapvote.nominations_full", NominationLimit); return; }
         _nominations[c.Slot] = m;
-        Chat.TellAll("mapvote.nominated", Chat.Name(c), Label(m));
+        if (replaced && !old.Equals(m)) Chat.TellAll("mapvote.nomination_changed", Chat.Name(c), Label(old), Label(m));
+        else Chat.TellAll("mapvote.nominated", Chat.Name(c), Label(m));
     }
 
     [ConsoleCommand("css_nextmap", "sm_nextmap - show the next map")]
@@ -383,7 +500,9 @@ public sealed class MapVoteModule : JbModule
     public void CmdTimeLeft(CCSPlayerController? caller, CommandInfo info)
     {
         var left = TimeLeft();
-        if (left == null) Chat.ReplyT(caller, info, "mapvote.no_timelimit");
+        if (_changing) Chat.ReplyT(caller, info, "mapvote.change_pending");
+        else if (left == null) Chat.ReplyT(caller, info, "mapvote.no_timelimit");
+        else if (left.Value <= 0f) Chat.ReplyT(caller, info, "mapvote.timeleft_round");
         else Chat.ReplyT(caller, info, "mapvote.timeleft", MapVoteRules.FormatTime(left.Value));
     }
 
@@ -410,7 +529,7 @@ public sealed class MapVoteModule : JbModule
         ShowBallot(caller);
     }
 
-    // ================================================================= !extend, !setnextmap (admin)
+    // ================================================================= !extend, !setmapend, !setnextmap (admin)
 
     // !extend is the warden's round extend on jailbreak (WardenTools): the map extend is !extendmap only.
     [ConsoleCommand("css_extendmap", "sm_extendmap [minutes] - (admin) extend the map")]
@@ -418,15 +537,34 @@ public sealed class MapVoteModule : JbModule
     {
         if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
         var minutes = MapVoteRules.ExtendBy(info.ArgCount >= 2 ? info.GetArg(1) : null, Cfg.ExtendMinutes);
-        if (minutes == null) { Chat.ReplyT(caller, info, "core.usage", "!extend [minutes]"); return; }
+        if (minutes == null) { Chat.ReplyT(caller, info, "core.usage", "!extendmap [minutes]"); return; }
         if (TimeLeft() == null) { Chat.ReplyT(caller, info, "mapvote.no_timelimit"); return; }
         if (_extends >= Cfg.MaxExtends) { Chat.ReplyT(caller, info, "mapvote.extend_max", Cfg.MaxExtends); return; }
         _extends++;
-        var limit = ConVar.Find("mp_timelimit")?.GetPrimitiveValue<float>() ?? 0f;
-        Server.ExecuteCommand($"mp_timelimit {(limit + minutes.Value).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
+        ExtendBy(minutes.Value);
         var who = caller?.PlayerName ?? "Console";
-        Jb.Log.LogEvent($"{who} extended the map by {minutes.Value} minutes", caller?.Jb(), null, LogType.Admin);
+        AdminLog(caller, $"{who} extended the map by {minutes.Value} minutes");
         Chat.TellAll("mapvote.extended_admin", who, minutes.Value);
+    }
+
+    [ConsoleCommand("css_setmapend", "sm_setmapend <minutes> - (admin) end the map this many minutes from now (0 = at the end of this round)")]
+    [ConsoleCommand("css_settimeleft", "sm_settimeleft <minutes> - (admin) end the map this many minutes from now")]
+    public void CmdSetMapEnd(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        var minutes = MapVoteRules.ParseMinutes(info.ArgCount >= 2 ? info.GetArg(1) : null);
+        if (minutes == null) { Chat.ReplyT(caller, info, "core.usage", "!setmapend <minutes, 0-600>"); return; }
+        var rules = Round.GameRules;
+        if (rules == null) return;
+        var limit = MapVoteRules.TimeLimitFor(Server.CurrentTime - rules.GameStartTime, minutes.Value);
+        Server.ExecuteCommand($"mp_timelimit {MapVoteRules.Minutes(limit)}");
+        _endForced = true;
+        _timeUpAt = null;
+        _retryEndAt = 0;
+        var who = caller?.PlayerName ?? "Console";
+        AdminLog(caller, $"{who} set the map to end in {minutes.Value} minutes");
+        if (minutes.Value == 0) Chat.TellAll("mapvote.mapend_round", who);
+        else Chat.TellAll("mapvote.mapend_set", who, minutes.Value);
     }
 
     [ConsoleCommand("css_setnextmap", "sm_setnextmap <map|workshop id|link> - (admin) set the next map")]
@@ -434,17 +572,35 @@ public sealed class MapVoteModule : JbModule
     {
         if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
         if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!setnextmap <map|workshop id>"); return; }
-        var m = Resolve(info.ArgString);
+        var m = Resolve(info.ArgString, false);
         if (m == null) { Chat.ReplyT(caller, info, "mapvote.not_found", info.ArgString.Trim()); return; }
-        // A running vote is cancelled: the admin's map is the next one, loaded when the game ends.
+        // A running vote is cancelled: the admin's map is the next one, loaded when the map ends.
         _voteTimer?.Kill();
         _voteTimer = null;
         _voting = false;
+        SetNext(m.Value);
+        var who = caller?.PlayerName ?? "Console";
+        AdminLog(caller, $"{who} set the next map to {Label(m.Value)}");
+        Chat.TellAll("mapvote.next_set", who, Label(m.Value));
+    }
+
+    /// <summary>The next map is decided: shown by !nextmap, set as nextlevel for a stock map, downloaded ahead for a Workshop map.</summary>
+    private void SetNext(VoteMap m)
+    {
         _voted = true;
         _next = m;
-        var who = caller?.PlayerName ?? "Console";
-        Jb.Log.LogEvent($"{who} set the next map to {Label(m.Value)}", caller?.Jb(), null, LogType.Admin);
-        Chat.TellAll("mapvote.next_set", who, Label(m.Value));
+        if (m.WorkshopId == 0 && MapVoteRules.IsMapName(m.Name) && Server.IsMapValid(m.Name)) Server.ExecuteCommand($"nextlevel {m.Name}");
+        else if (m.WorkshopId != 0 && Cfg.PreDownloadMaps && MultiAddonManager.Loaded) Server.ExecuteCommand($"mm_download_addon {m.WorkshopId}");
+    }
+
+    private void ExtendBy(int minutes)
+    {
+        var limit = ConVar.Find("mp_timelimit")?.GetPrimitiveValue<float>() ?? 0f;
+        // Time already up (waiting for the round to end): extend from now.
+        if (TimeLeft() is <= 0f && Round.GameRules is { } rules)
+            limit = MapVoteRules.TimeLimitFor(Server.CurrentTime - rules.GameStartTime, 0f);
+        Server.ExecuteCommand($"mp_timelimit {MapVoteRules.Minutes(limit + Math.Max(1, minutes))}");
+        _timeUpAt = null;
     }
 
     // ================================================================= Steam names, !mapsetup, !mapadd, !mapremove
@@ -705,12 +861,13 @@ public sealed class MapVoteModule : JbModule
         }
 
         Chat.TellAll("mapvote.startjb_map", who, Label(target.Value));
-        ChangeTo(target.Value);
+        ChangeTo(target.Value, Math.Max(1, Cfg.AdminChangeCountdownSeconds), caller);
     }
 
     private bool IsJailbreakMap(string map) =>
         Cfg.JailbreakMapPrefixes.Any(p => p.Length > 0 && map.StartsWith(p, StringComparison.OrdinalIgnoreCase))
         || Pool().Any(m => string.Equals(Label(m), map, StringComparison.OrdinalIgnoreCase));
+
 
     // ================================================================= vote
 
@@ -720,8 +877,8 @@ public sealed class MapVoteModule : JbModule
         {
             var limit = ConVar.Find("mp_timelimit")?.GetPrimitiveValue<float>() ?? 0f;
             var rules = Round.GameRules;
-            if (limit <= 0f || rules == null) return null;
-            return rules.GameStartTime + limit * 60f - Server.CurrentTime;
+            if (rules == null) return null;
+            return MapVoteRules.TimeLeft(limit, rules.GameStartTime, Server.CurrentTime);
         }
         catch
         {
@@ -729,7 +886,20 @@ public sealed class MapVoteModule : JbModule
         }
     }
 
+    private static bool Warmup
+    {
+        get
+        {
+            try { return Round.GameRules?.WarmupPeriod ?? false; }
+            catch { return false; }
+        }
+    }
+
+    /// <summary>The module itself ends the map when the time is up (else the game ends the match at a round end, if ever).</summary>
+    private bool EndsMapItself => Cfg.MapTimeLimitMinutes > 0 || _endForced;
+
     private DateTime _nextNameCheck = DateTime.MinValue;
+    private DateTime _nextNameScan = DateTime.MinValue;
 
     /// <summary>
     /// Every 10 s (also right after a mid-map plugin load, which gets no map start): look up maps that still show as
@@ -737,7 +907,8 @@ public sealed class MapVoteModule : JbModule
     /// </summary>
     private void NameCheck()
     {
-        if (!Cfg.FetchNamesFromSteam || _refreshing || DateTime.UtcNow < _nextNameCheck) return;
+        if (!Cfg.FetchNamesFromSteam || _refreshing || DateTime.UtcNow < _nextNameCheck || DateTime.UtcNow < _nextNameScan) return;
+        _nextNameScan = DateTime.UtcNow.AddSeconds(10);
         var collection = ulong.TryParse(Cfg.WorkshopCollectionId.Trim(), out var cid) ? cid : 0;
         var collectionMissing = collection != 0 && Storage.Get<List<ulong>>(Ns, "collection") == null;
         var unnamed = AllMaps().Any(m => m.WorkshopId != 0 && m.Name.Length == 0 && Storage.Get<string>(Ns, "title:" + m.WorkshopId) is not { Length: > 0 });
@@ -746,21 +917,51 @@ public sealed class MapVoteModule : JbModule
         RefreshFromSteam(null);
     }
 
-    private void CheckEndVote()
+    /// <summary>
+    /// Every second: the end-of-map vote EndVoteMinutesBefore the end, and the map end itself. mp_timelimit alone only ends
+    /// the match when a round ends (never on deathmatch or movement maps), so when the time is up the map changes at the end
+    /// of the round, or after MapEndMaxWaitSeconds.
+    /// </summary>
+    private void Tick()
     {
         NameCheck();
-        if (_voting || _voted || Cfg.EndVoteMinutesBefore <= 0 || Pool().Count == 0) return;
-        if (TimeLeft() is { } left && left <= Cfg.EndVoteMinutesBefore * 60f) StartVote(false);
+        if (_mapStart <= 0f) _mapStart = Server.CurrentTime; // loaded mid-map
+        if (_changing) return;
+        var left = TimeLeft();
+        if (left == null || Warmup) { _timeUpAt = null; return; }
+        if (!_voting && !_voted && Cfg.EndVoteMinutesBefore > 0 && left.Value <= Cfg.EndVoteMinutesBefore * 60f && Pool().Count > 0) StartVote(false);
+        if (left.Value > 0f || !EndsMapItself) { _timeUpAt = null; return; }
+        var now = Server.CurrentTime;
+        if (_timeUpAt == null)
+        {
+            _timeUpAt = now;
+            if (Cfg.MapEndMaxWaitSeconds > 0) Chat.TellAll("mapvote.time_up");
+        }
+
+        if (_voting || now < _retryEndAt) return;
+        if (MapVoteRules.ForceEnd(now - _timeUpAt.Value, Cfg.MapEndMaxWaitSeconds)) EndMap();
+    }
+
+    /// <summary>A won !rtv: the time is up now, so the map ends at the end of this round (or after MapEndMaxWaitSeconds).</summary>
+    private void EndMapSoon()
+    {
+        if (!Cfg.RtvEndsGame) return;
+        var rules = Round.GameRules;
+        if (rules != null) Server.ExecuteCommand($"mp_timelimit {MapVoteRules.Minutes(MapVoteRules.TimeLimitFor(Server.CurrentTime - rules.GameStartTime, 0f))}");
+        _endForced = true;
+        _retryEndAt = 0;
+        if (rules == null || Cfg.MapEndMaxWaitSeconds <= 0) EndMap();
     }
 
     private void StartVote(bool fromRtv)
     {
         if (_voting || _voted) return;
         var pool = Pool();
-        var ballot = MapVoteRules.Ballot(pool, _nominations.Values.ToList(), IsCurrentOrRecent, Math.Clamp(Cfg.VoteOptions, 2, 6), Random.Shared);
+        var ballot = MapVoteRules.Ballot(pool, _nominations.Values.ToList(), IsCurrentOrRecent, NominationLimit, Random.Shared);
         if (ballot.Count == 0) { Chat.TellAll("mapvote.no_maps"); return; }
-        _ballot = ballot.Select(m => (VoteMap?)m).ToList();
-        if (!fromRtv && _extends < Cfg.MaxExtends && TimeLeft() != null) _ballot.Add(null); // "Extend the current map"
+        _ballot = ballot.Select(m => (Choice.Map, m)).ToList();
+        if (fromRtv) _ballot.Add((Choice.Stay, default)); // "Don't change the map"
+        else if (_extends < Cfg.MaxExtends && TimeLeft() != null) _ballot.Add((Choice.Extend, default));
         _voting = true;
         _fromRtv = fromRtv;
         _votes.Clear();
@@ -769,13 +970,20 @@ public sealed class MapVoteModule : JbModule
         _voteTimer = Plugin.AddTimer(Math.Clamp(Cfg.VoteSeconds, 5, 120), EndVote, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
     }
 
+    private string BallotLabel((Choice Kind, VoteMap Map) item) => item.Kind switch
+    {
+        Choice.Extend => Lang.T("mapvote.extend_item", Cfg.ExtendMinutes),
+        Choice.Stay => Lang.T("mapvote.dont_change"),
+        _ => Label(item.Map)
+    };
+
     private void ShowBallot(CCSPlayerController c)
     {
         var m = new JbMenu(Lang.T("mapvote.title")) { Timeout = Math.Clamp(Cfg.VoteSeconds, 5, 120) };
         for (var i = 0; i < _ballot.Count; i++)
         {
             var idx = i;
-            var label = _ballot[i] is { } map ? Label(map) : Lang.T("mapvote.extend_item", Cfg.ExtendMinutes);
+            var label = BallotLabel(_ballot[i]);
             m.Add(Hud.Escape(label), p =>
             {
                 if (!_voting) return;
@@ -797,79 +1005,113 @@ public sealed class MapVoteModule : JbModule
         {
             // Nobody voted: an !rtv vote fails, the end-of-map vote picks a random map so the server still moves on.
             if (_fromRtv) { _rtv.Clear(); Chat.TellAll("mapvote.no_votes"); return; }
-            win = Enumerable.Range(0, _ballot.Count).Where(i => _ballot[i] != null).OrderBy(_ => Random.Shared.Next()).FirstOrDefault();
+            win = Enumerable.Range(0, _ballot.Count).Where(i => _ballot[i].Kind == Choice.Map).OrderBy(_ => Random.Shared.Next()).FirstOrDefault();
         }
 
         var choice = _ballot[win];
         var count = _votes.Values.Count(v => v == win);
-        if (choice == null)
+        switch (choice.Kind)
         {
-            _extends++;
-            var limit = ConVar.Find("mp_timelimit")?.GetPrimitiveValue<float>() ?? 0f;
-            Server.ExecuteCommand($"mp_timelimit {limit + Math.Max(1, Cfg.ExtendMinutes)}");
-            _rtv.Clear();
-            _nominations.Clear();
-            Chat.TellAll("mapvote.extended", Cfg.ExtendMinutes, count);
-            return;
+            case Choice.Stay:
+                _rtv.Clear();
+                Chat.TellAll("mapvote.stays", count);
+                return;
+            case Choice.Extend:
+                _extends++;
+                ExtendBy(Cfg.ExtendMinutes);
+                _rtv.Clear();
+                _nominations.Clear();
+                Chat.TellAll("mapvote.extended", Cfg.ExtendMinutes, count);
+                return;
         }
 
-        _voted = true;
-        _next = choice;
-        Logger.LogInformation("[MapVote] next map {Map} ({Votes} votes)", Label(choice.Value), count);
+        SetNext(choice.Map);
+        Logger.LogInformation("[MapVote] next map {Map} ({Votes} votes)", Label(choice.Map), count);
         if (_fromRtv && Cfg.RtvEndsGame)
         {
-            // End the game at the end of this round: CS2 checks the time limit when a round ends.
-            var rules = Round.GameRules;
-            if (rules != null)
-            {
-                var elapsedMinutes = Math.Max(0f, (Server.CurrentTime - rules.GameStartTime) / 60f);
-                Server.ExecuteCommand($"mp_timelimit {elapsedMinutes.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
-            }
-
-            Chat.TellAll("mapvote.won_rtv", Label(choice.Value), count);
+            Chat.TellAll("mapvote.won_rtv", Label(choice.Map), count);
+            EndMapSoon();
         }
-        else Chat.TellAll("mapvote.won_map_end", Label(choice.Value), count);
+        else Chat.TellAll("mapvote.won_map_end", Label(choice.Map), count);
     }
 
-    /// <summary>The game is over (time limit reached): load the voted map, or a random one if no vote happened.</summary>
+    /// <summary>The round ended after the map's time ran out: the map changes now (also when the game itself did not end the match).</summary>
     [GameEventHandler]
-    public HookResult OnMatchEnd(EventCsWinPanelMatch ev, GameEventInfo info)
+    public HookResult OnRoundEnd(EventRoundEnd ev, GameEventInfo info)
     {
-        if (_changing) return HookResult.Continue;
-        var next = _next;
-        if (next == null)
-        {
-            var pool = Pool().Where(m => !IsCurrentOrRecent(m)).ToList();
-            if (pool.Count == 0) return HookResult.Continue; // nothing configured: the server's own map cycle decides
-            next = pool[Random.Shared.Next(pool.Count)];
-        }
-
-        ChangeTo(next.Value);
+        if (!_changing && !_voting && EndsMapItself && !Warmup && TimeLeft() is <= 0f && Server.CurrentTime >= _retryEndAt) EndMap();
         return HookResult.Continue;
     }
 
-    private void ChangeTo(VoteMap m) => ChangeTo(m, Math.Clamp(Cfg.ChangeDelaySeconds, 1f, 60f), null);
+    /// <summary>The game is over (time limit, max rounds, a finished match): load the voted map, or a random one if no vote happened.</summary>
+    [GameEventHandler]
+    public HookResult OnMatchEnd(EventCsWinPanelMatch ev, GameEventInfo info)
+    {
+        if (!_changing) EndMap();
+        return HookResult.Continue;
+    }
 
     /// <summary>
-    /// Load a map: a Workshop map with host_workshop_map &lt;id&gt; (works for any Workshop map, subscribed or not), a stock
-    /// map with changelevel. If the map has not changed ChangeCheckSeconds later the next command is tried, and the admin is told when
-    /// none worked (timers stop on a map change, so a successful load cancels the check).
+    /// End the map: the vote winner, the admin's !setnextmap or a random pool map. The game's own match end would load the
+    /// map group's next map after mp_match_restart_delay (CS2 ignores nextlevel for Workshop maps), so it is told to restart
+    /// instead and the plugin loads the map before that.
+    /// </summary>
+    private void EndMap()
+    {
+        if (_changing) return;
+        var next = _next ?? RandomMap();
+        if (next == null) return; // nothing configured: the server's own map cycle decides
+        var restartDelay = ConVar.Find("mp_match_restart_delay")?.GetPrimitiveValue<float>() ?? 0f;
+        if (next.Value.WorkshopId != 0) Cvars.SetTemp("mp_match_end_restart", "1");
+        ChangeTo(next.Value, MapVoteRules.ChangeDelay(Cfg.ChangeDelaySeconds, restartDelay), null);
+    }
+
+    private VoteMap? RandomMap()
+    {
+        var pool = Pool().Where(m => !IsCurrentOrRecent(m)).ToList();
+        if (pool.Count == 0) pool = Pool().Where(m => !string.Equals(KnownName(m), Server.MapName, StringComparison.OrdinalIgnoreCase)).ToList();
+        return pool.Count == 0 ? null : pool[Random.Shared.Next(pool.Count)];
+    }
+
+    /// <summary>
+    /// The one way a map is loaded (vote, map end, !rtv, !setnextmap, !map, !changemap, !startmode): "Changing to X in N"
+    /// countdown (chat + HUD), then host_workshop_map &lt;id&gt; for a Workshop map or changelevel for a stock map. If the
+    /// map has not changed ChangeCheckSeconds later the next command is tried (the last try repeats the first), and the
+    /// admin is told when none worked. A newer change (an admin's) replaces a pending one.
     /// </summary>
     private void ChangeTo(VoteMap m, float delay, CCSPlayerController? admin)
     {
-        _next = null;
-        _changing = true;
-        if (m.WorkshopId != 0) _loadingId = m.WorkshopId;
         var attempts = MapVoteRules.ChangeCommands(m, KnownName(m), Server.IsMapValid);
         var label = Label(m);
         var adminSlot = admin?.Slot ?? -1;
-        Chat.TellAll("mapvote.changing", label);
-        Logger.LogInformation("[MapVote] changing map to {Map}: {Command}", label, attempts[0]);
+        if (attempts.Count == 0)
+        {
+            Logger.LogError("[MapVote] no way to load {Map}", label);
+            if (admin != null) Chat.Tell(admin, "mapvote.change_failed", label);
+            return;
+        }
+
+        _voteTimer?.Kill();
+        _voteTimer = null;
+        _voting = false;
+        _changing = true;
+        _voted = true;
+        _next = m;
+        var id = ++_changeId;
+        var serial = _mapSerial;
+        bool Stale() => id != _changeId || serial != _mapSerial;
+        var left = Math.Max(0, (int)Math.Ceiling(delay));
+        Chat.TellAll("mapvote.changing_in", label, left);
+
         void Attempt(int i)
         {
+            if (Stale()) return;
+            _loadingId = m.WorkshopId;
+            Logger.LogInformation("[MapVote] changing map to {Map}: {Command}", label, attempts[i]);
             Server.ExecuteCommand(attempts[i]);
-            Plugin.AddTimer(Math.Clamp(Cfg.ChangeCheckSeconds, 15f, 600f), () =>
+            Plugin.AddTimer(Math.Clamp(Cfg.ChangeCheckSeconds, 10f, 600f), () =>
             {
+                if (Stale()) return; // the map changed
                 if (i + 1 < attempts.Count)
                 {
                     Logger.LogWarning("[MapVote] map did not change after \"{Command}\", trying \"{Next}\"", attempts[i], attempts[i + 1]);
@@ -878,14 +1120,33 @@ public sealed class MapVoteModule : JbModule
                 }
 
                 _changing = false;
+                _loadingId = 0;
+                _next = null; // the map end picks another map next time
+                _voted = false;
+                _retryEndAt = Server.CurrentTime + 120f;
                 Logger.LogError("[MapVote] could not change map to {Map} (tried: {Commands})", label, string.Join("; ", attempts));
                 if (adminSlot >= 0 && Players.Get(adminSlot).Controller is { IsValid: true } a) Chat.Tell(a, "mapvote.change_failed", label);
                 else Chat.TellAll("mapvote.change_failed", label);
             }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
         }
 
-        if (delay <= 0.05f) Attempt(0);
-        else Plugin.AddTimer(delay, () => Attempt(0), CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+        void Count()
+        {
+            if (Stale()) return;
+            if (left <= 0)
+            {
+                Hud.ClearGlobal(HudKey);
+                Chat.TellAll("mapvote.changing", label);
+                Attempt(0);
+                return;
+            }
+
+            Hud.SetGlobal(HudKey, Lang.T("mapvote.hud_changing", Hud.Escape(label), left), 60, 1.5f);
+            left--;
+            Plugin.AddTimer(1f, Count, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+        }
+
+        Count();
     }
 
     /// <summary>The map's real (bsp) name if it has loaded here before, for ds_workshop_changelevel.</summary>
@@ -909,10 +1170,10 @@ public sealed class MapVoteModule : JbModule
         ChangeNow(caller, info.ArgString, info);
     }
 
-    /// <summary>Change the map right away (ends the round and the map). Used by !mapchange, !map and the admin menu.</summary>
+    /// <summary>Change the map right away (after a short countdown). Used by !mapchange, !map and the admin menu.</summary>
     internal bool ChangeNow(CCSPlayerController? admin, string query, CommandInfo? info)
     {
-        var m = Resolve(query);
+        var m = Resolve(query, true);
         if (m == null)
         {
             if (info != null) Chat.ReplyT(admin, info, "mapvote.not_found", query.Trim());
@@ -921,13 +1182,17 @@ public sealed class MapVoteModule : JbModule
         }
 
         var who = admin?.PlayerName ?? "Console";
-        Jb.Log.LogEvent($"{who} changed the map to {Label(m.Value)}", admin?.Jb(), null, LogType.Admin);
-        ChangeTo(m.Value, 1f, admin); // 1 s so the chat line reaches everyone, then the map loads
+        AdminLog(admin, $"{who} changed the map to {Label(m.Value)}");
+        ChangeTo(m.Value, Math.Max(1, Cfg.AdminChangeCountdownSeconds), admin);
         return true;
     }
 
-    /// <summary>A Workshop id or link, a map from the list by name (also switched-off ones), or a stock map name.</summary>
-    private VoteMap? Resolve(string query)
+    /// <summary>
+    /// A Workshop id or link, a map from the list by name (also switched-off ones), or a stock map name. With
+    /// <paramref name="anyName"/> also any other plain map name (a map of the server's Workshop collection, loaded with
+    /// ds_workshop_changelevel; the change check tells the admin if it does not exist).
+    /// </summary>
+    private VoteMap? Resolve(string query, bool anyName)
     {
         query = query.Trim().Trim('"');
         if (query.Length == 0) return null;
@@ -937,7 +1202,8 @@ public sealed class MapVoteModule : JbModule
         var byLearned = all.Where(x => x.WorkshopId != 0 && string.Equals(KnownName(x), query, StringComparison.OrdinalIgnoreCase)).ToList();
         if (byLearned.Count == 1) return byLearned[0];
         if (FindIn(all, query) is { } found) return found;
-        return Server.IsMapValid(query) ? new VoteMap(query, 0) : null;
+        if (Server.IsMapValid(query)) return new VoteMap(query, 0);
+        return anyName && MapVoteRules.IsMapName(query) ? new VoteMap(query, 0) : null;
     }
 
     private void OpenChangeMenu(CCSPlayerController admin)
