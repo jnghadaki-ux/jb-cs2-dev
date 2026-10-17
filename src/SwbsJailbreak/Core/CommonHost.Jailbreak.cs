@@ -59,6 +59,9 @@ public static partial class CommonHost
     /// <summary>16 checks a second on 64 tick: no timers here, and fast movers are still caught by the swept test.</summary>
     public static partial int ZoneCheckEveryTicksDefault => 4;
 
+    // Admins only: look at player models, hats and store effects (a camera behind you sees around corners in a fight).
+    public static partial string ThirdPersonCommandDefault => "admin";
+
     /// <summary>Respawns later in the round (days, !respawn, !1up) keep their own position.</summary>
     public static partial bool SpawnZonesOnEverySpawnDefault => false;
 
