@@ -99,4 +99,14 @@ public class MapVoteTests
         Assert.Equal(new[] { "changelevel de_dust2", "ds_workshop_changelevel de_dust2" },
             MapVoteRules.ChangeCommands(new VoteMap("de_dust2", 0), "de_dust2", n => n == "de_dust2"));
     }
+
+    [Theory]
+    [InlineData(null, 15, 15)]
+    [InlineData(" ", 15, 15)]
+    [InlineData("20", 15, 20)]
+    [InlineData("0", 15, null)]
+    [InlineData("abc", 15, null)]
+    [InlineData("500", 15, null)]
+    public void ExtendBy_DefaultOrValidMinutes(string? arg, int def, int? expected) =>
+        Assert.Equal(expected, MapVoteRules.ExtendBy(arg, def));
 }

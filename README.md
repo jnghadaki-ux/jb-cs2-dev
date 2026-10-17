@@ -261,7 +261,8 @@ Players vote on the next map; maps are **Workshop maps**. The map only ever chan
 | Command | What it does |
 |---|---|
 | `!rtv` (`!votechange`, `!rockthevote`) | Vote to change the map. When 60% of players have typed it, a map vote starts; the winner loads when the game ends (the game ends after the current round). |
-| `!nominate [map]` | Put a map on the next ballot (no name = pick from a menu). |
+| `!nominate [map]` (`!nom`) | Put a map on the next ballot (no name = pick from a menu). |
+| `!revote` | Change your vote while the map vote is open. |
 | `!nextmap` | The next map, once voted. |
 | `!timeleft` | Time left on this map. |
 | `!maplist` (`!maps`) | Every map you can vote for. |
@@ -274,8 +275,8 @@ A vote also starts by itself 3 minutes before the time limit, with an "Extend th
 1. Put your jailbreak maps in a Steam Workshop collection and set `MapVote.WorkshopCollectionId` to its id (the number in the collection's Steam link). The plugin reads the collection and every map's **name** from Steam, so you never type map ids by hand.
 2. `!mapsetup` (Level 3+): every map by name with **[ON]/[OFF]** switches, and "Refresh map names from Steam".
 3. `!mapadd <id or Steam link>` adds a single map (its name loads from Steam); `!mapremove <name or id>` switches one off.
-4. `!mapchange [name, id or Steam link]` (Level 3+, also `!changemap` and `!map`): changes the map **right away**, ending the round and the map. No name opens a menu of your maps by name. It loads Workshop maps with `host_workshop_map`, checks the map really changed, and tries another way (or tells you) if not.
-5. `!startjb` (Level 3+): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
+4. `!mapchange [name, id or Steam link]` (Level 3+, also `!changemap` and `!map`): changes the map **right away**, ending the round and the map. No name opens a menu of your maps by name. It loads Workshop maps with `host_workshop_map`, checks the map really changed, and tries another way (or tells you) if not. `!setnextmap <map>` picks the next map, and `!extendmap [minutes]` adds time to this map (up to `MapVote.MaxExtends` times; `!extend` stays the warden's round extend).
+5. `!startjb` (Level 3+, also `!jbstart` and `!startmode`): on a default map (e.g. the server booted into de_dust2), it sets casual mode, kicks bots, ends warmup and loads your collection. On a jailbreak map it restarts the game in jailbreak mode.
 
 **MultiAddonManager** (required, see [Requirements](#requirements)): `!mapadd` also downloads the map to the server ahead of time, and `!addon add|remove|list <id or link>` (Lead+) mounts Workshop addons such as the store pack, with names from Steam.
 
@@ -371,7 +372,7 @@ In game: `!adminlevels` lists the tiers, `!mylevel` shows yours.
 
 ## Command list
 
-Every command of the plugin (179 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
+Every command of the plugin (182 commands, generated from the code). Type them in chat with `!` (or `/` to hide the message) or in the console with `css_` (`!bhc` = `css_bhc`). **Who** is the lowest admin tier that can use the command (see Admin tiers); "Everyone" commands may still be limited to the warden, guards or prisoners by the game rules.
 
 <details><summary><b>Admin</b> (60)</summary>
 
@@ -480,7 +481,7 @@ Every command of the plugin (179 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (23)</summary>
+<details><summary><b>Extras</b> (26)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -492,6 +493,7 @@ Every command of the plugin (179 commands, generated from the code). Type them i
 | `!currentmap` |  | Everyone | show the current map |
 | `!demo` |  | Everyone | the demo being recorded and the time in it (quote it in reports) |
 | `!demos` |  | Level 1 | (admin) the last recorded games (console) |
+| `!extendmap` |  | Level 3 | [minutes] - (admin) extend the map |
 | `!giveparachute` |  | Level 3 | &lt;target&gt; - give a parachute (when Parachute.Everyone is off) |
 | `!mapadd` |  | Level 3 | &lt;workshop id\|url&gt; - (admin) add a Workshop map to the vote list (its name comes from Steam) |
 | `!mapchange` | !changemap | Level 3 | [map name\|workshop id\|link] - (admin) change the map now (no name = pick from a menu) |
@@ -500,11 +502,13 @@ Every command of the plugin (179 commands, generated from the code). Type them i
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!nextmap` |  | Everyone | show the next map |
-| `!nominate` |  | Everyone | [map] - put a map on the next map vote |
+| `!nominate` | !nom | Everyone | [map] - put a map on the next map vote |
 | `!perfsound` |  | Everyone | toggle the perfect-jump sound |
 | `!removeparachute` |  | Level 3 | &lt;target&gt; - remove a parachute |
+| `!revote` |  | Everyone | change your map vote while the vote is open |
 | `!rtv` | !rockthevote, !votechange | Everyone | rock the vote: vote to change the map |
-| `!startjb` | !jbstart | Level 3 | [collection id\|map] - (admin) start jailbreak: from a default map, load the Workshop jailbreak maps |
+| `!setnextmap` |  | Level 3 | &lt;map\|workshop id\|link&gt; - (admin) set the next map |
+| `!startjb` | !jbstart, !startmode | Level 3 | [collection id\|map] - (admin) start jailbreak: from a default map, load the Workshop jailbreak maps |
 | `!timeleft` |  | Everyone | time left on this map |
 | `!workshoppack` |  | Root | point the sound settings at the SWBS workshop pack again |
 

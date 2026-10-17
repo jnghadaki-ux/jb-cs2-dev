@@ -46,5 +46,9 @@
   "mapvote.addon_line": "{olive}- {green}{0}{olive} ({1})",
   "mapvote.change_title": "Change map now",
   "mapvote.current_short": "Current: {0}",
-  "mapvote.change_failed": "{red}The map did not change to {0}. {olive}Check the server console; the map may be missing or still downloading."
+  "mapvote.change_failed": "{red}The map did not change to {0}. {olive}Check the server console; the map may be missing or still downloading.",
+  "mapvote.extend_max": "{red}This map was already extended {0} times (MapVote.MaxExtends).",
+  "mapvote.extended_admin": "{0} {olive}extended the map by {green}{1}{olive} minutes.",
+  "mapvote.next_set": "{0} {olive}set the next map to {green}{1}{olive}.",
+  "mapvote.no_vote_open": "{olive}No map vote is open right now."
 }

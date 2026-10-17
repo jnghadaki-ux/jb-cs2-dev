@@ -181,6 +181,13 @@ internal static class MapVoteRules
         return list;
     }
 
+    /// <summary>Minutes for admin !extend: the argument (1-180), the default without one; null for a bad argument.</summary>
+    public static int? ExtendBy(string? arg, int defaultMinutes)
+    {
+        if (string.IsNullOrWhiteSpace(arg)) return Math.Max(1, defaultMinutes);
+        return int.TryParse(arg.Trim(), out var n) && n >= 1 && n <= 180 ? n : null;
+    }
+
     public static string FormatTime(float seconds)
     {
         var s = Math.Max(0, (int)seconds);
@@ -328,6 +335,7 @@ public sealed class MapVoteModule : JbModule
     }
 
     [ConsoleCommand("css_nominate", "sm_nominate [map] - put a map on the next map vote")]
+    [ConsoleCommand("css_nom", "sm_nom [map] - put a map on the next map vote")]
     [OpenCommand]
     public void CmdNominate(CCSPlayerController? caller, CommandInfo info)
     {
@@ -391,6 +399,52 @@ public sealed class MapVoteModule : JbModule
         var pool = Pool();
         if (pool.Count == 0) { Chat.ReplyT(caller, info, "mapvote.no_maps"); return; }
         Chat.ReplyT(caller, info, "mapvote.list", string.Join(", ", pool.Select(Label).OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+    }
+
+    [ConsoleCommand("css_revote", "sm_revote - change your map vote while the vote is open")]
+    [OpenCommand]
+    public void CmdRevote(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null || !caller.IsValid || caller.IsBot) return;
+        if (!_voting) { Chat.Tell(caller, "mapvote.no_vote_open"); return; }
+        ShowBallot(caller);
+    }
+
+    // ================================================================= !extend, !setnextmap (admin)
+
+    // !extend is the warden's round extend on jailbreak (WardenTools): the map extend is !extendmap only.
+    [ConsoleCommand("css_extendmap", "sm_extendmap [minutes] - (admin) extend the map")]
+    public void CmdExtend(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        var minutes = MapVoteRules.ExtendBy(info.ArgCount >= 2 ? info.GetArg(1) : null, Cfg.ExtendMinutes);
+        if (minutes == null) { Chat.ReplyT(caller, info, "core.usage", "!extend [minutes]"); return; }
+        if (TimeLeft() == null) { Chat.ReplyT(caller, info, "mapvote.no_timelimit"); return; }
+        if (_extends >= Cfg.MaxExtends) { Chat.ReplyT(caller, info, "mapvote.extend_max", Cfg.MaxExtends); return; }
+        _extends++;
+        var limit = ConVar.Find("mp_timelimit")?.GetPrimitiveValue<float>() ?? 0f;
+        Server.ExecuteCommand($"mp_timelimit {(limit + minutes.Value).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
+        var who = caller?.PlayerName ?? "Console";
+        Jb.Log.LogEvent($"{who} extended the map by {minutes.Value} minutes", caller?.Jb(), null, LogType.Admin);
+        Chat.TellAll("mapvote.extended_admin", who, minutes.Value);
+    }
+
+    [ConsoleCommand("css_setnextmap", "sm_setnextmap <map|workshop id|link> - (admin) set the next map")]
+    public void CmdSetNextMap(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
+        if (info.ArgCount < 2) { Chat.ReplyT(caller, info, "core.usage", "!setnextmap <map|workshop id>"); return; }
+        var m = Resolve(info.ArgString);
+        if (m == null) { Chat.ReplyT(caller, info, "mapvote.not_found", info.ArgString.Trim()); return; }
+        // A running vote is cancelled: the admin's map is the next one, loaded when the game ends.
+        _voteTimer?.Kill();
+        _voteTimer = null;
+        _voting = false;
+        _voted = true;
+        _next = m;
+        var who = caller?.PlayerName ?? "Console";
+        Jb.Log.LogEvent($"{who} set the next map to {Label(m.Value)}", caller?.Jb(), null, LogType.Admin);
+        Chat.TellAll("mapvote.next_set", who, Label(m.Value));
     }
 
     // ================================================================= Steam names, !mapsetup, !mapadd, !mapremove
@@ -611,6 +665,7 @@ public sealed class MapVoteModule : JbModule
 
     [ConsoleCommand("css_startjb", "sm_startjb [collection id|map] - (admin) start jailbreak: from a default map, load the Workshop jailbreak maps")]
     [ConsoleCommand("css_jbstart", "sm_jbstart - (admin) start jailbreak")]
+    [ConsoleCommand("css_startmode", "sm_startmode - (admin) start this server's game mode (jailbreak)")]
     public void CmdStartJb(CCSPlayerController? caller, CommandInfo info)
     {
         if (!Perms.Has(caller, "map")) { Chat.ReplyT(caller, info, "core.no_access"); return; }
