@@ -89,6 +89,8 @@ public sealed class WorldMenuModule : SwbsModule
         return allowed[0];
     }
 
+    internal bool DetailsOf(CCSPlayerController c) => Prefs(c).Details ?? Cfg.DefaultDetails;
+
     internal static float SizeScale(string size) => size switch { "small" => 0.85f, "large" => 1.2f, _ => 1f };
 
     // ---- !menustyle
@@ -150,6 +152,12 @@ public sealed class WorldMenuModule : SwbsModule
             Save(p);
             OpenSettings(p);
         }, style == "world");
+        menu.Add(Value(Lang.T("worldmenu.item.details"), Lang.T(DetailsOf(c) ? "worldmenu.on" : "worldmenu.off"), DetailsOf(c) ? theme.Good : theme.Bad), p =>
+        {
+            Prefs(p).Details = !DetailsOf(p);
+            Save(p);
+            OpenSettings(p);
+        }, style == "world");
         menu.Add(Lang.T("worldmenu.item.reset"), p =>
         {
             _prefs[p.Slot] = new WorldMenuPrefs();
@@ -176,6 +184,7 @@ public static class WorldMenus
         var s = m.Cfg;
         var theme = WorldMenuThemes.Get(m.ThemeOf(c));
         var pulse = s.Animations && s.PulseSeconds > 0 && (int)(Server.CurrentTime / s.PulseSeconds) % 2 == 1;
+        if (!m.DetailsOf(c)) view.Details = null;
         var panel = WorldMenuLayout.Build(view, theme, s, pulse);
         return WorldMenuRenderer.Show(c, panel, s, m.PositionOf(c), WorldMenuModule.SizeScale(m.SizeOf(c)));
     }

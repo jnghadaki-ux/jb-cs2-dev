@@ -21,6 +21,12 @@ public sealed class JbMenuItem
 
     /// <summary>A section heading inside the list (not selectable).</summary>
     public bool IsHeader { get; set; }
+
+    /// <summary>Shown in the world menu's details pane while the cursor is on this item.</summary>
+    public WorldMenuDetails? Details { get; set; }
+
+    /// <summary>F (inspect) on this item: a preview (try a trail, show a hat ...). Null = F does nothing.</summary>
+    public Action<CCSPlayerController>? OnPreview { get; set; }
 }
 
 /// <summary>
@@ -50,6 +56,16 @@ public sealed class JbMenu
 
     /// <summary>Optional line under the title (e.g. instructions).</summary>
     public string? Subtitle { get; set; }
+
+    /// <summary>Tabs along the top (A/D switches): see <see cref="MenuTabs{TMenu}"/>.</summary>
+    public MenuTabs<JbMenu>? Tabs { get; set; }
+
+    /// <summary>Give this menu tabs: <paramref name="build"/> makes the menu of tab i (it gets the same tabs, active i).</summary>
+    public JbMenu WithTabs(IEnumerable<string> titles, int active, Func<CCSPlayerController, int, JbMenu> build)
+    {
+        Tabs = new MenuTabs<JbMenu>(titles, active, build);
+        return this;
+    }
 
     public JbMenuItem Add(string text, Action<CCSPlayerController>? onSelect, bool enabled = true, bool keepOpen = false)
     {
@@ -242,6 +258,24 @@ public static class MenuService
         Select(inst, index);
     }
 
+    /// <summary>Open the next / previous tab in place of this menu (same parent, cursor on its first row).</summary>
+    private static void SwitchTab(JbMenuInstance inst, MenuTabs<JbMenu> tabs, int step)
+    {
+        var index = tabs.Step(step);
+        JbMenu next;
+        try { next = tabs.Build(inst.Player, index); }
+        catch (Exception ex)
+        {
+            Microsoft.Extensions.Logging.LoggerExtensions.LogError(JailbreakPlugin.Instance!.Logger, ex, "Menu tab failed");
+            return;
+        }
+
+        next.Tabs ??= new MenuTabs<JbMenu>(tabs.Titles, index, tabs.Build);
+        next.Parent ??= inst.JbMenu.Parent;
+        WorldMenus.Feedback(inst.Player, "move");
+        Open(inst.Player, next);
+    }
+
     private static void GoBack(JbMenuInstance inst)
     {
         var parent = inst.JbMenu.Parent;
@@ -311,6 +345,15 @@ public static class MenuService
         {
             if (menu.Parent != null) GoBack(inst);
             else if (menu.ExitButton) Close(player);
+        }
+        else if ((pressed & (PlayerButtons.Moveleft | PlayerButtons.Moveright)) != 0 && menu.Tabs is { Titles.Count: > 1 } tabs)
+        {
+            SwitchTab(inst, tabs, (pressed & PlayerButtons.Moveleft) != 0 ? -1 : 1);
+        }
+        else if ((pressed & PlayerButtons.Inspect) != 0 && count > 0 && menu.Items[Math.Clamp(inst.Cursor, 0, count - 1)].OnPreview is { } preview)
+        {
+            inst.LastInput = Server.CurrentTime;
+            SafeInvoke(preview, player);
         }
     }
 
@@ -384,6 +427,13 @@ public static class MenuService
         for (var p = menu.Parent; p != null && crumbs.Count < 3; p = p.Parent) crumbs.Insert(0, p.Title);
         if (crumbs.Count > 0) view.Breadcrumb = string.Join(" › ", crumbs.Select(WorldMenuText.Plain)) + " ›";
         if (!UsesKeys) view.Footer = "Type !1-!6   !7 Back   !8 Next   !9 Exit";
+        if (menu.Tabs is { } tabs)
+        {
+            view.Tabs.AddRange(tabs.Titles);
+            view.ActiveTab = tabs.Active;
+        }
+
+        if (menu.Items.Count > 0 && inst.Cursor >= 0 && inst.Cursor < menu.Items.Count) view.Details = menu.Items[inst.Cursor].Details;
 
         var start = inst.PageIndex * JbMenuInstance.ItemsPerPage;
         var end = Math.Min(start + JbMenuInstance.ItemsPerPage, menu.Items.Count);
@@ -415,6 +465,14 @@ public static class MenuService
         sb.Append("<font color='#FFD700'><b>").Append(menu.Title).Append("</b></font>");
         if (inst.PageCount > 1) sb.Append($" <font color='#AAAAAA' class='fontSize-s'>({inst.PageIndex + 1}/{inst.PageCount})</font>");
         sb.Append("<br>");
+        if (menu.Tabs is { Titles.Count: > 0 } tabs)
+        {
+            sb.Append("<font class='fontSize-s'>");
+            for (var t = 0; t < tabs.Titles.Count; t++)
+                sb.Append(t == tabs.Active ? $"<font color='#FFB000'>[{tabs.Titles[t]}]</font> " : $"<font color='#AAAAAA'>{tabs.Titles[t]}</font> ");
+            sb.Append("<font color='#777777'>A/D</font></font><br>");
+        }
+
         if (!string.IsNullOrEmpty(menu.Subtitle))
             sb.Append("<font color='#CCCCCC' class='fontSize-s'>").Append(menu.Subtitle).Append("</font><br>");
 
