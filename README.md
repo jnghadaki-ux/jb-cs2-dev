@@ -515,7 +515,7 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 
 </details>
 
-<details><summary><b>Extras</b> (28)</summary>
+<details><summary><b>Extras</b> (29)</summary>
 
 | Command | Aliases | Who | Description |
 |---|---|---|---|
@@ -534,6 +534,7 @@ Every command of the plugin (183 commands, generated from the code). Type them i
 | `!maplist` | !maps | Everyone | list the maps you can vote for |
 | `!mapremove` |  | Level 3 | &lt;workshop id\|name&gt; - (admin) take a map off the vote list |
 | `!mapsetup` |  | Level 3 | (admin) switch maps on/off for voting, refresh map names from Steam |
+| `!3p` | !thirdperson, !camera | Level 1 | third person camera on or off, to look at player models, hats and store effects (`ThirdPerson.Command`: admin by default) |
 | `!menustyle` | !menutheme, !menusettings | Everyone | [world\|center] - your menu style, theme, position and size |
 | `!music` | !stopmusic | Everyone | turn map music on or off for you |
 | `!nextmap` |  | Everyone | show the next map |

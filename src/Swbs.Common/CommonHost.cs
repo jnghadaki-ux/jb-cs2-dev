@@ -62,6 +62,11 @@ public static partial class CommonHost
     /// <summary>Default for ZonesConfig.CheckEveryTicks (1 for timer servers, more where exact touches do not matter).</summary>
     public static partial int ZoneCheckEveryTicksDefault { get; }
 
+    // ---- third person camera ----
+
+    /// <summary>Who may use !3p by default: "everyone", "admin" or "off" (ThirdPersonConfig.Command overrides it).</summary>
+    public static partial string ThirdPersonCommandDefault { get; }
+
     /// <summary>Default for ZonesConfig.SpawnZonesOnEverySpawn.</summary>
     public static partial bool SpawnZonesOnEverySpawnDefault { get; }
 

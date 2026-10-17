@@ -1,0 +1,7 @@
+{
+  "tp.on": "{lightgreen}-- {olive}Third person camera {green}on{olive}. Type {green}!3p {olive}again for first person.",
+  "tp.off": "{lightgreen}-- {olive}Third person camera {red}off{olive}.",
+  "tp.not_now": "{lightgreen}-- {red}The third person camera is not allowed right now.",
+  "tp.admins_only": "{lightgreen}-- {red}The third person camera is for admins on this server.",
+  "tp.dead": "{lightgreen}-- {red}You need to be alive to use the third person camera."
+}

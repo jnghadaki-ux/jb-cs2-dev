@@ -50,6 +50,17 @@ What the mode's code checks in return:
 
 A mode can add its own variation by subclassing `RoundVariation` and passing it to `RoundsModule.Instance.Register`.
 
+## Third person camera
+
+`Camera/` holds the `!3p` follow camera. It works like this:
+
+- An invisible, model-less prop_dynamic follows behind the player every frame and is set as their view entity, re-set every frame.
+- It is kept in front of walls.
+- During the server's entity think the view entity is cleared, so shots and +use still come from the player's eyes.
+- Several reasons can hold the camera on, such as the command or Bhop's Third Person style. Use `ThirdPerson.Set(player, reason, on)`.
+
+Who may use `!3p` by default comes from `CommonHost.ThirdPersonCommandDefault`: everyone on the movement servers, admins on jailbreak, off on minigames, DM, PUG and 1v1. The `ThirdPerson.Command` config overrides it.
+
 ## Shared points and store items
 
 Every server reads `addons/counterstrikesharp/configs/swbs_shared.json`. The first start writes it with comments:
