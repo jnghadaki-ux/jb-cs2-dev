@@ -75,7 +75,7 @@ public class WorkshopPackTests
         var items = WorkshopPackModule.StoreModelItems();
         Assert.NotEmpty(names);
         Assert.Equal(names.Select(n => $"{root}/{n}/{n}.vmdl"), items.Select(i => i.Data));
-        Assert.All(items, i => Assert.Equal(SwbsJailbreak.Modules.PlayerExtras.StoreItemType.PlayerModel, i.Type));
+        Assert.All(items, i => Assert.Equal(StoreItemType.PlayerModel, i.Type));
         Assert.False(new WorkshopPackConfig().StoreModels);
     }
 
@@ -85,7 +85,7 @@ public class WorkshopPackTests
     [InlineData(true, CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, true)]
     [InlineData(true, CounterStrikeSharp.API.Modules.Utils.CsTeam.Spectator, false)]
     public void StorePlayerModel_PrisonersOnlyByDefault(bool guardsToo, CounterStrikeSharp.API.Modules.Utils.CsTeam team, bool wears) =>
-        Assert.Equal(wears, SwbsJailbreak.Modules.PlayerExtras.StoreModule.WearsPlayerModel(team, guardsToo));
+        Assert.Equal(wears, StoreModule.WearsPlayerModel(team, guardsToo));
 
     [Theory]
     [InlineData(1f, 0f, 0f, 90f, 0f)]    // flying straight ahead (+X): nose (+Z) tipped forward

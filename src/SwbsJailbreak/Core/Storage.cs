@@ -9,7 +9,8 @@ namespace SwbsJailbreak.Core;
 /// ClientCookies, UserPoints...). Each namespace is one JSON file under
 /// addons/counterstrikesharp/configs/plugins/SwbsJailbreak/data/&lt;namespace&gt;.json, kept in memory and
 /// flushed (atomically, off the game thread) every 30 seconds, on map end and on unload.
-/// Keys are usually SteamID64 strings.
+/// Keys are usually SteamID64 strings. The "points" and "store" namespaces go to Swbs.Common.SharedPlayerData
+/// instead when configs/swbs_shared.json shares them between servers.
 /// </summary>
 public static class Storage
 {
@@ -72,8 +73,10 @@ public static class Storage
 
     public static T? Get<T>(string ns, string key)
     {
-        var obj = Ns(ns);
-        if (!obj.TryGetPropertyValue(key, out var node) || node == null) return default;
+        JsonNode? node;
+        if (Swbs.Common.SharedPlayerData.Routes(ns, key, out var steamId)) node = Swbs.Common.SharedPlayerData.Get(ns, steamId);
+        else if (!Ns(ns).TryGetPropertyValue(key, out node)) return default;
+        if (node == null) return default;
         try
         {
             return node.Deserialize<T>(JsonOptions);
@@ -84,10 +87,17 @@ public static class Storage
         }
     }
 
-    public static bool Has(string ns, string key) => Ns(ns).ContainsKey(key);
+    public static bool Has(string ns, string key) =>
+        Swbs.Common.SharedPlayerData.Routes(ns, key, out var steamId) ? Swbs.Common.SharedPlayerData.Get(ns, steamId) != null : Ns(ns).ContainsKey(key);
 
     public static void Set<T>(string ns, string key, T value)
     {
+        if (Swbs.Common.SharedPlayerData.Routes(ns, key, out var steamId))
+        {
+            Swbs.Common.SharedPlayerData.Set(ns, steamId, JsonSerializer.SerializeToNode(value, JsonOptions));
+            return;
+        }
+
         var obj = Ns(ns);
         obj[key] = JsonSerializer.SerializeToNode(value, JsonOptions);
         Dirty.Add(ns);
@@ -95,13 +105,17 @@ public static class Storage
 
     public static void Delete(string ns, string key)
     {
-        if (Ns(ns).Remove(key)) Dirty.Add(ns);
+        if (Swbs.Common.SharedPlayerData.Routes(ns, key, out var steamId)) Swbs.Common.SharedPlayerData.Set(ns, steamId, null);
+        else if (Ns(ns).Remove(key)) Dirty.Add(ns);
     }
 
     public static Dictionary<string, T> All<T>(string ns)
     {
         var result = new Dictionary<string, T>();
-        foreach (var (k, node) in Ns(ns))
+        var entries = Swbs.Common.SharedPlayerData.RoutesNamespace(ns)
+            ? Swbs.Common.SharedPlayerData.All(ns).Select(kv => new KeyValuePair<string, JsonNode?>(kv.Key, kv.Value))
+            : (IEnumerable<KeyValuePair<string, JsonNode?>>)Ns(ns);
+        foreach (var (k, node) in entries)
         {
             if (node == null) continue;
             try
@@ -116,6 +130,18 @@ public static class Storage
         }
 
         return result;
+    }
+
+    // ---- this server's own files, never shared (old per-server points / items for the one-time merge) ----
+
+    public static JsonNode? LocalGetNode(string ns, string key) =>
+        Ns(ns).TryGetPropertyValue(key, out var node) ? node?.DeepClone() : null;
+
+    public static void LocalSetNode(string ns, string key, JsonNode? value)
+    {
+        if (value == null) Ns(ns).Remove(key);
+        else Ns(ns)[key] = value.DeepClone();
+        Dirty.Add(ns);
     }
 
     /// <summary>Write dirty namespaces. async=true serialises on this thread and writes on the thread pool.</summary>

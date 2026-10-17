@@ -68,11 +68,11 @@ public class StorePortTests
     [Fact]
     public void BodyItems_OnlyWhenFair()
     {
-        Assert.False(StoreModule.BodyItemsAllowed(false, false, false, false));
-        Assert.True(StoreModule.BodyItemsAllowed(false, true, false, false));
-        Assert.True(StoreModule.BodyItemsAllowed(false, false, true, false));
-        Assert.True(StoreModule.BodyItemsAllowed(false, false, false, true));
-        Assert.True(StoreModule.BodyItemsAllowed(true, false, false, false));
+        Assert.False(CommonHost.BodyItemsAllowed(false, false, false, false));
+        Assert.True(CommonHost.BodyItemsAllowed(false, true, false, false));
+        Assert.True(CommonHost.BodyItemsAllowed(false, false, true, false));
+        Assert.True(CommonHost.BodyItemsAllowed(false, false, false, true));
+        Assert.True(CommonHost.BodyItemsAllowed(true, false, false, false));
     }
 
     [Fact]

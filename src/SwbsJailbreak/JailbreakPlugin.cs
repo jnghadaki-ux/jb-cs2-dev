@@ -220,8 +220,8 @@ public sealed class JailbreakPlugin : BasePlugin
             // exist and gave players huge first-person guns. Team models off again, the 0.19 store agents removed, the
             // deputy model moved to an agent that exists.
             Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.PlayerModelsConfig>("PlayerModels", m => m.ApplyModels = false);
-            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
-                s.Items.RemoveAll(i => global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig.RemovedAgentIds.Contains(i.Id, StringComparer.OrdinalIgnoreCase)
+            Config.Update<global::Swbs.Common.StoreConfig>("Store", s =>
+                s.Items.RemoveAll(i => global::Swbs.Common.StoreConfig.RemovedAgentIds.Contains(i.Id, StringComparer.OrdinalIgnoreCase)
                                        && ModelPaths.IsLegacyAgentPath(i.Data)));
             Config.Update<global::SwbsJailbreak.Modules.Warden.WardenToolsConfig>("WardenTools", w =>
             {
@@ -234,7 +234,7 @@ public sealed class JailbreakPlugin : BasePlugin
         if (Config.General.ConfigRevision < 7)
         {
             // 0.20.4: store player models are for both teams (owner's choice).
-            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            Config.Update<global::Swbs.Common.StoreConfig>("Store", s =>
             {
                 s.PlayerModelsForGuards = true;
                 foreach (var i in s.Items.Where(i => i.Id.StartsWith("model_ct_diver_", StringComparison.OrdinalIgnoreCase))) i.Team = "";
@@ -246,12 +246,12 @@ public sealed class JailbreakPlugin : BasePlugin
         if (Config.General.ConfigRevision < 8)
         {
             // 0.21: kill sounds play the pack's .vsnd files directly; the see-through body (invisible on CS2) is a ghost tint.
-            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            Config.Update<global::Swbs.Common.StoreConfig>("Store", s =>
             {
                 foreach (var i in s.Items)
                 {
                     if (i.Id.Equals("killsound_cowbell", StringComparison.OrdinalIgnoreCase) && i.Data == "swbs.cowbell")
-                        i.Data = global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig.PackSounds.Cowbell;
+                        i.Data = global::Swbs.Common.StoreConfig.PackSounds.Cowbell;
                     if (i.Id.Equals("body_transparent", StringComparison.OrdinalIgnoreCase) && i.Name == "See-through body")
                         i.Name = "Ghost skin";
                 }
@@ -263,7 +263,7 @@ public sealed class JailbreakPlugin : BasePlugin
         if (Config.General.ConfigRevision < 9)
         {
             // 0.21: hats parent to clip_limit (on the head bone of every CS2 agent); facemask does not exist on CS2 agents.
-            Config.Update<global::SwbsJailbreak.Modules.PlayerExtras.StoreConfig>("Store", s =>
+            Config.Update<global::Swbs.Common.StoreConfig>("Store", s =>
             {
                 if (s.HatAttachment.Equals("facemask", StringComparison.OrdinalIgnoreCase)) s.HatAttachment = "clip_limit";
             });

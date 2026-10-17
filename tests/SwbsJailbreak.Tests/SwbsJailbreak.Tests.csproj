@@ -11,6 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <!-- Engine-free pieces of the plugin are tested; the CSS API assembly is only needed for type loading. -->
     <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SwbsJailbreak\SwbsJailbreak.csproj" />

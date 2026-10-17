@@ -43,6 +43,18 @@ Type `!commands` in game for the full command list (also [below](#command-list))
 
 ---
 
+## Shared with the other SWBS servers
+
+The Store (`!store`), the Zone Manager (`!zones`) and BhopCheck (`!bhc`) are the same code on every SWBS server: the
+movement servers (`cs2-bhop-dev`), minigames / DM / PUG / 1v1 (`cs2-mg-dev`) and jailbreak (`jb-cs2-dev`). The code
+lives in `src/Swbs.Common`, which is kept identical in all three repos. See
+[`src/Swbs.Common/README.md`](src/Swbs.Common/README.md) for how to edit it and what each game mode changes.
+
+Store points and store items can also follow players across every server. Set `Backend` in
+`addons/counterstrikesharp/configs/swbs_shared.json` (written on first start) to `folder` (servers on one machine) or
+`mysql` (servers on different machines), using the same settings on every server. Each server's existing points and
+items are merged in automatically the first time a player joins.
+
 ## Requirements
 
 | Component | Version |

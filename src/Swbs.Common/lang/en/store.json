@@ -42,9 +42,9 @@
   "store.title.removed": "{olive}Your chat title was removed.",
   "store.title.cleared": "{olive}Cleared {lightred}{0}{olive}'s chat title.",
   "store.title.cleared_you": "{red}An admin removed your chat title.",
-  "store.body.when": "{olive}Ghost skin and body size only show in warmup, on freedays and in freeday last requests.",
-  "store.model.when_guard": "{olive}This player model is for guards: it shows from your next spawn as a guard.",
+  "store.body.when": "{olive}Ghost skin and body size are now equipped.",
+  "store.model.when_guard": "{olive}This player model is for CTs: it shows from your next spawn as a CT.",
   "store.model.now": "{olive}Your new player model is on.",
   "store.model.when": "{olive}Your new player model shows from your next spawn.",
-  "store.model.when_prisoner": "{olive}Your new player model shows from your next spawn as a prisoner (guards keep their uniform)."
+  "store.model.when_prisoner": "{olive}Your new player model shows from your next spawn as a T."
 }

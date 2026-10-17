@@ -210,7 +210,7 @@ public class MapInputRulesTests
     [InlineData("", "cell_button", false)]
     [InlineData("cell_button", null, false)]
     public void NameMatches_IsCaseInsensitive_WithTrailingWildcard(string pattern, string? name, bool expected) =>
-        Assert.Equal(expected, SwbsJailbreak.Modules.Zones.MapInputRules.NameMatches(pattern, name));
+        Assert.Equal(expected, MapInputRules.NameMatches(pattern, name));
 
     [Theory]
     [InlineData("func_button", "Press")]
@@ -218,22 +218,22 @@ public class MapInputRulesTests
     [InlineData("logic_relay", "Trigger")]
     [InlineData("info_target", null)]
     public void DefaultInput_FollowsTheClass(string cls, string? expected) =>
-        Assert.Equal(expected, SwbsJailbreak.Modules.Zones.MapInputRules.DefaultInput(cls));
+        Assert.Equal(expected, MapInputRules.DefaultInput(cls));
 
     [Fact]
     public void Activation_MapsChoicesToTriggerAndTeam()
     {
-        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.PressUse, 0), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(0));
-        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.PressUse, 3), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(1));
-        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.Enter, 2), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(5));
-        Assert.Equal((SwbsJailbreak.Modules.Zones.MapInputTrigger.RoundStart, 0), SwbsJailbreak.Modules.Zones.MapInputRules.Activation(6));
+        Assert.Equal((MapInputTrigger.PressUse, 0), MapInputRules.Activation(0));
+        Assert.Equal((MapInputTrigger.PressUse, 3), MapInputRules.Activation(1));
+        Assert.Equal((MapInputTrigger.Enter, 2), MapInputRules.Activation(5));
+        Assert.Equal((MapInputTrigger.RoundStart, 0), MapInputRules.Activation(6));
     }
 
     [Fact]
     public void BoxesOverlap_TouchingCountsAndApartDoesNot()
     {
         var a0 = new Vector3(0, 0, 0); var a1 = new Vector3(10, 10, 10);
-        Assert.True(SwbsJailbreak.Modules.Zones.MapInputRules.BoxesOverlap(a0, a1, new Vector3(10, 0, 0), new Vector3(20, 5, 5)));
-        Assert.False(SwbsJailbreak.Modules.Zones.MapInputRules.BoxesOverlap(a0, a1, new Vector3(11, 0, 0), new Vector3(20, 5, 5)));
+        Assert.True(MapInputRules.BoxesOverlap(a0, a1, new Vector3(10, 0, 0), new Vector3(20, 5, 5)));
+        Assert.False(MapInputRules.BoxesOverlap(a0, a1, new Vector3(11, 0, 0), new Vector3(20, 5, 5)));
     }
 }

@@ -214,7 +214,8 @@ public class LastRequestExtraTests
     {
         var root = Path.Combine(RepoRoot(), "src", "SwbsJailbreak");
         var keys = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var f in Directory.GetFiles(Path.Combine(root, "lang", "en"), "*.json"))
+        var common = Path.Combine(RepoRoot(), "src", "Swbs.Common");
+        foreach (var f in Directory.GetFiles(Path.Combine(root, "lang", "en"), "*.json").Concat(Directory.GetFiles(Path.Combine(common, "lang", "en"), "*.json")))
             foreach (var p in JsonDocument.Parse(File.ReadAllText(f)).RootElement.EnumerateObject())
                 keys.Add(p.Name);
 
@@ -225,7 +226,7 @@ public class LastRequestExtraTests
             "Modules/LastRequest/LrExtrasModule.cs", "Modules/LastRequest/TournamentLastRequest.cs",
             "Modules/Days/NewDays.cs", "Modules/Days/GunGameDay.cs", "Modules/Days/SpyDay.cs", "Modules/Days/SpeedrunDay.cs",
             "Modules/PlayerExtras/BettingModule.cs", "Modules/PlayerExtras/StatsModule.cs",
-            "Modules/PlayerExtras/StoreModule.cs", "Modules/Extras/ChatFormatModule.cs", "Modules/Extras/WorkshopPackModule.cs"
+            "../Swbs.Common/Store/StoreModule.cs", "Modules/Extras/ChatFormatModule.cs", "Modules/Extras/WorkshopPackModule.cs"
         };
         var call = new Regex(@"(?:Lang\.T|TellAll|TellBoth|Tell|ReplyT)\((?:[^""()]*?,\s*)?""([a-z_]+\.[a-z0-9_.]+)""\s*[,)]"); // a key followed by + is built at run time
         var missing = new List<string>();

@@ -15,6 +15,7 @@ New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
 Copy-Item "$bin/SwbsJailbreak.dll" $pluginDir
 if (Test-Path "$bin/SwbsJailbreak.pdb") { Copy-Item "$bin/SwbsJailbreak.pdb" $pluginDir }
 if (Test-Path "$bin/SwbsJailbreak.deps.json") { Copy-Item "$bin/SwbsJailbreak.deps.json" $pluginDir }
+Copy-Item "$bin/MySqlConnector.dll" $pluginDir # shared points / store items on MySQL (configs/swbs_shared.json)
 Copy-Item "$bin/lang" $pluginDir -Recurse
 if (Test-Path package) { Copy-Item "package/*" $out -Recurse -Force }
 Compress-Archive -Path "$out/addons" -DestinationPath "artifacts/SwbsJailbreak-$version-net10.zip" -Force

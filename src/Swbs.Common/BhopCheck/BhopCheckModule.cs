@@ -4,9 +4,8 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
-using SwbsJailbreak.Core;
 
-namespace SwbsJailbreak.Modules.Extras;
+namespace Swbs.Common;
 
 /// <summary>Section "BhopCheck" (bhc_* cvars).</summary>
 public sealed class BhopCheckConfig
@@ -18,7 +17,7 @@ public sealed class BhopCheckConfig
     public bool AllowPerfSounds { get; set; } = false;    // bhc_allow_perf_sounds
     public string PerfSound { get; set; } = "UIPanorama.generic_button_press";
 
-    /// <summary>Tell online admins (chat) and the jail log when a player's recent hops look scripted.</summary>
+    /// <summary>Tell online admins (chat) and the game mode's admin log when a player's recent hops look scripted.</summary>
     public bool AlertAdmins { get; set; } = true;
 
     /// <summary>Hops looked at for the alert (the last N); alert when at least WarnPerfs of them are perfect.</summary>
@@ -105,7 +104,7 @@ internal sealed class BhopState
 /// Jumps are detected from the ground -> air transition every tick (player_jump alone is not fired reliably on current
 /// CS2 builds, which left the log empty); the event is still used and de-duplicated.
 /// </summary>
-public sealed class BhopCheckModule : JbModule
+public sealed class BhopCheckModule : SwbsModule
 {
     private BhopCheckConfig Cfg => Section<BhopCheckConfig>("BhopCheck");
 
@@ -113,15 +112,15 @@ public sealed class BhopCheckModule : JbModule
     public override int Order => 120;
     public override bool Enabled => Cfg.Enabled;
 
-    private static BhopState S(JbPlayer p) => p.Data<BhopState>();
+    private static BhopState S(SwbsPlayer p) => p.Data<BhopState>();
 
     public override void OnLoad(bool hotReload)
     {
-        Plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        Plugin.RegisterListener<Listeners.OnTick>(OwnTick);
         Plugin.RegisterEventHandler<EventPlayerJump>(OnJump);
     }
 
-    public override void OnPlayerConnected(JbPlayer player)
+    public override void OnPlayerConnected(SwbsPlayer player)
     {
         if (player.SteamId64 != 0) S(player).PerfSound = Storage.Get<bool>("bhopcheck_perfsound", player.SteamId64.ToString());
     }
@@ -134,7 +133,7 @@ public sealed class BhopCheckModule : JbModule
         return HookResult.Continue;
     }
 
-    private void Jumped(JbPlayer p, BhopState s)
+    private void Jumped(SwbsPlayer p, BhopState s)
     {
         var tick = Server.TickCount;
         if (tick - s.LastJumpTick <= 2) return; // event and tick detection saw the same jump
@@ -146,11 +145,11 @@ public sealed class BhopCheckModule : JbModule
         s.GroundTicks = 0;
     }
 
-    private void OnTick()
+    private void OwnTick()
     {
         foreach (var c in Players.Humans())
         {
-            var p = c.Jb();
+            var p = c.Swbs();
             if (p == null) continue;
             var s = S(p);
             var pawn = c.PawnOrNull();
@@ -215,7 +214,7 @@ public sealed class BhopCheckModule : JbModule
         return heldNow && !heldBefore;
     }
 
-    private void PushBhop(JbPlayer p, BhopState s)
+    private void PushBhop(SwbsPlayer p, BhopState s)
     {
         var c = p.Controller;
         var e = new BhopEntry
@@ -241,7 +240,7 @@ public sealed class BhopCheckModule : JbModule
         return (float)perfs / n;
     }
 
-    private void CheckAlert(JbPlayer p, BhopState s)
+    private void CheckAlert(SwbsPlayer p, BhopState s)
     {
         if (!Cfg.AlertAdmins) return;
         var sample = Math.Clamp(Cfg.AlertSampleSize, 5, 100);
@@ -249,7 +248,7 @@ public sealed class BhopCheckModule : JbModule
         var c = p.Controller;
         if (c == null || Movement.HasAutoBhop(c)) return;
         var auto = Cvars.Get("sv_autobunnyhopping");
-        if (auto is "1" or "true") return; // auto bhop day: every hop is perfect by design
+        if (auto is "1" or "true") return; // auto bhop on: every hop is perfect by design
         var now = Server.CurrentTime;
         if (now < s.NextAlert) return;
         var ratio = PerfRatio(s.Log, sample);
@@ -259,7 +258,7 @@ public sealed class BhopCheckModule : JbModule
         var line = Lang.T("bhc.alert", c.PlayerName, pct, sample);
         foreach (var admin in Players.Humans().Where(x => Perms.IsAdmin(x))) Chat.Print(admin, line);
         Logger.LogWarning("[BhopCheck] {Name} ({SteamId}): {Pct}% perfect hops in the last {Sample}", c.PlayerName, p.SteamId64, pct, sample);
-        Jb.Log.LogEvent($"BhopCheck: {c.PlayerName} hit {pct}% perfect bhops over the last {sample} hops", p, null, LogType.Admin);
+        CommonHost.Log($"BhopCheck: {c.PlayerName} hit {pct}% perfect bhops over the last {sample} hops", p, null, CommonLogType.Admin);
     }
 
     [ConsoleCommand("css_bhopcheck", "sm_bhopcheck <#userid|name> - bhop log (console)")]
@@ -283,11 +282,11 @@ public sealed class BhopCheckModule : JbModule
         var t = Targets.FindOrReply(caller, info, info.GetArg(1), singleOnly: true, respectImmunity: false);
         if (t == null) return;
         var target = t.Players[0];
-        var log = S(target.Jb()!).Log;
+        var log = S(target.Swbs()!).Log;
         void W(string line) => Chat.PrintToConsole(caller, line);
         // SMPlugins BhopCheck layout. CS2's console drops tab characters, so the columns are padded with spaces.
         W("");
-        W("    BhopCheck (SWBS Jailbreak CS2)");
+        W($"    BhopCheck ({CommonHost.ServerLabel})");
         W($"    Name: {target.PlayerName}");
         W($"    Steam ID: {target.SteamID}");
         W($"    Map: {Server.MapName}");
@@ -309,7 +308,7 @@ public sealed class BhopCheckModule : JbModule
     {
         if (caller == null) return;
         if (!Cfg.AllowPerfSounds) { Chat.Tell(caller, "bhc.perfsound.disabled"); return; }
-        var p = caller.Jb()!;
+        var p = caller.Swbs()!;
         var s = S(p);
         s.PerfSound = !s.PerfSound;
         if (p.SteamId64 != 0) Storage.Set("bhopcheck_perfsound", p.SteamId64.ToString(), s.PerfSound);
