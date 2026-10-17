@@ -24,7 +24,7 @@
   "worldmenu.size.large": "Large",
   "worldmenu.help.keys": "A/D change · W/S move",
   "worldmenu.help.save_keys": "E select · R close",
-  "worldmenu.help.style": "World panel: menus float in front of you, also while you spectate in first person or fly the free camera. Classic: the centre-screen menu.",
+  "worldmenu.help.style": "HUD panel: a crisp menu on your screen. World panel: menus float in front of you. Classic: the centre-screen menu.",
   "worldmenu.help.theme": "The colours of your menus. Each server starts with its own theme.",
   "worldmenu.help.themes": "Themes",
   "worldmenu.help.position": "Where the panel sits: left of the crosshair, in the middle or on the right.",
@@ -42,5 +42,7 @@
   "worldmenu.failed": "{red}The world menu could not be drawn ({0}). Showing the classic menu - tell an admin, or use {green}!menustyle center{red}.",
   "worldmenu.test.title": "World menu test",
   "worldmenu.test.subtitle": "W/S move · A/D tabs · E select",
-  "worldmenu.test.result": "{default}Menu test: style {gold}{0}{default}, follow {gold}{1}{default}, alive {gold}{2}{default}, panel entities {gold}{3}{default}, last error {grey}{4}{default}."
+  "worldmenu.test.result": "{default}Menu test: style {gold}{0}{default}, follow {gold}{1}{default}, alive {gold}{2}{default}, panel entities {gold}{3}{default}, last error {grey}{4}{default}.",
+  "worldmenu.style.panorama": "HUD panel",
+  "worldmenu.no_panorama": "{grey}The HUD panel is not available on this server yet."
 }

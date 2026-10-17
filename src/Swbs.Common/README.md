@@ -54,12 +54,23 @@ A mode can add its own variation by subclassing `RoundVariation` and passing it 
 
 `Camera/` holds the `!3p` follow camera. It works like this:
 
-- An invisible, model-less prop_dynamic follows behind the player every frame and is set as their view entity, re-set every frame.
+- A model-less point_camera follows behind the player every frame and is set as their view entity, re-set every frame. Only its owner receives it.
 - It is kept in front of walls.
 - During the server's entity think the view entity is cleared, so shots and +use still come from the player's eyes.
 - Several reasons can hold the camera on, such as the command or Bhop's Third Person style. Use `ThirdPerson.Set(player, reason, on)`.
 
 Who may use `!3p` by default comes from `CommonHost.ThirdPersonCommandDefault`: everyone on the movement servers, admins on jailbreak, off on minigames, DM, PUG and 1v1. The `ThirdPerson.Command` config overrides it.
+
+## Menu panels
+
+`WorldMenu/` draws the menus of every mode as a panel instead of the centre-screen HTML. The menu cores turn a menu into
+a `WorldMenuView` and call `WorldMenus.Draw`; when that returns false they draw the classic menu.
+
+- `PanoramaMenuModel` and `PanoramaMenuRenderer`: the HUD panel. One `custom_hud_layout` entity loads
+  `Workshop/panorama/layout/custom_game/swbs_menu.xml` (with `styles/custom_game/swbs_menu.css`) from the SWBS
+  Workshop pack, and each player gets their own texts and classes on it. Only changes are sent. It is on when
+  `WorldMenu.Panorama` is true. The tests check that the layout has every panel the model writes to.
+- `WorldMenuLayout` and `WorldMenuRenderer`: the world panel, point_worldtext in front of the player's eyes.
 
 ## Shared points and store items
 
